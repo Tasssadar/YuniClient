@@ -228,7 +228,7 @@
             // 
             this.version.AutoSize = true;
             this.version.Enabled = false;
-            this.version.Location = new System.Drawing.Point(917, 414);
+            this.version.Location = new System.Drawing.Point(884, 418);
             this.version.Name = "version";
             this.version.Size = new System.Drawing.Size(0, 13);
             this.version.TabIndex = 15;

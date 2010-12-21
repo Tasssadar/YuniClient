@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "2";
+            version.Text = "3";
         }
 
         Status state = 0;
@@ -530,7 +530,7 @@ namespace YuniClient
         private void device_label_Click(object sender, EventArgs e)
         {
             if(System.Convert.ToInt32(state & (Status.STATE_WAITING_ID | Status.STATE_WAITING_ID_FLASH | Status.STATE_WAITING_STOP | Status.STATE_WAITING_FLASH)) != 0 || 
-                (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0))
+                (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0) || (System.Convert.ToInt32(state & Status.STATE_FLASH_MODE) == 0))
                 return;
             textBox1.Text += "Reading device ID...";
             state |= Status.STATE_WAITING_ID;
