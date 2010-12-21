@@ -61,6 +61,8 @@
             // 
             // serialPort1
             // 
+            this.serialPort1.DtrEnable = true;
+            this.serialPort1.Parity = System.IO.Ports.Parity.Mark;
             this.serialPort1.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.serialPort1_DataReceived);
             // 
             // portName
@@ -82,6 +84,7 @@
             // 
             this.rate.FormattingEnabled = true;
             this.rate.Items.AddRange(new object[] {
+            "19200",
             "38400",
             "57600",
             "115200",
@@ -99,13 +102,14 @@
             // 
             this.textBox1.BackColor = System.Drawing.Color.Black;
             this.textBox1.ForeColor = System.Drawing.Color.White;
-            this.textBox1.Location = new System.Drawing.Point(12, 81);
+            this.textBox1.Location = new System.Drawing.Point(12, 51);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(163, 303);
+            this.textBox1.Size = new System.Drawing.Size(191, 364);
             this.textBox1.TabIndex = 3;
+            this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
             // 
             // state_b
             // 
@@ -122,19 +126,22 @@
             // 
             this.botOut.BackColor = System.Drawing.Color.Black;
             this.botOut.ForeColor = System.Drawing.Color.White;
-            this.botOut.Location = new System.Drawing.Point(191, 81);
+            this.botOut.ImeMode = System.Windows.Forms.ImeMode.On;
+            this.botOut.Location = new System.Drawing.Point(209, 51);
             this.botOut.Multiline = true;
             this.botOut.Name = "botOut";
             this.botOut.ReadOnly = true;
             this.botOut.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.botOut.Size = new System.Drawing.Size(726, 303);
+            this.botOut.Size = new System.Drawing.Size(708, 364);
             this.botOut.TabIndex = 5;
+            this.botOut.WordWrap = false;
+            this.botOut.TextChanged += new System.EventHandler(this.botOut_TextChanged);
             this.botOut.KeyDown += new System.Windows.Forms.KeyEventHandler(this.botOut_KeyDown);
             this.botOut.KeyUp += new System.Windows.Forms.KeyEventHandler(this.botOut_KeyUp);
             // 
             // hackStop
             // 
-            this.hackStop.Location = new System.Drawing.Point(842, 5);
+            this.hackStop.Location = new System.Drawing.Point(367, 5);
             this.hackStop.Name = "hackStop";
             this.hackStop.Size = new System.Drawing.Size(75, 23);
             this.hackStop.TabIndex = 6;
@@ -146,7 +153,7 @@
             // load_b
             // 
             this.load_b.Enabled = false;
-            this.load_b.Location = new System.Drawing.Point(209, 40);
+            this.load_b.Location = new System.Drawing.Point(447, 5);
             this.load_b.Name = "load_b";
             this.load_b.Size = new System.Drawing.Size(75, 23);
             this.load_b.TabIndex = 8;
@@ -162,7 +169,7 @@
             // filename
             // 
             this.filename.AutoSize = true;
-            this.filename.Location = new System.Drawing.Point(290, 45);
+            this.filename.Location = new System.Drawing.Point(215, 30);
             this.filename.Name = "filename";
             this.filename.Size = new System.Drawing.Size(49, 13);
             this.filename.TabIndex = 9;
@@ -171,7 +178,7 @@
             // flash
             // 
             this.flash.Enabled = false;
-            this.flash.Location = new System.Drawing.Point(367, 5);
+            this.flash.Location = new System.Drawing.Point(597, 5);
             this.flash.Name = "flash";
             this.flash.Size = new System.Drawing.Size(75, 23);
             this.flash.TabIndex = 10;
@@ -182,7 +189,7 @@
             // device_label
             // 
             this.device_label.AutoSize = true;
-            this.device_label.Location = new System.Drawing.Point(462, 10);
+            this.device_label.Location = new System.Drawing.Point(528, 10);
             this.device_label.Name = "device_label";
             this.device_label.Size = new System.Drawing.Size(63, 13);
             this.device_label.TabIndex = 11;
@@ -191,7 +198,7 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(191, 64);
+            this.progressBar1.Location = new System.Drawing.Point(209, 34);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(709, 11);
             this.progressBar1.TabIndex = 12;
@@ -200,7 +207,7 @@
             // percentL
             // 
             this.percentL.AutoSize = true;
-            this.percentL.Location = new System.Drawing.Point(150, 62);
+            this.percentL.Location = new System.Drawing.Point(179, 30);
             this.percentL.Name = "percentL";
             this.percentL.Size = new System.Drawing.Size(24, 13);
             this.percentL.TabIndex = 13;
@@ -209,7 +216,7 @@
             // 
             // Clear_b
             // 
-            this.Clear_b.Location = new System.Drawing.Point(842, 35);
+            this.Clear_b.Location = new System.Drawing.Point(843, 5);
             this.Clear_b.Name = "Clear_b";
             this.Clear_b.Size = new System.Drawing.Size(75, 23);
             this.Clear_b.TabIndex = 14;
@@ -221,7 +228,7 @@
             // 
             this.version.AutoSize = true;
             this.version.Enabled = false;
-            this.version.Location = new System.Drawing.Point(900, 387);
+            this.version.Location = new System.Drawing.Point(917, 414);
             this.version.Name = "version";
             this.version.Size = new System.Drawing.Size(0, 13);
             this.version.TabIndex = 15;
@@ -230,7 +237,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(929, 401);
+            this.ClientSize = new System.Drawing.Size(929, 427);
             this.Controls.Add(this.version);
             this.Controls.Add(this.Clear_b);
             this.Controls.Add(this.percentL);

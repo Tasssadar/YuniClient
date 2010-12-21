@@ -37,13 +37,14 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "1";
+            version.Text = "2";
         }
 
         Status state = 0;
         BinaryReader hexFile;
         static BackgroundWorker _bw;
         string deviceId = "";
+        string lastKey = "";
         chip_definition deviceInfo;
         memory mem;
 
@@ -68,18 +69,23 @@ namespace YuniClient
                 _bw.RunWorkerAsync(con_info);
                 connect.Enabled = false;
                 load_b.Enabled = true;
+                portName.Enabled = false;
+                rate.Enabled = false;
             }
             else
             {
                 textBox1.Text += "Closing port " + portName.Text + "...";
                 serialPort1.Close();
-                state = 0;
+                state = (state & Status.STATE_HAS_FILE) != 0 ? Status.STATE_HAS_FILE  : 0;
                 connect.Text = "Connect";
                 textBox1.Text += "done\r\n";
                 state_b.Enabled = false;
                 hackStop.Visible = false;
                 load_b.Enabled = false;
                 flash.Enabled = false;
+                portName.Enabled = true;
+                rate.Enabled = true;
+                deviceId = "";
             }
         }
         static void connect_v(object sender, DoWorkEventArgs e)
@@ -90,7 +96,6 @@ namespace YuniClient
                 ConnectParam con_info = e.Argument as ConnectParam;
                 con_info.serialPort.BaudRate = con_info.rate_val;
                 con_info.serialPort.PortName = con_info.port;
-                con_info.serialPort.ReadTimeout = 1000;
                 con_info.serialPort.Open();
                 int i = 0;
                 for (; !con_info.serialPort.IsOpen && i < 500; ++i)
@@ -109,6 +114,8 @@ namespace YuniClient
             {
                 textBox1.Text += "failed("+ e.Result.ToString() + ")!\r\n";
                 connect.Enabled = true;
+                portName.Enabled = true;
+                rate.Enabled = true; 
             }
             else
             {
@@ -116,9 +123,8 @@ namespace YuniClient
                 connect.Text = "Disconnect";
                 textBox1.Text += "done \r\n";
                 state_b.Enabled = true;
-                connect.Enabled = true;
+                connect.Enabled = true;   
             }
-            
         }
 
         private void state_b_Click(object sender, EventArgs e)
@@ -148,14 +154,25 @@ namespace YuniClient
 
         private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            BotOuput(serialPort1.ReadExisting());
+            if (progressBar1.Visible)
+                return;
+            string text = "";
+            text = serialPort1.ReadExisting();
+            BotOuput(text);
         }
         private void BotOuput(string text)
         {
+            if (text == "")
+                return;
             if (this.botOut.InvokeRequired)
             {
-                SetTextCallback d = new SetTextCallback(BotOuput);
-                this.Invoke(d, new object[] { text });
+                try
+                {
+
+                    SetTextCallback d = new SetTextCallback(BotOuput);
+                    this.Invoke(d, new object[] { text });
+                }
+                catch (Exception) { }
             }
             else
             {
@@ -163,22 +180,19 @@ namespace YuniClient
                 {
                     if (System.Convert.ToChar(text) == System.Convert.ToChar(20))
                     {
-                        if (System.Convert.ToChar(text) == System.Convert.ToChar(20))
+                        state &= ~(Status.STATE_WAITING_STOP);
+                        if (System.Convert.ToInt32(state & Status.STATE_FLASH_MODE) == 0)
                         {
-                            state &= ~(Status.STATE_WAITING_STOP);
-                            if (System.Convert.ToInt32(state & Status.STATE_FLASH_MODE) == 0)
-                            {
-                                serialPort1.Write(flash_mode_sequence, 0, 4);
-                                state |= Status.STATE_FLASH_MODE;
-                                state |= Status.STATE_WAITING_STOP;
-                            }
-                            else
-                            {
-                                state_b.Text = "Start";
-                                state_b.Enabled = true;
-                                hackStop.Visible = false;
-                                flash.Enabled = true;
-                            }
+                            serialPort1.Write(flash_mode_sequence, 0, 4);
+                            state |= Status.STATE_FLASH_MODE;
+                            state |= Status.STATE_WAITING_STOP;
+                        }
+                        else
+                        {
+                            state_b.Text = "Start";
+                            state_b.Enabled = true;
+                            hackStop.Visible = false;
+                            flash.Enabled = true;
                         }
                     }
                     else this.botOut.Text += text;
@@ -195,6 +209,7 @@ namespace YuniClient
                         load_b.Enabled = true;
                         state_b.Enabled = true;
                         flash.Enabled = true;
+                        hexFile.Close();
                     }
                 }
                 else if (System.Convert.ToInt32(state & Status.STATE_WAITING_ID) != 0)
@@ -203,9 +218,11 @@ namespace YuniClient
                     deviceId = text;
                     if (!ReadDeviceId())
                         textBox1.Text += "failed!\r\n";
+                    else
+                        textBox1.Text += "done\r\n";
                 }
                 else
-                    this.botOut.Text += text;
+                    this.botOut.Text +=  text;
             }
         }
 
@@ -239,6 +256,7 @@ namespace YuniClient
             try
             {
                 hexFile = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
+                hexFile.Close();
             }
             catch(Exception ex)
             {
@@ -283,6 +301,7 @@ namespace YuniClient
             textBox1.Text += "Starting flash...";
             if (System.Convert.ToInt32(state & Status.STATE_HAS_FILE) != 0)
             {
+                hexFile = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
                 load_b.Enabled = false;
                 state_b.Enabled = false;
                 flash.Enabled = false;
@@ -310,10 +329,12 @@ namespace YuniClient
                 load_b.Enabled = true;
                 state_b.Enabled = true;
                 flash.Enabled = true;
+                hexFile.Close();
                 return;
             }
             else
                 textBox1.Text += "done\r\n";
+            hexFile.Close();
             textBox1.Text += "Creating pages...";
             List<Page> pages = new List<Page>();
             if (!CreatePages(mem, pages))
@@ -332,8 +353,10 @@ namespace YuniClient
                 serialPort = serialPort1,
                 pages = pages
             };
+            progressBar1.Value = 0;
             progressBar1.Visible = true;
             percentL.Visible = true;
+            filename.Visible = false;
             _bw.DoWork += flash_v;
             _bw.RunWorkerCompleted += bw_flash_complete;
             _bw.ProgressChanged += bw_flash_progress;
@@ -350,23 +373,40 @@ namespace YuniClient
                 {
                     char[] flash_seq = { '\x10' };
                     con_info.serialPort.Write(flash_seq, 0, 1);
-                    char[] adress = {System.Convert.ToChar(con_info.pages[y].address >> 8), System.Convert.ToChar(con_info.pages[y].address)};
+                    // second value must be 128 or 0, wish c# would allow overflow...
+                    int adress_sec = con_info.pages[y].address;
+                    while (adress_sec > 255)
+                        adress_sec -= 256;
+                    byte[] adress = { System.Convert.ToByte(con_info.pages[y].address >> 8), System.Convert.ToByte(adress_sec) };
                     con_info.serialPort.Write(adress, 0, 2);
-                    char[] data = new char[con_info.pages[y].data.Count];
+                    byte[] data = new byte[con_info.pages[y].data.Count];
                     for (int i = 0; i < con_info.pages[y].data.Count; ++i)
-                        data[i] = System.Convert.ToChar(con_info.pages[y].data[i]);
+                        data[i] = con_info.pages[y].data[i];
                     con_info.serialPort.Write(data, 0, con_info.pages[y].data.Count);
+                   // Thread.Sleep(0);
+
                     int timeout = 0;
-                    while (System.Convert.ToChar(con_info.serialPort.ReadExisting()) != System.Convert.ToChar(20) && timeout < 1000)
+                    
+                    while (timeout < 100000)
                     {
+                        string ins = "";
+                        try { ins = con_info.serialPort.ReadExisting(); }
+                        catch (Exception) { }
+                        if (ins != "")
+                        {
+                            char c = System.Convert.ToChar(ins);
+                            if (c == System.Convert.ToChar(20))
+                                break;
+                        }
                         ++timeout;
                     }
-                    if (timeout <= 1000)
+                    if (timeout >= 100000)
                     {
                         e.Result = "timeout";
                         return;
-                    }
-                    _bw.ReportProgress(y / (con_info.pages.Count / 100));
+                    } 
+                    double a = System.Convert.ToDouble(con_info.pages.Count) / 100;
+                    _bw.ReportProgress(System.Convert.ToInt32(System.Convert.ToDouble(y+1) / (a != 0 ? a : 1)));
                 }
             }
             catch (Exception ex)
@@ -380,6 +420,7 @@ namespace YuniClient
             state_b.Enabled = true;
             flash.Enabled = true;
             progressBar1.Visible = false;
+            filename.Visible = true;
             percentL.Visible = false;
             if (e.Result != "good")
                 textBox1.Text += "failed(" + e.Result.ToString() + ")!\r\n";
@@ -401,23 +442,26 @@ namespace YuniClient
                         textBox1.Text += "Failed, program is too big!\r\n";
                         return false;
                     }
-            Page cur_page = new Page();
-            cur_page.data.Capacity = deviceInfo.page_size;
+            
             int alt_entry_page = deviceInfo.patch_pos / deviceInfo.page_size;
             bool add_alt_page = deviceInfo.patch_pos != 0;
 
             int i = 0;
+            Page cur_page = new Page();
 	        for (bool generate = true; generate && i < deviceInfo.memory_size / deviceInfo.page_size; ++i)
 	        {
+                cur_page = new Page();
+                cur_page.data = new List<byte>();
+                cur_page.data.Capacity = deviceInfo.page_size;
 		        cur_page.address = i * deviceInfo.page_size;
 		        if (mem.size() <= (i + 1) * deviceInfo.page_size)
 		        {
                     for(int y = 0; y < cur_page.data.Capacity; ++y)
                     {
-                        if(i * deviceInfo.page_size + y < mem.size())
-                            cur_page.data[y] = mem.Get(i * deviceInfo.page_size + y );
+                        if (i * deviceInfo.page_size + y < mem.size())
+                            cur_page.data.Add(mem.Get(i * deviceInfo.page_size + y));
                         else
-                            cur_page.data[y] = 0xff;
+                            cur_page.data.Add(0xff);
                     }
 			        generate = false;
 		        }
@@ -425,7 +469,7 @@ namespace YuniClient
 		        {
                     for(int y = i * deviceInfo.page_size; y < (i + 1) * deviceInfo.page_size; ++y)
                     {
-                        cur_page.data[y] = mem.Get(i * deviceInfo.page_size + y );
+                        cur_page.data.Add(mem.Get(y));
                     }
 		        }
 
@@ -453,7 +497,7 @@ namespace YuniClient
         private bool patch_page(memory mem, Page page, int patch_pos, int boot_reset)
         {
             if (patch_pos == 0)
-                return false;
+                return true;
             if (page.address == 0)
 	        {
 		        int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;
@@ -518,6 +562,9 @@ namespace YuniClient
             if (System.Convert.ToInt32(state & (Status.STATE_WAITING_ID | Status.STATE_WAITING_ID_FLASH | Status.STATE_WAITING_STOP | Status.STATE_WAITING_FLASH)) != 0 ||
                 (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0))
                 return;
+            if (e.KeyCode.ToString() == lastKey)
+                return;
+            lastKey = e.KeyCode.ToString();
             SendKey(e.KeyCode.ToString(), true);
         }
 
@@ -526,7 +573,23 @@ namespace YuniClient
             if (System.Convert.ToInt32(state & (Status.STATE_WAITING_ID | Status.STATE_WAITING_ID_FLASH | Status.STATE_WAITING_STOP | Status.STATE_WAITING_FLASH)) != 0 ||
                 (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0))
                 return;
+            lastKey = "";
             SendKey(e.KeyCode.ToString(), false);
+        }
+
+        //Autoscroll
+        private void botOut_TextChanged(object sender, EventArgs e)
+        {
+            botOut.SelectionStart = botOut.Text.Length;
+            botOut.ScrollToCaret();
+            botOut.Refresh();
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            textBox1.SelectionStart = textBox1.Text.Length;
+            textBox1.ScrollToCaret();
+            textBox1.Refresh();
         }
     }
 }

@@ -37,13 +37,13 @@ namespace YuniClient
                         if (c == System.Convert.ToChar("\r") && file.ReadChar() == System.Convert.ToChar("\n"))
                         {
                             c = '\n';
-                            line += c.ToString();
+                           // line += c.ToString();
                             break;
                         }
                         line += c.ToString();
                     }
                 }
-                if (line[0] != ':' || line.Length % 2 != 0)
+                if (line[0] != ':' || line.Length % 2 != 1)
                     return false;
                 rec_nums.Clear();
                 for (int i = 1; i+1 < line.Length;++i)
