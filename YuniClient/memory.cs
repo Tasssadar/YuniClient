@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-//using System.\;
 using System.Text;
 using System.IO;
 
@@ -89,7 +88,7 @@ namespace YuniClient
             return true;
         }
 
-        public List<byte> m_buffer { get; set; }
+        private List<byte> m_buffer { get; set; }
         private chip_definition deviceInfo;
     }
 }

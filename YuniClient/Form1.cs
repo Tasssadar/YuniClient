@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-//using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
@@ -38,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "4";
+            version.Text = "5";
         }
 
         Status state = 0;
@@ -86,6 +85,7 @@ namespace YuniClient
                 flash.Enabled = false;
                 portName.Enabled = true;
                 rate.Enabled = true;
+                state_b.Text = "Stop";
                 deviceId = "";
             }
         }
@@ -306,6 +306,7 @@ namespace YuniClient
                 load_b.Enabled = false;
                 state_b.Enabled = false;
                 flash.Enabled = false;
+                connect.Enabled = false;
                 if (deviceId == "")
                 {
                     textBox1.Text += "\r\nReading device ID...";
@@ -330,6 +331,7 @@ namespace YuniClient
                 load_b.Enabled = true;
                 state_b.Enabled = true;
                 flash.Enabled = true;
+                connect.Enabled = true;
                 hexFile.Close();
                 return;
             }
@@ -421,6 +423,7 @@ namespace YuniClient
             progressBar1.Visible = false;
             filename.Visible = true;
             percentL.Visible = false;
+            connect.Enabled = true;
             if (e.Result != "good")
                 textBox1.Text += "failed(" + e.Result.ToString() + ")!\r\n";
             else

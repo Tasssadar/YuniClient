@@ -107,7 +107,7 @@
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(191, 364);
+            this.textBox1.Size = new System.Drawing.Size(191, 368);
             this.textBox1.TabIndex = 3;
             this.textBox1.TextChanged += new System.EventHandler(this.textBox1_TextChanged);
             // 
@@ -132,7 +132,7 @@
             this.botOut.Name = "botOut";
             this.botOut.ReadOnly = true;
             this.botOut.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.botOut.Size = new System.Drawing.Size(708, 364);
+            this.botOut.Size = new System.Drawing.Size(708, 368);
             this.botOut.TabIndex = 5;
             this.botOut.WordWrap = false;
             this.botOut.TextChanged += new System.EventHandler(this.botOut_TextChanged);
@@ -228,7 +228,7 @@
             // 
             this.version.AutoSize = true;
             this.version.Enabled = false;
-            this.version.Location = new System.Drawing.Point(884, 418);
+            this.version.Location = new System.Drawing.Point(9, 34);
             this.version.Name = "version";
             this.version.Size = new System.Drawing.Size(0, 13);
             this.version.TabIndex = 15;
@@ -237,7 +237,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(929, 427);
+            this.ClientSize = new System.Drawing.Size(929, 429);
             this.Controls.Add(this.version);
             this.Controls.Add(this.Clear_b);
             this.Controls.Add(this.percentL);
