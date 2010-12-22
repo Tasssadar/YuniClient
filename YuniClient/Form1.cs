@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -53,17 +53,14 @@ namespace YuniClient
             if (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0)
             {
                 textBox1.Text += "Opening port " + portName.Text + "...";
-                _bw = new BackgroundWorker
-                {
-                    WorkerReportsProgress = true,
-                    WorkerSupportsCancellation = true
-                };
-                ConnectParam con_info = new ConnectParam
-                {
-                    port = portName.Text,
-                    rate_val = System.Convert.ToInt32(rate.Text),
-                    serialPort = serialPort1
-                };
+                _bw = new BackgroundWorker();
+                _bw.WorkerReportsProgress = true;
+                _bw.WorkerSupportsCancellation = true;
+                ConnectParam con_info = new ConnectParam();
+                con_info.port = portName.Text;
+                con_info.rate_val = System.Convert.ToInt32(rate.Text);
+                con_info.serialPort = serialPort1;
+    
                 _bw.DoWork += connect_v;
                 _bw.RunWorkerCompleted += bw_connect_complete;
                 _bw.RunWorkerAsync(con_info);
@@ -276,21 +273,26 @@ namespace YuniClient
 
         private bool ReadDeviceId()
         {
-            chip_definition[] defs = {
-                 new chip_definition{chip_id = "m48", chip_name = "atmega48", memory_size = 3840, page_size = 64, patch_pos = 3838},
+            chip_definition[] defs = new chip_definition[6];
+            chip_definition i = new chip_definition();
+            defs[0].chip_id = "m48"; defs[0].chip_name = "atmega48"; defs[0].memory_size = 3840; defs[0].page_size = 64; defs[0].patch_pos = 3838;
+
+            /*
+        		new chip_definition{chip_id = "m48", chip_name = "atmega48", memory_size = 3840, page_size = 64, patch_pos = 3838},
                  new chip_definition{chip_id = "m88", chip_name = "atmega88", memory_size = 7936, page_size = 128,patch_pos = 0},
                  new chip_definition{chip_id = "m168",chip_name = "atmega168",memory_size = 16128,page_size = 128,patch_pos = 0},
                  new chip_definition{chip_id = "m16", chip_name = "atmega16", memory_size = 16128,page_size = 128,patch_pos = 0},
                  new chip_definition{chip_id = "m32", chip_name = "atmega32", memory_size = 32256,page_size = 128,patch_pos = 0},
                  /* FIXME: only 16-bit addresses are available */
+            /*
                  new chip_definition{chip_id = "m128",chip_name = "atmega128",memory_size = 65536,page_size = 256,patch_pos = 0},
-             };
-            foreach (chip_definition i in defs)
+             };*/
+            foreach (chip_definition y in defs)
             {
-                if (i.chip_id == deviceId)
+                if (y.chip_id == deviceId)
                 {
-                    deviceInfo = i;
-                    device_label.Text = i.chip_name;
+                    deviceInfo = y;
+                    device_label.Text = y.chip_name;
                     return true;
                 }
             }
@@ -344,18 +346,14 @@ namespace YuniClient
                 return;
             textBox1.Text += "done!\r\n";
             textBox1.Text += "Flashing to device...";
-            _bw = new BackgroundWorker
-            {
-                WorkerReportsProgress = true,
-                WorkerSupportsCancellation = true
-            };
-            ConnectParam con_info = new ConnectParam
-            {
-                port = portName.Text,
-                rate_val = System.Convert.ToInt32(rate.Text),
-                serialPort = serialPort1,
-                pages = pages
-            };
+            _bw = new BackgroundWorker();
+            _bw.WorkerReportsProgress = true;
+            _bw.WorkerSupportsCancellation = true;
+            ConnectParam con_info = new ConnectParam();
+            con_info.port = portName.Text;
+            con_info.rate_val = System.Convert.ToInt32(rate.Text);
+            con_info.serialPort = serialPort1;
+            con_info.pages = pages;
             progressBar1.Value = 0;
             progressBar1.Visible = true;
             percentL.Visible = true;
@@ -597,10 +595,10 @@ namespace YuniClient
 
 class ConnectParam
 {
-    public string port { get; set; }
-    public int rate_val { get; set; }
-    public SerialPort serialPort { get; set; }
-    public List<Page> pages { get; set; }
+    public string port;
+    public int rate_val;
+    public SerialPort serialPort;
+    public List<Page> pages;
 }
 
 class chip_definition

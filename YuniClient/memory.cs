@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
@@ -10,7 +10,7 @@ namespace YuniClient
         public void SetDeviceInfo(chip_definition info) { deviceInfo = info; }
         public byte Get(int index) { return m_buffer[index]; }
         public int size() { return m_buffer.Count; }
-        public int data() { return m_buffer.Count == 0 ? 0 : m_buffer[0]; }
+        public int data() { if(m_buffer.Count == 0) return 0; else return m_buffer[0]; }
 
         public bool Load(BinaryReader file)
         {
@@ -88,13 +88,13 @@ namespace YuniClient
             return true;
         }
 
-        private List<byte> m_buffer { get; set; }
+        private List<byte> m_buffer;
         private chip_definition deviceInfo;
     }
 }
 
 class Page
 {
-    public int address { get; set; }
-    public List<byte> data { get; set; }
+    public int address;
+    public List<byte> data;
 }
