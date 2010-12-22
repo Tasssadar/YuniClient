@@ -28,16 +28,16 @@ namespace YuniClient
                     break;
                 char c = file.ReadChar();
                 string line = "";
-                if(c == System.Convert.ToChar(":"))
+                if (c == System.Convert.ToChar(":"))
                 {
                     line += c.ToString();
-                    while (file.BaseStream.Position+1 != file.BaseStream.Length)
+                    while (file.BaseStream.Position + 1 != file.BaseStream.Length)
                     {
                         c = file.ReadChar();
                         if (c == System.Convert.ToChar("\r") && file.ReadChar() == System.Convert.ToChar("\n"))
                         {
                             c = '\n';
-                           // line += c.ToString();
+                            // line += c.ToString();
                             break;
                         }
                         line += c.ToString();
@@ -46,14 +46,14 @@ namespace YuniClient
                 if (line[0] != ':' || line.Length % 2 != 1)
                     return false;
                 rec_nums.Clear();
-                for (int i = 1; i+1 < line.Length;++i)
+                for (int i = 1; i + 1 < line.Length; ++i)
                 {
                     string digit = line[i].ToString();
                     ++i;
                     digit += line[i];
-                    byte res = byte.Parse(digit,System.Globalization.NumberStyles.HexNumber, null);
-                    rec_nums.Add(res);    
-                   // Form1.ActiveForm.Controls.Find("textBox1", true)[0].Text += "d"+digit +" " + res + "\r\n";
+                    byte res = byte.Parse(digit, System.Globalization.NumberStyles.HexNumber, null);
+                    rec_nums.Add(res);
+                    // Form1.ActiveForm.Controls.Find("textBox1", true)[0].Text += "d"+digit +" " + res + "\r\n";
                 }
                 int length = rec_nums[0];
                 int address = rec_nums[1] * 0x100 + rec_nums[2];
@@ -62,37 +62,34 @@ namespace YuniClient
                     return false;
 
                 if (rectype == 2)
-			    {
-				    if (length != 2)
-					    return false;
-				    base_i = (rec_nums[4] * 0x100 + rec_nums[5]) * 16;
-				    continue;
-			    }
+                {
+                    if (length != 2)
+                        return false;
+                    base_i = (rec_nums[4] * 0x100 + rec_nums[5]) * 16;
+                    continue;
+                }
 
-			    if (rectype == 1)
-				    break;
+                if (rectype == 1)
+                    break;
 
-			    if (rectype != 0)
-				    return false;
+                if (rectype != 0)
+                    return false;
 
-			    for (int i = 0; i < length; ++i)
-			    {
-				    while (base_i + address + i >= m_buffer.Count)
+                for (int i = 0; i < length; ++i)
+                {
+                    while (base_i + address + i >= m_buffer.Count)
                         m_buffer.Add(0xff);
 
                     if (m_buffer[base_i + address + i] != 0xff)
                         return false;
 
                     m_buffer[base_i + address + i] = rec_nums[i + 4];
-			    }
+                }
             }
             return true;
         }
 
-        public List<byte> m_buffer { get;set; }
-        private int m_memsize;
-        private int m_pagesize;
-        private int m_patch_pos;
+        public List<byte> m_buffer { get; set; }
         private chip_definition deviceInfo;
     }
 }
