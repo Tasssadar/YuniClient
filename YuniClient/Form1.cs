@@ -256,7 +256,7 @@ namespace YuniClient
                 hexFile = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
                 hexFile.Close();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 succes = false;
             }
@@ -274,19 +274,15 @@ namespace YuniClient
         private bool ReadDeviceId()
         {
             chip_definition[] defs = new chip_definition[6];
-            chip_definition i = new chip_definition();
-            defs[0].chip_id = "m48"; defs[0].chip_name = "atmega48"; defs[0].memory_size = 3840; defs[0].page_size = 64; defs[0].patch_pos = 3838;
+            for(byte i = 0; i < 6; ++i) defs[i] = new chip_definition();
+            defs[0].chip_id = "m48";  defs[0].chip_name = "atmega48";  defs[0].memory_size = 3840;  defs[0].page_size = 64;  defs[0].patch_pos = 3838;
+            defs[1].chip_id = "m168"; defs[1].chip_name = "atmega168"; defs[1].memory_size = 16128; defs[1].page_size = 128; defs[1].patch_pos = 0;
+            defs[2].chip_id = "m88";  defs[2].chip_name = "atmega88";  defs[2].memory_size = 7936;  defs[2].page_size = 128; defs[2].patch_pos = 0;
+            defs[3].chip_id = "m16";  defs[3].chip_name = "atmega16";  defs[3].memory_size = 16128; defs[3].page_size = 128; defs[3].patch_pos = 0;
+            defs[4].chip_id = "m32";  defs[4].chip_name = "atmega32";  defs[4].memory_size = 32256; defs[4].page_size = 128; defs[4].patch_pos = 0;
+            /* FIXME: only 16-bit addresses are available */
+            defs[5].chip_id = "m128"; defs[5].chip_name = "atmega128"; defs[5].memory_size = 65536; defs[5].page_size = 256; defs[5].patch_pos = 0;
 
-            /*
-        		new chip_definition{chip_id = "m48", chip_name = "atmega48", memory_size = 3840, page_size = 64, patch_pos = 3838},
-                 new chip_definition{chip_id = "m88", chip_name = "atmega88", memory_size = 7936, page_size = 128,patch_pos = 0},
-                 new chip_definition{chip_id = "m168",chip_name = "atmega168",memory_size = 16128,page_size = 128,patch_pos = 0},
-                 new chip_definition{chip_id = "m16", chip_name = "atmega16", memory_size = 16128,page_size = 128,patch_pos = 0},
-                 new chip_definition{chip_id = "m32", chip_name = "atmega32", memory_size = 32256,page_size = 128,patch_pos = 0},
-                 /* FIXME: only 16-bit addresses are available */
-            /*
-                 new chip_definition{chip_id = "m128",chip_name = "atmega128",memory_size = 65536,page_size = 256,patch_pos = 0},
-             };*/
             foreach (chip_definition y in defs)
             {
                 if (y.chip_id == deviceId)
