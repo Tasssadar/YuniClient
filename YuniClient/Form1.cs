@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "6";
+            version.Text = "7";
         }
 
         Status state = 0;
@@ -108,6 +108,7 @@ namespace YuniClient
         }
         private void bw_connect_complete(object sender, RunWorkerCompletedEventArgs e)
         {
+            _bw = null;
             if (e.Result != "good")
             {
                 textBox1.Text += "failed(" + e.Result.ToString() + ")!\r\n";
@@ -253,6 +254,7 @@ namespace YuniClient
             {
                 hexFile = new BinaryReader(File.Open(openFileDialog1.FileName, FileMode.Open));
                 hexFile.Close();
+                hexFile = null;
             }
             catch (Exception)
             {
@@ -329,11 +331,13 @@ namespace YuniClient
                 flash.Enabled = true;
                 connect.Enabled = true;
                 hexFile.Close();
+                hexFile = null;
                 return;
             }
             else
                 textBox1.Text += "done\r\n";
             hexFile.Close();
+            hexFile = null;
             textBox1.Text += "Creating pages...";
             List<Page> pages = new List<Page>();
             if (!CreatePages(mem, pages))
@@ -409,6 +413,7 @@ namespace YuniClient
         }
         private void bw_flash_complete(object sender, RunWorkerCompletedEventArgs e)
         {
+            _bw = null;
             load_b.Enabled = true;
             state_b.Enabled = true;
             flash.Enabled = true;
@@ -416,6 +421,7 @@ namespace YuniClient
             filename.Visible = true;
             percentL.Visible = false;
             connect.Enabled = true;
+            mem = null;
             if (e.Result != "good")
                 textBox1.Text += "failed(" + e.Result.ToString() + ")!\r\n";
             else
