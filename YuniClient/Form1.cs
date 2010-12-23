@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "7";
+            version.Text = "8";
         }
 
         Status state = 0;
@@ -549,12 +549,11 @@ namespace YuniClient
             for (int i = 0; i < key.Length; ++i)
                 text[i] = key[i];
             text[key.Length] = ' ';
-            text[key.Length + 1] = '-';
             if (down)
-                text[key.Length + 2] = 'd';
+                text[key.Length + 1] = 'd';
             else
-                text[key.Length + 2] = 'u';
-            serialPort1.Write(text, 0, key.Length + 3);
+                text[key.Length + 1] = 'u';
+            serialPort1.Write(text, 0, key.Length + 2);
         }
         private void botOut_KeyDown(object sender, KeyEventArgs e)
         {
