@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "5";
+            version.Text = "6";
         }
 
         Status state = 0;
@@ -168,8 +168,6 @@ namespace YuniClient
                 return;
             string text = "";
             text = serialPort1.ReadExisting();
-            if (text.Length == 1 && System.Convert.ToChar(text) == System.Convert.ToChar(63)) // start confirmation
-                return;
             BotOuput(text);
         }
         private void BotOuput(string text)
