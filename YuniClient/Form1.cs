@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "9";
+            version.Text = "10";
         }
 
         Status state = 0;
@@ -583,6 +583,15 @@ namespace YuniClient
             textBox1.SelectionStart = textBox1.Text.Length;
             textBox1.ScrollToCaret();
             textBox1.Refresh();
+        }
+        
+        void Form1Resize(object sender, EventArgs e)
+        {
+        	botOut.Width = Form1.ActiveForm.Width - 230;
+        	progressBar1.Width = Form1.ActiveForm.Width - 230;
+        	botOut.Height = Form1.ActiveForm.Height - 95;
+        	textBox1.Height = Form1.ActiveForm.Height - 95;
+        	Clear_b.Location = new Point(Form1.ActiveForm.Width - (20 + Clear_b.Width), Clear_b.Location.Y);
         }
     }
 }

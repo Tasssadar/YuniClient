@@ -254,8 +254,10 @@ namespace YuniClient
         	this.Controls.Add(this.portName);
         	this.Controls.Add(this.connect);
         	this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+        	this.MinimumSize = new System.Drawing.Size(937, 461);
         	this.Name = "Form1";
         	this.Text = "YuniClient";
+        	this.Resize += new System.EventHandler(this.Form1Resize);
         	this.ResumeLayout(false);
         	this.PerformLayout();
         }
