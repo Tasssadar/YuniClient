@@ -587,11 +587,15 @@ namespace YuniClient
         
         void Form1Resize(object sender, EventArgs e)
         {
-        	botOut.Width = Form1.ActiveForm.Width - 230;
-        	progressBar1.Width = Form1.ActiveForm.Width - 230;
-        	botOut.Height = Form1.ActiveForm.Height - 95;
-        	textBox1.Height = Form1.ActiveForm.Height - 95;
-        	Clear_b.Location = new Point(Form1.ActiveForm.Width - (20 + Clear_b.Width), Clear_b.Location.Y);
+            try
+            {
+                botOut.Width = Form1.ActiveForm.Width - 230;
+                progressBar1.Width = Form1.ActiveForm.Width - 230;
+                botOut.Height = Form1.ActiveForm.Height - 95;
+                textBox1.Height = Form1.ActiveForm.Height - 95;
+                Clear_b.Location = new Point(Form1.ActiveForm.Width - (20 + Clear_b.Width), Clear_b.Location.Y);
+            }
+            catch(Exception) {}
         }
     }
 }
