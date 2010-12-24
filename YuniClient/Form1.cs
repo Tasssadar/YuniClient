@@ -37,14 +37,14 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "8";
+            version.Text = "9";
         }
 
         Status state = 0;
         BinaryReader hexFile;
         static BackgroundWorker _bw;
         string deviceId = "";
-        string lastKey = "";
+        int lastKey = 0;
         chip_definition deviceInfo;
         memory mem;
 
@@ -543,27 +543,22 @@ namespace YuniClient
             botOut.Text = "";
         }
 
-        private void SendKey(string key, bool down)
+        private void SendKey(int key, bool down)
         {
-            char[] text = new char[key.Length + 3];
-            for (int i = 0; i < key.Length; ++i)
-                text[i] = key[i];
-            text[key.Length] = ' ';
-            if (down)
-                text[key.Length + 1] = 'd';
-            else
-                text[key.Length + 1] = 'u';
-            serialPort1.Write(text, 0, key.Length + 2);
+            byte[] data = new byte[2];
+            data[0] = System.Convert.ToByte(key);
+            data[1] = System.Convert.ToByte(down ? 'd' : 'u');
+            serialPort1.Write(data, 0, 2);
         }
         private void botOut_KeyDown(object sender, KeyEventArgs e)
         {
             if (System.Convert.ToInt32(state & (Status.STATE_WAITING_ID | Status.STATE_WAITING_ID_FLASH | Status.STATE_WAITING_STOP | Status.STATE_WAITING_STOP2 | Status.STATE_WAITING_FLASH | Status.STATE_FLASH_MODE)) != 0 ||
                 (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0))
                 return;
-            if (e.KeyCode.ToString() == lastKey)
+            if (e.KeyValue == lastKey)
                 return;
-            lastKey = e.KeyCode.ToString();
-            SendKey(e.KeyCode.ToString(), true);
+            lastKey = e.KeyValue;
+            SendKey(e.KeyValue, true);
         }
 
         private void botOut_KeyUp(object sender, KeyEventArgs e)
@@ -571,8 +566,8 @@ namespace YuniClient
             if (System.Convert.ToInt32(state & (Status.STATE_WAITING_ID | Status.STATE_WAITING_ID_FLASH | Status.STATE_WAITING_STOP | Status.STATE_WAITING_STOP2 | Status.STATE_WAITING_FLASH | Status.STATE_FLASH_MODE)) != 0 ||
                 (System.Convert.ToInt32(state & Status.STATE_CONNECTED) == 0))
                 return;
-            lastKey = "";
-            SendKey(e.KeyCode.ToString(), false);
+            lastKey = 0;
+            SendKey(e.KeyValue, false);
         }
 
         //Autoscroll
