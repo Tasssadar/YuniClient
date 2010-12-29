@@ -37,7 +37,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "10";
+            version.Text = "11";
         }
 
         Status state = 0;
@@ -502,7 +502,11 @@ namespace YuniClient
             {
                 int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;
                 Debug.Assert((entrypt_jmp & 0xf000) == 0xc000);
-                page.data[0] = System.Convert.ToByte(entrypt_jmp);
+                
+                int entrypt_jmp_sec = entrypt_jmp;
+                while (entrypt_jmp_sec > 255)
+                   entrypt_jmp_sec -= 256;
+                page.data[0] = System.Convert.ToByte(entrypt_jmp_sec);
                 page.data[1] = System.Convert.ToByte(entrypt_jmp >> 8);
                 return true;
             }
@@ -521,7 +525,10 @@ namespace YuniClient
 
             int entry_addr = (entrypt_jmp2 & 0x0fff) + 1;
             entrypt_jmp2 = ((entry_addr - patch_pos / 2 - 1) & 0xfff) | 0xc000;
-            page.data[new_patch_pos] = System.Convert.ToByte(entrypt_jmp2);
+            int entrypt_jmp_sec2 = entrypt_jmp2;
+            while (entrypt_jmp_sec2 > 255)
+               entrypt_jmp_sec2 -= 256;
+            page.data[new_patch_pos] = System.Convert.ToByte(entrypt_jmp_sec2);
             page.data[new_patch_pos + 1] = System.Convert.ToByte(entrypt_jmp2 >> 8);
             return true;
         }
