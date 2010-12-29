@@ -25,7 +25,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
-import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -181,17 +180,6 @@ public class BluetoothChatService {
      * @see ConnectedThread#write(byte[])
      */
     public void write(byte[] out) {
-        // Create temporary object
-        ConnectedThread r;
-        // Synchronize a copy of the ConnectedThread
-        synchronized (this) {
-            if (mState != STATE_CONNECTED) return;
-            r = mConnectedThread;
-        }
-        // Perform the write unsynchronized
-        r.write(out);
-    }
-    public void write(short[] out) {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -403,8 +391,6 @@ public class BluetoothChatService {
         public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
             byte[] buffer = new byte[1024];
-            for(int i = 0; i < 1024; ++i)
-            	buffer[i] = 0;
             int bytes;
 
             // Keep listening to the InputStream while connected
@@ -436,20 +422,6 @@ public class BluetoothChatService {
                 // Share the sent message back to the UI Activity
                 mHandler.obtainMessage(YuniClient.MESSAGE_WRITE, -1, -1, buffer)
                        .sendToTarget();
-            } catch (IOException e) {
-                Log.e(TAG, "Exception during write", e);
-            }
-        }
-        public void write(short[] buffer) {
-            try {
-            	//if()
-               // mmOutStream.write(buffer);
-            	for(int i = 0; i < buffer.length; ++i)
-            		mmOutStream.write((int)buffer[i]);
-
-                // Share the sent message back to the UI Activity
-                //mHandler.obtainMessage(YuniClient.MESSAGE_WRITE, -1, -1, buffer)
-                  //     .sendToTarget();
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);
             }

@@ -20,7 +20,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.view.MotionEvent;
@@ -309,8 +308,7 @@ public class YuniClient extends Activity {
          		InitMain();
          	 }
           });
-        
-        button.setOnTouchListener(keyTouch);
+
         button = (Button) findViewById(R.id.Clear_b);
         button.setOnClickListener(new View.OnClickListener() {
           	 public void onClick(View v) {
