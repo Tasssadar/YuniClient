@@ -22,6 +22,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -62,6 +63,7 @@ public class YuniClient extends Activity {
 	public static final byte STATE_STOPPED   = 0x08;
 	public static final byte STATE_WAITING_ID= 0x10;
 	public static final byte STATE_FLASHING  = 0x20;
+	public static final byte STATE_SCROLL    = 0x40;
     
 	public short state;
 	public List<Page> pages;
@@ -70,6 +72,8 @@ public class YuniClient extends Activity {
 	public ProgressDialog dialog;
 	public File curFolder = null; 
 	public Context context = null;
+	
+	public Thread autoScrollThread = null;
 	
 	final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -123,6 +127,7 @@ public class YuniClient extends Activity {
     	fileSelect = null;
     	dialog = null;
     	deviceInfo = null;
+        autoScrollThread = null;
     	if(resetUI)
     	{
     		setContentView(R.layout.device_list);
@@ -135,55 +140,7 @@ public class YuniClient extends Activity {
     		mBluetoothAdapter = null;		
     	}
     }
-    public void init()
-    {
-    	mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
-        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
-        pairedListView.setAdapter(mPairedDevices);
-        pairedListView.setOnItemClickListener(mDeviceClickListener);
         
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
-        if (pairedDevices.size() > 0) {
-            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
-            for (BluetoothDevice device : pairedDevices) {
-            	mPairedDevices.add(device.getName() + "\n" + device.getAddress());
-            }
-        }
-        
-        final Button button = (Button) findViewById(R.id.button_scan);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                if (mBluetoothAdapter != null) {
-                	FindDevices();
-                } 
-            }
-        });
-        keyTouch = new View.OnTouchListener() {
-       	 public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
-                {
-               	 boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
-               	 if(((Button)v).getId() == R.id.LeftForw_b)
-               	 {
-               		ButtonTouched("W", down);
-               		ButtonTouched("A", down);
-               	 }
-               	 else if(((Button)v).getId() == R.id.RightForw_b)
-               	 {
-                		ButtonTouched("W", down);
-                		ButtonTouched("D", down);
-                 }
-               	 else if(((Button)v).getId() == R.id.Space_b)
-               			ButtonTouched(" ", down);
-               	 else
-               		 ButtonTouched(((Button)v).getText(), down);
-                }
-				return false;
-       	 }
-        };
-    }
-    
     public void EnableConnect(boolean enable)
     {
     	if(!enable)
@@ -267,81 +224,81 @@ public class YuniClient extends Activity {
             	mChatService.connect(device);
         }
     }; 
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)
     
-    public void InitControls()
     {
-    	state |= STATE_CONTROLS;
-    	setContentView(R.layout.controls);
-   	 	Button button = (Button) findViewById(R.id.Forward_b);
-        button.setOnTouchListener(keyTouch); 
-       
-        button = (Button) findViewById(R.id.Backward_b);
-        button.setOnTouchListener(keyTouch); 
-        button = (Button) findViewById(R.id.Left_b);
-        button.setOnTouchListener(keyTouch); 
-        button = (Button) findViewById(R.id.Right_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.LeftForw_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.RightForw_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Speed1_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Speed2_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Speed3_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Space_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Record_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Play_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Regulator_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Return_b);
-        button.setOnClickListener(new View.OnClickListener() {
-         	 public void onClick(View v) {
-         		InitMain();
-         	 }
-          });
-
-        button = (Button) findViewById(R.id.Clear_b);
-        button.setOnClickListener(new View.OnClickListener() {
-          	 public void onClick(View v) {
-          		TextView out = (TextView) findViewById(R.id.output);
-          		out.setText("");
-          	 }
-           });
-        
-    }
-    public final Handler fileClick = new Handler() {
-    	@Override
-        public void handleMessage(Message msg) {
-    		File file = (File)msg.obj;
-    		if(!file.isDirectory())
-	        {
-	        	TextView error = (TextView)findViewById(R.id.hex_file);
-	        	error.setText(file.getAbsolutePath());
-	        }
-	        else
-	        {
-	        	curFolder = file;
-	        	AlertDialog.Builder builder = new AlertDialog.Builder(context);
-    		 	FilenameFilter filter = new HexFilter();
-    		 	final CharSequence[] items = curFolder.list(filter); 		 	
-    	        builder.setTitle("Chose file");
-    	        builder.setItems(items, fileSelect);
-    	        AlertDialog alert = builder.create();
-    	        alert.show();
-	        }
+        if ((keyCode == KeyEvent.KEYCODE_BACK))
+        {	 
+        	  if((state & STATE_CONTROLS) != 0)
+        		  InitMain();
+        	  else if((state & STATE_CONNECTED) != 0)
+        		  Disconnect(true);
+        	  else
+        		  finish();
+        	  return true;
         }
-    };
+        else if(keyCode == KeyEvent.KEYCODE_MENU)
+        {
+        	moveTaskToBack(true);
+        	return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+    
+    // INITS
+    public void init()
+    {
+    	mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
+        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
+        pairedListView.setAdapter(mPairedDevices);
+        pairedListView.setOnItemClickListener(mDeviceClickListener);
+        
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+        if (pairedDevices.size() > 0) {
+            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
+            for (BluetoothDevice device : pairedDevices) {
+            	mPairedDevices.add(device.getName() + "\n" + device.getAddress());
+            }
+        }
+        
+        final Button button = (Button) findViewById(R.id.button_scan);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                if (mBluetoothAdapter != null) {
+                	FindDevices();
+                } 
+            }
+        });
+        keyTouch = new View.OnTouchListener() {
+       	 public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
+                {
+               	 boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
+               	 if(((Button)v).getId() == R.id.LeftForw_b)
+               	 {
+               		ButtonTouched("W", down);
+               		ButtonTouched("A", down);
+               	 }
+               	 else if(((Button)v).getId() == R.id.RightForw_b)
+               	 {
+                		ButtonTouched("W", down);
+                		ButtonTouched("D", down);
+                 }
+               	 else if(((Button)v).getId() == R.id.Space_b)
+               			ButtonTouched(" ", down);
+               	 else
+               		 ButtonTouched(((Button)v).getText(), down);
+                }
+				return false;
+       	 }
+        };
+    }
+    
     void InitMain()
     {
+  		autoScrollThread = null;
     	state &= ~(STATE_CONTROLS);
     	context = this;
     	curFolder = new File("/mnt/sdcard/");
@@ -453,12 +410,175 @@ public class YuniClient extends Activity {
         });
         
     }
-	
+    public final Handler fileClick = new Handler() {
+    	@Override
+        public void handleMessage(Message msg) {
+    		File file = (File)msg.obj;
+    		if(!file.isDirectory())
+	        {
+	        	TextView error = (TextView)findViewById(R.id.hex_file);
+	        	error.setText(file.getAbsolutePath());
+	        }
+	        else
+	        {
+	        	curFolder = file;
+	        	AlertDialog.Builder builder = new AlertDialog.Builder(context);
+    		 	FilenameFilter filter = new HexFilter();
+    		 	final CharSequence[] items = curFolder.list(filter); 		 	
+    	        builder.setTitle("Chose file");
+    	        builder.setItems(items, fileSelect);
+    	        AlertDialog alert = builder.create();
+    	        alert.show();
+	        }
+        }
+    };
+    
+    public void InitControls()
+    {
+    	state |= STATE_CONTROLS;
+    	setContentView(R.layout.controls);
+   	 	Button button = (Button) findViewById(R.id.Forward_b);
+        button.setOnTouchListener(keyTouch); 
+       
+        button = (Button) findViewById(R.id.Backward_b);
+        button.setOnTouchListener(keyTouch); 
+        button = (Button) findViewById(R.id.Left_b);
+        button.setOnTouchListener(keyTouch); 
+        button = (Button) findViewById(R.id.Right_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.LeftForw_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.RightForw_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Speed1_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Speed2_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Speed3_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Space_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Record_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Play_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Regulator_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Return_b);
+        button.setOnClickListener(new View.OnClickListener() {
+         	 public void onClick(View v) {
+         		InitMain();
+         	 }
+          });
+
+        button = (Button) findViewById(R.id.Clear_b);
+        button.setOnClickListener(new View.OnClickListener() {
+          	 public void onClick(View v) {
+          		TextView out = (TextView) findViewById(R.id.output);
+          		out.setText("");
+          	 }
+           });
+        
+        if(autoScrollThread != null)
+        	autoScrollThread.stop();
+        autoScrollThread = new Thread (new Runnable()
+		{
+			public void run()
+	        {
+				TextView out = (TextView) findViewById(R.id.output);
+		    	ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
+			    while(true)
+			    {
+			    	if((state & STATE_CONTROLS) == 0)
+						break;
+
+			    	if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
+			    	{
+			    		scrollHandler.sendEmptyMessage(0);
+			    		state &= ~(STATE_SCROLL);
+			    	}
+			    	try {
+						Thread.sleep(300);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+			    }
+	        }
+		});
+        autoScrollThread.setPriority(1);
+        autoScrollThread.start();
+    }
+    public final Handler scrollHandler = new Handler() {
+    	@Override
+        public void handleMessage(Message msg) {
+    		TextView out = (TextView) findViewById(R.id.output);
+	    	ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
+    		if(scroll == null || out == null)
+    			return;
+	    	scroll.scrollTo(0, out.getHeight());
+        }
+    };
+    
+    
+	// INITS END
+    // HANDLERS
+    public void ButtonTouched(CharSequence button, boolean down)
+    {
+    	byte[] out = new byte[2];
+    	if(button.length() == 1)
+    		out[0] = (byte)button.charAt(0);
+
+        if(down)
+        	out[1] = (byte)'d';
+        else
+        	out[1] = (byte)'u';
+        mChatService.write(out);
+    }
     public final Handler progressHandler2 = new Handler() {
     	@Override
         public void handleMessage(Message msg) {
     		if(msg.arg1 != 0)
     			dialog.setProgress(msg.arg1);
+        }
+    };
+    Handler progressHandler = new Handler() {
+        public void handleMessage(Message msg) {
+        	if(dialog.isShowing())
+        		dialog.incrementProgressBy(1);
+        }
+    };
+    
+    Handler pagesHandler = new Handler() {
+        public void handleMessage(Message msg) {
+        	memory mem = (memory)msg.obj;
+        	dialog.dismiss();
+        	dialog= new ProgressDialog(context);
+        	dialog.setCancelable(false);
+	        dialog.setMessage("Creating pages...");
+	        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+	        dialog.setMax((mem.size()/deviceInfo.page_size)+1);
+	        dialog.setProgress(0);
+	        dialog.show();
+        }
+    };
+    Handler flashHandler = new Handler() {
+        public void handleMessage(Message msg) {
+        	dialog.dismiss();
+        	dialog= new ProgressDialog(context);
+        	dialog.setCancelable(false);
+	        dialog.setMessage("Flashing into device...");
+	        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+	        dialog.setMax(pages.size());
+	        dialog.setProgress(0);
+	        dialog.show();
+			pagesItr = 0;
+			SendPage(pages.get(pagesItr));
+			++pagesItr;
+			state |= STATE_FLASHING;
         }
     };
     private final Handler mHandler = new Handler() {
@@ -498,14 +618,11 @@ public class YuniClient extends Activity {
 	            			seq += (char)buffer[y];
 	            		if((state & STATE_CONTROLS) != 0)
 	            		{
-	            			
 		            		TextView out = (TextView) findViewById(R.id.output);
 		            		if(seq != "")
 		            		{
-			            		
 			            		out.setText(out.getText() + seq);
-			            		ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
-			            		scroll.scrollTo(0, out.getHeight());
+			            		state |= STATE_SCROLL;
 		            		}
 	            		}
 	            		else if((state & STATE_STOPPING) != 0)
@@ -576,43 +693,8 @@ public class YuniClient extends Activity {
             }
         }
     };
-
-    Handler progressHandler = new Handler() {
-        public void handleMessage(Message msg) {
-        	if(dialog.isShowing())
-        		dialog.incrementProgressBy(1);
-        }
-    };
-    
-    Handler pagesHandler = new Handler() {
-        public void handleMessage(Message msg) {
-        	memory mem = (memory)msg.obj;
-        	dialog.dismiss();
-        	dialog= new ProgressDialog(context);
-        	dialog.setCancelable(false);
-	        dialog.setMessage("Creating pages...");
-	        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-	        dialog.setMax((mem.size()/deviceInfo.page_size)+1);
-	        dialog.setProgress(0);
-	        dialog.show();
-        }
-    };
-    Handler flashHandler = new Handler() {
-        public void handleMessage(Message msg) {
-        	dialog.dismiss();
-        	dialog= new ProgressDialog(context);
-        	dialog.setCancelable(false);
-	        dialog.setMessage("Flashing into device...");
-	        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-	        dialog.setMax(pages.size());
-	        dialog.setProgress(0);
-	        dialog.show();
-			pagesItr = 0;
-			SendPage(pages.get(pagesItr));
-			++pagesItr;
-			state |= STATE_FLASHING;
-        }
-    };
+    // HANDLERS END
+    // FLASH FUNCTIONS
     public void SendPage(Page page)
     {	
     	byte[] out = { 0x10 };
@@ -634,18 +716,6 @@ public class YuniClient extends Activity {
         error.setText("Flashing " + (int)percent + "%...");
         if(dialog.isShowing())
         	dialog.setProgress(pagesItr+1);
-    }
-    public void ButtonTouched(CharSequence button, boolean down)
-    {
-    	byte[] out = new byte[2];
-    	if(button.length() == 1)
-    		out[0] = (byte)button.charAt(0);
-
-        if(down)
-        	out[1] = (byte)'d';
-        else
-        	out[1] = (byte)'u';
-        mChatService.write(out);
     }
     
     public boolean CreatePages(memory mem)
@@ -739,5 +809,4 @@ public class YuniClient extends Activity {
         page.data.set(new_patch_pos + 1, (entrypt_jmp2 >> 8));
         return true;
     }
-
 }
