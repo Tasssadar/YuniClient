@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent" 
+              android:layout_height="fill_parent">
+       <ScrollView    
+        android:id="@+id/ScrollView01"   
+      android:layout_height="150px"    
+      android:layout_width="fill_parent"
+      android:fadingEdge="none"
+      android:fillViewport="true">         
+    <TextView android:id="@+id/output"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#fff"
+        android:maxLines="500"
+    /> 
+    </ScrollView>   
+            
+    <Button android:id="@+id/Speed1_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/ScrollView01"
+            android:text="a"/>
+    <Button android:id="@+id/Speed2_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/ScrollView01"
+            android:layout_toRightOf="@id/Speed1_b"
+            android:text="b"/>
+     <Button android:id="@+id/Speed3_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/ScrollView01"
+            android:layout_toRightOf="@id/Speed2_b"
+            android:text="c"/>
+            
+     <Button android:id="@+id/Space_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/Speed3_b"
+            android:text="Space"/>
+     <Button android:id="@+id/Record_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/Speed3_b"
+            android:layout_toRightOf="@id/Space_b"
+            android:text="C"/>
+      <Button android:id="@+id/Play_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/Speed3_b"
+            android:layout_toRightOf="@id/Record_b"
+            android:text="P"/>
+           
+        <Button android:id="@+id/Return_b"
+            android:layout_width="100px"
+            android:layout_height="40px"
+            android:layout_below="@id/Record_b"
+            android:text="Back"/> 
+      <Button android:id="@+id/Regulator_b"
+            android:layout_width="100px"
+            android:layout_height="40px"
+            android:layout_below="@id/Record_b"
+            android:layout_toRightOf="@id/Return_b"
+            android:text="Q"/>
+      <Button android:id="@+id/Clear_b"
+            android:layout_width="100px"
+            android:layout_height="40px"
+            android:layout_below="@id/Record_b"
+            android:layout_toRightOf="@id/Speed2_b"
+            android:text="Clear"/>
+      
+            
+      <Button android:id="@+id/LeftForw_b"
+            android:layout_width="100px"
+            android:layout_height="50px" 
+            android:layout_below="@id/Clear_b"
+            android:layout_marginTop="20px"
+            android:text="Q"/>     
+    <Button android:id="@+id/Forward_b"
+            android:layout_width="100px"
+            android:layout_height="50px" 
+            android:layout_marginLeft="100px"
+            android:layout_below="@id/Clear_b"
+            android:layout_marginBottom="10px"
+            android:layout_marginTop="20px"
+            android:text="@string/W"/>
+    <Button android:id="@+id/RightForw_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_toRightOf="@id/Forward_b"
+            android:layout_below="@id/Clear_b"
+            android:layout_marginTop="20px"
+            android:text="E"/>
+           
+    <Button android:id="@+id/Left_b"
+            android:layout_width="100px"
+            android:layout_height="50px" 
+            android:layout_below="@id/Forward_b"
+            android:text="@string/A"/>
+    <Button android:id="@+id/Backward_b"
+            android:layout_width="100px"
+            android:layout_height="50px" 
+            android:layout_toRightOf="@id/Left_b"
+            android:layout_below="@id/Forward_b"
+            android:text="@string/S"/>
+    <Button android:id="@+id/Right_b"
+            android:layout_width="100px"
+            android:layout_height="50px"
+            android:layout_below="@id/Forward_b"
+            android:layout_toRightOf="@id/Backward_b"
+            android:text="@string/D"/>
+
+</RelativeLayout>
