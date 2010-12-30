@@ -197,7 +197,7 @@ public class YuniClient extends Activity {
         findViewById(R.id.title_new_devices).setVisibility(View.VISIBLE);
     	mBluetoothAdapter.startDiscovery();
     }
-    private OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
+    private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
         	EnableConnect(false);
         	
@@ -226,7 +226,6 @@ public class YuniClient extends Activity {
     }; 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)
-    
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {	 
@@ -332,7 +331,7 @@ public class YuniClient extends Activity {
         button = (Button) findViewById(R.id.Start_b);
         button.setOnClickListener(new View.OnClickListener() {
           	 public void onClick(View v) {
-          		byte[] out = { 0x11 };
+          		final byte[] out = { 0x11 };
           		mChatService.write(out.clone());
           		state &= ~(STATE_STOPPED);
           		Button controls = (Button) findViewById(R.id.Controls_b);
@@ -351,7 +350,7 @@ public class YuniClient extends Activity {
         button = (Button) findViewById(R.id.Stop_b);
         button.setOnClickListener(new View.OnClickListener() {
           	 public void onClick(View v) {
-          		byte[] out = { 0x74, 0x7E, 0x7A, 0x33 };
+          		final byte[] out = { 0x74, 0x7E, 0x7A, 0x33 };
           		mChatService.write(out.clone());
           		try {
 					Thread.sleep(300);
@@ -384,7 +383,7 @@ public class YuniClient extends Activity {
           		if(hex.exists() && hex.canRead())
           		{
           			error.setText("Hex file exists\n");
-          			byte[] out = { 0x12 };
+          			final byte[] out = { 0x12 };
                		mChatService.write(out.clone());
                		state |= STATE_WAITING_ID;
                		error.append("Waiting for ID and preparing hex file...");
@@ -397,20 +396,20 @@ public class YuniClient extends Activity {
         button = (Button) findViewById(R.id.List_b);
         button.setOnClickListener(new View.OnClickListener() {
         	 public void onClick(View v) {
-        		 AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+        		    final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
         		    curFolder = new File("/mnt/sdcard/");
         		 	FilenameFilter filter = new HexFilter();
         		 	final CharSequence[] items = curFolder.list(filter);
         		 	        		 	
         	        builder.setTitle("Chose file");
         	        builder.setItems(items, fileSelect);
-        	        AlertDialog alert = builder.create();
+        	        final AlertDialog alert = builder.create();
         	        alert.show();
         	 }
         });
         
     }
-    public final Handler fileClick = new Handler() {
+    private final Handler fileClick = new Handler() {
     	@Override
         public void handleMessage(Message msg) {
     		File file = (File)msg.obj;
@@ -482,8 +481,6 @@ public class YuniClient extends Activity {
           	 }
            });
         
-        if(autoScrollThread != null)
-        	autoScrollThread.stop();
         autoScrollThread = new Thread (new Runnable()
 		{
 			public void run()
@@ -515,8 +512,8 @@ public class YuniClient extends Activity {
     public final Handler scrollHandler = new Handler() {
     	@Override
         public void handleMessage(Message msg) {
-    		TextView out = (TextView) findViewById(R.id.output);
-	    	ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
+    		final TextView out = (TextView) findViewById(R.id.output);
+    		final ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
     		if(scroll == null || out == null)
     			return;
 	    	scroll.scrollTo(0, out.getHeight());
@@ -526,11 +523,10 @@ public class YuniClient extends Activity {
     
 	// INITS END
     // HANDLERS
-    public void ButtonTouched(CharSequence button, boolean down)
+    private void ButtonTouched(CharSequence button, boolean down)
     {
     	byte[] out = new byte[2];
-    	if(button.length() == 1)
-    		out[0] = (byte)button.charAt(0);
+  		out[0] = (byte)button.charAt(0);
 
         if(down)
         	out[1] = (byte)'d';
@@ -538,34 +534,15 @@ public class YuniClient extends Activity {
         	out[1] = (byte)'u';
         mChatService.write(out);
     }
-    public final Handler progressHandler2 = new Handler() {
+    private final Handler progressHandler2 = new Handler() {
     	@Override
         public void handleMessage(Message msg) {
     		if(msg.arg1 != 0)
     			dialog.setProgress(msg.arg1);
         }
     };
-    Handler progressHandler = new Handler() {
-        public void handleMessage(Message msg) {
-        	if(dialog.isShowing())
-        		dialog.incrementProgressBy(1);
-        }
-    };
     
-    Handler pagesHandler = new Handler() {
-        public void handleMessage(Message msg) {
-        	memory mem = (memory)msg.obj;
-        	dialog.dismiss();
-        	dialog= new ProgressDialog(context);
-        	dialog.setCancelable(false);
-	        dialog.setMessage("Creating pages...");
-	        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-	        dialog.setMax((mem.size()/deviceInfo.page_size)+1);
-	        dialog.setProgress(0);
-	        dialog.show();
-        }
-    };
-    Handler flashHandler = new Handler() {
+    private final Handler flashHandler = new Handler() {
         public void handleMessage(Message msg) {
         	dialog.dismiss();
         	dialog= new ProgressDialog(context);
@@ -599,7 +576,7 @@ public class YuniClient extends Activity {
 	                    break;
 	                }
 	            case MESSAGE_TOAST:
-	            	String text = msg.getData().getString(TOAST);
+	            	final String text = msg.getData().getString(TOAST);
 	            	if(text == null)
 	            		break;
 	            	Toast.makeText(context, text,
@@ -612,13 +589,13 @@ public class YuniClient extends Activity {
 	            case MESSAGE_READ:
 	            	if(msg.obj != null)
 	            	{
-	            		byte[] buffer = (byte[])msg.obj;
+	            		final byte[] buffer = (byte[])msg.obj;
 	            		String seq = "";
 	            		for(int y = 0; y < msg.arg1; ++y)
 	            			seq += (char)buffer[y];
 	            		if((state & STATE_CONTROLS) != 0)
 	            		{
-		            		TextView out = (TextView) findViewById(R.id.output);
+		            		final TextView out = (TextView) findViewById(R.id.output);
 		            		if(seq != "")
 		            		{
 			            		out.setText(out.getText() + seq);
@@ -628,7 +605,7 @@ public class YuniClient extends Activity {
 	            		else if((state & STATE_STOPPING) != 0)
 	            		{
 	            			state &= ~(STATE_STOPPING);
-	            			TextView error = (TextView)findViewById(R.id.error);
+	            			final TextView error = (TextView)findViewById(R.id.error);
 	                  		error.setText("");
 	                  		state |= STATE_STOPPED;
 	            		}
@@ -638,7 +615,7 @@ public class YuniClient extends Activity {
 	            			deviceInfo = new DeviceInfo(seq);
 	            			if(deviceInfo.isSet())
 	            			{
-	            				TextView file = (TextView)findViewById(R.id.hex_file);
+	            				final TextView file = (TextView)findViewById(R.id.hex_file);
 	            				File hex = new File(file.getText().toString());
 	            				dialog.dismiss();
 	            				dialog= new ProgressDialog(context);
@@ -653,8 +630,8 @@ public class YuniClient extends Activity {
 	            				{
 	            					public void run()
 	         			            {
-	            						TextView file = (TextView)findViewById(R.id.hex_file);
-									    File hex = new File(file.getText().toString());
+	            						final TextView file = (TextView)findViewById(R.id.hex_file);
+									    final File hex = new File(file.getText().toString());
 									    memory mem = new memory();
 									    try
 									    {
@@ -662,7 +639,7 @@ public class YuniClient extends Activity {
 									    	{
 									    		Message msg = new Message();
 									    		msg.obj = mem;
-									    		pagesHandler.sendMessage(msg);
+									    		//pagesHandler.sendMessage(msg);
 									    		if(!CreatePages(mem))
 									    			return;
 									    		flashHandler.sendMessage(flashHandler.obtainMessage());
@@ -695,16 +672,16 @@ public class YuniClient extends Activity {
     };
     // HANDLERS END
     // FLASH FUNCTIONS
-    public void SendPage(Page page)
+    private void SendPage(Page page)
     {	
-    	byte[] out = { 0x10 };
+    	final byte[] out = { 0x10 };
   		mChatService.write(out.clone());
         // second value must be 128 or 0, wish c# would allow overflow...
         int adress_sec = page.address;
         while (adress_sec > 255)
             adress_sec -= 256;
 
-        byte[] adress = { (byte)(page.address >> 8), (byte)(adress_sec) };
+        final byte[] adress = { (byte)(page.address >> 8), (byte)(adress_sec) };
         mChatService.write(adress);
         byte[] data = new byte[page.data.size()];
         for (int i = 0; i < page.data.size(); ++i)
@@ -712,16 +689,16 @@ public class YuniClient extends Activity {
 
         mChatService.write(data);
         TextView error = (TextView)findViewById(R.id.error);
-        float percent = (float)(pagesItr +1) / ((float)pages.size() / 100);
+        final float percent = (float)(pagesItr +1) / ((float)pages.size() / 100);
         error.setText("Flashing " + (int)percent + "%...");
         if(dialog.isShowing())
         	dialog.setProgress(pagesItr+1);
     }
     
-    public boolean CreatePages(memory mem)
+    private boolean CreatePages(memory mem)
     {
     	pages.clear();
-    	TextView error = (TextView)findViewById(R.id.error);
+    	final TextView error = (TextView)findViewById(R.id.error);
     	if (mem.size() > deviceInfo.mem_size)
             for (int a = deviceInfo.mem_size; a < mem.size(); ++a)
                 if (mem.Get(a) != 0xff)
@@ -764,7 +741,7 @@ public class YuniClient extends Activity {
 
             if (i == alt_entry_page)
                 add_alt_page = false;
-            progressHandler.sendMessage(progressHandler.obtainMessage());
+            //progressHandler.sendMessage(progressHandler.obtainMessage());
         }
         if (add_alt_page)
         {
@@ -810,3 +787,24 @@ public class YuniClient extends Activity {
         return true;
     }
 }
+//UNUSED
+/*private final Handler progressHandler = new Handler() {
+public void handleMessage(Message msg) {
+	if(dialog.isShowing())
+		dialog.incrementProgressBy(1);
+}
+};
+
+private final Handler pagesHandler = new Handler() {
+public void handleMessage(Message msg) {
+	memory mem = (memory)msg.obj;
+	dialog.dismiss();
+	dialog= new ProgressDialog(context);
+	dialog.setCancelable(false);
+    dialog.setMessage("Creating pages...");
+    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+    dialog.setMax((mem.size()/deviceInfo.page_size)+1);
+    dialog.setProgress(0);
+    dialog.show();
+}
+}; */

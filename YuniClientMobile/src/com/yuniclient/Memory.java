@@ -19,17 +19,21 @@ class memory
     public boolean Load(File filePath, Handler handler) throws IOException
     {
     	m_buffer = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
-        m_buffer.clear();
-        int base_i = 0;
-        List<Integer> rec_nums = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
         
+        List<Integer> rec_nums = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
         FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
         long pos = 0;
         long lastSendPos = 0;
-        Message msg;
-        for (int lineno = 1; ; ++lineno)
+        Message msg = null;
+        char c = (char)0;
+        String digit = null;
+        short length = 0;
+        short address = 0;
+        short rectype = 0;
+        short base_i = 0;
+        while(true)
         {
-        	if(pos - lastSendPos > 1024)
+        	if(pos - lastSendPos >= 1024)
         	{
         		msg = new Message();
         		msg.arg1 = (int)(pos/1024);
@@ -38,7 +42,7 @@ class memory
         	}
             if (pos >= filePath.length())
                 break;
-            char c = (char)file.read();
+            c = (char)file.read();
             ++pos;
             String line = "";
             if (c == ':')
@@ -61,20 +65,18 @@ class memory
             if (line.charAt(0) != ':' || line.length() % 2 != 1)
                 return false;
             rec_nums.clear();
-            for (int i = 1; i + 1 < line.length(); ++i)
+            for (short i = 1; i + 1 < line.length(); ++i)
             {
-            	String digit = "0x";
+            	digit = "0x";
                 digit += line.charAt(i);
                 ++i;
                 digit += line.charAt(i);
-                int value = Integer.decode(digit);
-                value = (value & 0xFF);
                 rec_nums.add(Integer.decode(digit));
                 // Form1.ActiveForm.Controls.Find("textBox1", true)[0].Text += "d"+digit +" " + res + "\r\n";
             }
-            int length = rec_nums.get(0).intValue();
-            int address = rec_nums.get(1).intValue() * 0x100 + rec_nums.get(2).intValue();
-            int rectype = rec_nums.get(3).intValue();
+            length = rec_nums.get(0).shortValue();
+            address = (short) (rec_nums.get(1).shortValue() * 0x100 + rec_nums.get(2).shortValue());
+            rectype = rec_nums.get(3).shortValue();
             if (length != rec_nums.size() - 5)
                 return false;
 
@@ -82,7 +84,7 @@ class memory
             {
                 if (length != 2)
                     return false;
-                base_i = (rec_nums.get(4).intValue() * 0x100 + rec_nums.get(5).intValue()) * 16;
+                base_i = (short) ((rec_nums.get(4).shortValue() * 0x100 + rec_nums.get(5).shortValue()) * 16);
                 continue;
             }
 
@@ -104,16 +106,22 @@ class memory
             }
         }
         file.close();
+        file = null;
+        rec_nums = null;
+        msg = null;
+        digit = null;
         return true;
     }
 
 	public List<Integer> m_buffer;
 };
+
 class Page
 {
     public int address;
     public List<Integer> data;
 };
+
 class HexFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
     	File file = new File(dir, name);
