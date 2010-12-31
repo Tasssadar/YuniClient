@@ -47,6 +47,7 @@ namespace YuniClient
         	this.percentL = new System.Windows.Forms.Label();
         	this.Clear_b = new System.Windows.Forms.Button();
         	this.version = new System.Windows.Forms.Label();
+        	this.eeprom_open = new System.Windows.Forms.Button();
         	this.SuspendLayout();
         	// 
         	// connect
@@ -233,11 +234,23 @@ namespace YuniClient
         	this.version.Size = new System.Drawing.Size(0, 13);
         	this.version.TabIndex = 15;
         	// 
+        	// eeprom_open
+        	// 
+        	this.eeprom_open.Enabled = false;
+        	this.eeprom_open.Location = new System.Drawing.Point(762, 5);
+        	this.eeprom_open.Name = "eeprom_open";
+        	this.eeprom_open.Size = new System.Drawing.Size(75, 23);
+        	this.eeprom_open.TabIndex = 16;
+        	this.eeprom_open.Text = "EEPROM";
+        	this.eeprom_open.UseVisualStyleBackColor = true;
+        	this.eeprom_open.Click += new System.EventHandler(this.Eeprom_openClick);
+        	// 
         	// Form1
         	// 
         	this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         	this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         	this.ClientSize = new System.Drawing.Size(929, 429);
+        	this.Controls.Add(this.eeprom_open);
         	this.Controls.Add(this.version);
         	this.Controls.Add(this.Clear_b);
         	this.Controls.Add(this.percentL);
@@ -261,6 +274,7 @@ namespace YuniClient
         	this.ResumeLayout(false);
         	this.PerformLayout();
         }
+        private System.Windows.Forms.Button eeprom_open;
 
         #endregion
 

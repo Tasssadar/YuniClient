@@ -35,12 +35,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="eeprom.cs" />
+    <Compile Include="eeprom.Designer.cs">
+      <DependentUpon>eeprom.cs</DependentUpon>
+    </Compile>
     <Compile Include="Form1.cs" />
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="memory.cs" />
     <Compile Include="Program.cs" />
+    <EmbeddedResource Include="eeprom.resx">
+      <DependentUpon>eeprom.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
     </EmbeddedResource>

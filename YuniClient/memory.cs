@@ -36,7 +36,6 @@ namespace YuniClient
                         if (c == System.Convert.ToChar("\r") && file.ReadChar() == System.Convert.ToChar("\n"))
                         {
                             c = '\n';
-                            // line += c.ToString();
                             break;
                         }
                         line += c.ToString();
@@ -52,7 +51,6 @@ namespace YuniClient
                     digit += line[i];
                     byte res = byte.Parse(digit, System.Globalization.NumberStyles.HexNumber, null);
                     rec_nums.Add(res);
-                    // Form1.ActiveForm.Controls.Find("textBox1", true)[0].Text += "d"+digit +" " + res + "\r\n";
                 }
                 int length = rec_nums[0];
                 int address = rec_nums[1] * 0x100 + rec_nums[2];

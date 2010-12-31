@@ -27,19 +27,16 @@ namespace YuniClient
 {
     public partial class Form1 : Form
     {
+        public Form1()
+        {
+            InitializeComponent();
+            version.Text = "12";
+        }
         delegate void SetTextCallback(string text);
-
         char[] flash_mode_sequence = { '\x74', '\x7E', '\x7A', '\x33' };
         char[] device_id_seq = { '\x12' };
         char[] start_seq = { '\x11' };
         //char[] flash_seq = { '\x10' };
-
-        public Form1()
-        {
-            InitializeComponent();
-            version.Text = "11";
-        }
-
         Status state = 0;
         BinaryReader hexFile;
         static BackgroundWorker _bw;
@@ -82,6 +79,7 @@ namespace YuniClient
                 flash.Enabled = false;
                 portName.Enabled = true;
                 rate.Enabled = true;
+                eeprom_open.Enabled = false;
                 state_b.Text = "Stop";
                 deviceId = "";
             }
@@ -115,6 +113,7 @@ namespace YuniClient
                 connect.Enabled = true;
                 portName.Enabled = true;
                 rate.Enabled = true;
+                eeprom_open.Enabled = false;
             }
             else
             {
@@ -123,6 +122,7 @@ namespace YuniClient
                 textBox1.Text += "done \r\n";
                 state_b.Enabled = true;
                 connect.Enabled = true;
+                eeprom_open.Enabled = true;
             }
         }
 
@@ -139,6 +139,7 @@ namespace YuniClient
                 state |= Status.STATE_WAITING_STOP2;
                 serialPort1.Write(flash_mode_sequence, 0, 4);
                 state_b.Enabled = false;
+                eeprom_open.Enabled = false;
                 state_b.Text = "Switching..";
                 hackStop.Visible = true;
                 int retryCount = 0;
@@ -156,6 +157,7 @@ namespace YuniClient
             }
             else
             {
+                eeprom_open.Enabled = true;
                 serialPort1.Write(start_seq, 0, 1);
                 state &= ~(Status.STATE_FLASH_MODE);
                 state_b.Text = "Stop";
@@ -165,7 +167,7 @@ namespace YuniClient
 
         private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            if (progressBar1.Visible || System.Convert.ToInt32(state & Status.STATE_WAITING_STOP2) != 0)
+            if (!Enabled || progressBar1.Visible || System.Convert.ToInt32(state & Status.STATE_WAITING_STOP2) != 0)
                 return;
             string text = "";
             text = serialPort1.ReadExisting();
@@ -603,6 +605,16 @@ namespace YuniClient
                 Clear_b.Location = new Point(Form1.ActiveForm.Width - (20 + Clear_b.Width), Clear_b.Location.Y);
             }
             catch(Exception) {}
+        }
+        
+        void Eeprom_openClick(object sender, EventArgs e)
+        {
+            Enabled = false;
+            eeprom eepromMgr = new eeprom(serialPort1);
+            eepromMgr.Show(this);
+            eepromMgr.Visible = true;
+            eepromMgr.Focus();
+            //eeprom.ActiveForm.
         }
     }
 }
