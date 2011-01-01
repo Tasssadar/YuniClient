@@ -50,13 +50,17 @@ namespace YuniClient
         	this.label3 = new System.Windows.Forms.Label();
         	this.label4 = new System.Windows.Forms.Label();
         	this.time_t = new System.Windows.Forms.TextBox();
-        	this.label5 = new System.Windows.Forms.Label();
         	this.save_b = new System.Windows.Forms.Button();
         	this.textBox1 = new System.Windows.Forms.TextBox();
         	this.Add_b = new System.Windows.Forms.Button();
         	this.erase_b = new System.Windows.Forms.Button();
         	this.behind_t = new System.Windows.Forms.TextBox();
         	this.label6 = new System.Windows.Forms.Label();
+        	this.label7 = new System.Windows.Forms.Label();
+        	this.endEvent = new System.Windows.Forms.ComboBox();
+        	this.label5 = new System.Windows.Forms.Label();
+        	this.byte1 = new System.Windows.Forms.TextBox();
+        	this.byte2 = new System.Windows.Forms.TextBox();
         	this.SuspendLayout();
         	// 
         	// read_b
@@ -157,30 +161,22 @@ namespace YuniClient
         	// 
         	// label4
         	// 
-        	this.label4.Location = new System.Drawing.Point(305, 126);
+        	this.label4.Location = new System.Drawing.Point(305, 179);
         	this.label4.Name = "label4";
         	this.label4.Size = new System.Drawing.Size(62, 16);
         	this.label4.TabIndex = 12;
-        	this.label4.Text = "Time";
+        	this.label4.Text = "BigNum";
         	// 
         	// time_t
         	// 
-        	this.time_t.Location = new System.Drawing.Point(373, 123);
+        	this.time_t.Location = new System.Drawing.Point(373, 176);
         	this.time_t.Name = "time_t";
         	this.time_t.Size = new System.Drawing.Size(75, 20);
         	this.time_t.TabIndex = 13;
         	// 
-        	// label5
-        	// 
-        	this.label5.Location = new System.Drawing.Point(454, 126);
-        	this.label5.Name = "label5";
-        	this.label5.Size = new System.Drawing.Size(37, 17);
-        	this.label5.TabIndex = 14;
-        	this.label5.Text = "ms";
-        	// 
         	// save_b
         	// 
-        	this.save_b.Location = new System.Drawing.Point(305, 174);
+        	this.save_b.Location = new System.Drawing.Point(305, 228);
         	this.save_b.Name = "save_b";
         	this.save_b.Size = new System.Drawing.Size(164, 23);
         	this.save_b.TabIndex = 15;
@@ -191,11 +187,11 @@ namespace YuniClient
         	// textBox1
         	// 
         	this.textBox1.Enabled = false;
-        	this.textBox1.Location = new System.Drawing.Point(305, 203);
+        	this.textBox1.Location = new System.Drawing.Point(305, 257);
         	this.textBox1.Multiline = true;
         	this.textBox1.Name = "textBox1";
         	this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-        	this.textBox1.Size = new System.Drawing.Size(164, 144);
+        	this.textBox1.Size = new System.Drawing.Size(164, 90);
         	this.textBox1.TabIndex = 16;
         	// 
         	// Add_b
@@ -216,34 +212,86 @@ namespace YuniClient
         	this.erase_b.TabIndex = 18;
         	this.erase_b.Text = "Erase";
         	this.erase_b.UseVisualStyleBackColor = true;
+        	this.erase_b.Click += new System.EventHandler(this.Erase_bClick);
         	// 
         	// behind_t
         	// 
-        	this.behind_t.Location = new System.Drawing.Point(373, 149);
+        	this.behind_t.Enabled = false;
+        	this.behind_t.Location = new System.Drawing.Point(373, 202);
         	this.behind_t.Name = "behind_t";
         	this.behind_t.Size = new System.Drawing.Size(75, 20);
         	this.behind_t.TabIndex = 19;
         	// 
         	// label6
         	// 
-        	this.label6.Location = new System.Drawing.Point(305, 152);
+        	this.label6.Location = new System.Drawing.Point(305, 205);
         	this.label6.Name = "label6";
         	this.label6.Size = new System.Drawing.Size(62, 17);
         	this.label6.TabIndex = 20;
         	this.label6.Text = "Behind ID..";
+        	// 
+        	// label7
+        	// 
+        	this.label7.Location = new System.Drawing.Point(305, 126);
+        	this.label7.Name = "label7";
+        	this.label7.Size = new System.Drawing.Size(62, 17);
+        	this.label7.TabIndex = 21;
+        	this.label7.Text = "End event";
+        	// 
+        	// endEvent
+        	// 
+        	this.endEvent.FormattingEnabled = true;
+        	this.endEvent.Items.AddRange(new object[] {
+        	        	        	"TIME",
+        	        	        	"SENSOR_LEVEL_HIGHER",
+        	        	        	"SENSOR_LEVEL_LOWER",
+        	        	        	"RANGE_MIDDLE_HIGHER",
+        	        	        	"RANGE_MIDDLE_LOWER"});
+        	this.endEvent.Location = new System.Drawing.Point(373, 123);
+        	this.endEvent.Name = "endEvent";
+        	this.endEvent.Size = new System.Drawing.Size(96, 21);
+        	this.endEvent.TabIndex = 22;
+        	this.endEvent.Text = "TIME";
+        	// 
+        	// label5
+        	// 
+        	this.label5.Location = new System.Drawing.Point(305, 153);
+        	this.label5.Name = "label5";
+        	this.label5.Size = new System.Drawing.Size(70, 23);
+        	this.label5.TabIndex = 23;
+        	this.label5.Text = "Byte params";
+        	// 
+        	// byte1
+        	// 
+        	this.byte1.Location = new System.Drawing.Point(373, 150);
+        	this.byte1.MaxLength = 3;
+        	this.byte1.Name = "byte1";
+        	this.byte1.Size = new System.Drawing.Size(39, 20);
+        	this.byte1.TabIndex = 24;
+        	// 
+        	// byte2
+        	// 
+        	this.byte2.Location = new System.Drawing.Point(418, 150);
+        	this.byte2.Name = "byte2";
+        	this.byte2.Size = new System.Drawing.Size(39, 20);
+        	this.byte2.TabIndex = 25;
         	// 
         	// eeprom
         	// 
         	this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         	this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
         	this.ClientSize = new System.Drawing.Size(481, 359);
+        	this.Controls.Add(this.byte2);
+        	this.Controls.Add(this.byte1);
+        	this.Controls.Add(this.label5);
+        	this.Controls.Add(this.endEvent);
+        	this.Controls.Add(this.label7);
         	this.Controls.Add(this.label6);
         	this.Controls.Add(this.behind_t);
         	this.Controls.Add(this.erase_b);
         	this.Controls.Add(this.Add_b);
         	this.Controls.Add(this.textBox1);
         	this.Controls.Add(this.save_b);
-        	this.Controls.Add(this.label5);
         	this.Controls.Add(this.time_t);
         	this.Controls.Add(this.label4);
         	this.Controls.Add(this.label3);
@@ -262,6 +310,10 @@ namespace YuniClient
         	this.ResumeLayout(false);
         	this.PerformLayout();
         }
+        private System.Windows.Forms.TextBox byte2;
+        private System.Windows.Forms.TextBox byte1;
+        private System.Windows.Forms.ComboBox endEvent;
+        private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.TextBox behind_t;
         private System.Windows.Forms.Button erase_b;

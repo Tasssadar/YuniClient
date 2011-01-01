@@ -25,12 +25,32 @@ enum eeprom_states
     STATE_WRITING_WAIT= 0x04,
 };
 
+enum end_events
+{
+    EVENT_TIME               = 0x01,
+    EVENT_SENSOR_LEVEL_HIGHER= 0x02,
+    EVENT_SENSOR_LEVEL_LOWER = 0x04,
+    EVENT_RANGE_MIDDLE_HIGHER= 0x08,
+    EVENT_RANGE_MIDDLE_LOWER = 0x10,
+};
+
 class Record
 {
+    public Record() { event_params = new byte[2]; key = 0; }
     public int id;
     public byte key;
     public byte downUp;
-    public UInt16 time;
+    public byte end_event;
+    public byte[] event_params;
+    
+    public ushort getBigNum() {
+        return (ushort)((event_params[0] << 8) | (event_params[1] & 0xFF));
+    }
+    public void setBigNum(ushort num)
+    {
+        event_params[0] = (byte)(num >> 8);
+        event_params[1] = (byte)(num & 0xFF);
+    }
 };
 
 
@@ -51,11 +71,11 @@ namespace YuniClient
             records = new List<Record>();
         }
         
-        delegate void SetTextCallback(string text);
+        delegate void SetTextCallback(byte[] bytes, int lenght);
         
         char[] eeprom_read_seq = { '\x16' };
         char[] eeprom_write_seq  = { '\x1C' };
-        char[] eeprom_write_stop_seq  = { '\x1E' };
+        char[] eeprom_write_stop_seq  = { '\x1E'};
         
         short state = 0;
         Record curRec;
@@ -78,25 +98,24 @@ namespace YuniClient
         {
             if((state & (short)eeprom_states.STATE_WRITING_WAIT) != 0)
                 return;
-        	string text = "";
-            text = serialPort1.ReadExisting();
-            BotOuput(text);
+        	byte[] bytes = new byte[serialPort1.ReadBufferSize];
+        	serialPort1.Read(bytes, 0, serialPort1.ReadBufferSize);
+            BotOuput(bytes, serialPort1.ReadBufferSize);
         }
         
-        private void BotOuput(string text)
+        private void BotOuput(byte[] bytes, int lenght)
         {
             if (this.read_b.InvokeRequired)
             {
                 try
                 {
                     SetTextCallback d = new SetTextCallback(BotOuput);
-                    this.Invoke(d, new object[] { text });
+                    this.Invoke(d, new object[] { bytes, lenght });
                 }
                 catch (Exception) { }
             }
             else
-            {
-                char[] bytes = text.ToCharArray();
+            {        
                 int itr = 0;
                 if(bytes[itr] == '\x17')
                 {
@@ -109,9 +128,9 @@ namespace YuniClient
                 
                 if((state & System.Convert.ToInt16(eeprom_states.STATE_READING)) != 0)
                 {
-                    for(; itr < text.Length; ++itr)
+                    for(; itr < lenght; ++itr)
                     {
-                        if(recItr == 0 && bytes[itr] == '\x18')
+                        if(/*recItr == 0 &&*/ bytes[itr] == '\x18')
                         {
                             state &= System.Convert.ToInt16(~(eeprom_states.STATE_READING));
                             IntoList();
@@ -121,15 +140,16 @@ namespace YuniClient
                         {
                             case 0: curRec.key = System.Convert.ToByte(bytes[itr]);    break;
                             case 1: curRec.downUp = System.Convert.ToByte(bytes[itr]); break;
-                            case 2: curRec.time = System.Convert.ToUInt16(System.Convert.ToByte(bytes[itr]) << 8); break;
-                            case 3:
-                                curRec.time |= System.Convert.ToUInt16(System.Convert.ToByte(bytes[itr]) & 0xFF);
+                            case 2: curRec.end_event = System.Convert.ToByte(bytes[itr]); break;
+                            case 3: curRec.event_params[0] = System.Convert.ToByte(bytes[itr]); break;
+                            case 4:
+                                curRec.event_params[1] = System.Convert.ToByte(bytes[itr]);
                                 curRec.id = records.Count;
                                 records.Add(curRec);
                                 curRec = new Record();
                                 break;
                         }
-                        if(recItr == 3)
+                        if(recItr == 4)
                            recItr = 0;
                         else 
                             ++recItr;
@@ -144,17 +164,25 @@ namespace YuniClient
                     {
                         if(records[i].key == 0)
                             break;
+
                         buffer = new byte[1];
                         buffer[0] = records[i].key;
                         serialPort1.Write(buffer, 0, 1);
                         while(serialPort1.ReadByte() != 0x1F) { }
+                        
                         buffer[0] = records[i].downUp;
                         serialPort1.Write(buffer, 0, 1);
                         while(serialPort1.ReadByte() != 0x1F) { }
-                        buffer[0] = (byte)(records[i].time >> 8);
+                        
+                        buffer[0] = records[i].end_event;
                         serialPort1.Write(buffer, 0, 1);
                         while(serialPort1.ReadByte() != 0x1F) { }
-                        buffer[0] = (byte)(records[i].time & 0xFF);
+                        
+                        buffer[0] = records[i].event_params[0];
+                        serialPort1.Write(buffer, 0, 1);
+                        while(serialPort1.ReadByte() != 0x1F) { }
+                        
+                        buffer[0] = records[i].event_params[1];
                         serialPort1.Write(buffer, 0, 1);
                         while(serialPort1.ReadByte() != 0x1F) { }
                     }
@@ -183,7 +211,11 @@ namespace YuniClient
             {
                 if(records[i].key == 0)
                     break;
-                _items.Add(records[i].id + " Key \""+ System.Convert.ToChar(records[i].key).ToString() + "\" " + System.Convert.ToChar(records[i].downUp).ToString() + ", time " + (records[i].time*10).ToString()+ " ms");
+                _items.Add(records[i].id + " Key \""+ System.Convert.ToChar(records[i].key).ToString() +
+                           "\" " + System.Convert.ToChar(records[i].downUp).ToString() +
+                           ", end event " + (records[i].end_event).ToString()+ ", params " + 
+                           records[i].event_params[0].ToString() + " " + records[i].event_params[1].ToString()
+                           + " (" + records[i].getBigNum().ToString() + ")");
             }
             recordsList.DataSource = null;
             recordsList.DataSource = _items;
@@ -215,12 +247,12 @@ namespace YuniClient
                 comboBox1.SelectedItem = "Down";
             else
                 comboBox1.SelectedItem = "Up";
-            time_t.Text = (rec.time*10).ToString();
+            time_t.Text = (rec.getBigNum()*10).ToString();
         }
         
         void Save_bClick(object sender, EventArgs e)
         {
-            if(key_t.Text == "" || time_t.Text == "")
+            if(key_t.Text == "" || (time_t.Text == "" && byte1.Text == "" && byte2.Text == ""))
                 return;
             
             if(id_t.Text != "")
@@ -229,27 +261,61 @@ namespace YuniClient
                 if(rec == null)
                     return;
                 rec.key = (byte)(key_t.Text.ToCharArray()[0]);
-                rec.time = (ushort)(System.Convert.ToUInt16(time_t.Text)/10);
                 if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
                     rec.downUp = (byte)'d';
                 else
                     rec.downUp = (byte)'u';
+                if(endEvent.SelectedItem == null || endEvent.SelectedItem == "TIME")
+                {
+                    rec.end_event = (byte)end_events.EVENT_TIME;
+                    rec.setBigNum((ushort)(System.Convert.ToUInt16(time_t.Text)/10));
+                }
+                else if(endEvent.SelectedItem == "SENSOR_LEVEL_HIGHER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_HIGHER;
+                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
+                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
+                }
+                else if(endEvent.SelectedItem == "SENSOR_LEVEL_LOWER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_LOWER;
+                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
+                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
+                }
+                else if(endEvent.SelectedItem == "RANGE_MIDDLE_HIGHER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_HIGHER;
+                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
+                }
+                else if(endEvent.SelectedItem == "RANGE_MIDDLE_LOWER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_LOWER;
+                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
+                }
             }
             else
             {
-                Record rec = new Record();  
+                Record rec = null;
                 
                 int behind = -1;
                 if(behind_t.Text != "")
                 {
                     behind = System.Convert.ToInt32(behind_t.Text);
-                    rec = GetRec(behind+1);            
+                    
+                    for(int i = 1; i < records.Count; ++i)
+                    {
+                        rec = GetRec(behind+i);
+                        rec.id += 1;
+                    }
+                    rec = new Record(); 
+                    rec.id = behind+1;
+                    records.Add(rec);
                 }
                 else
                 {
                     for(int i = 0; i < records.Count; ++i)
                     {
-                        if(records[i].key == 0 && records[i].time == 0)
+                        if(records[i].key == 0 && records[i].getBigNum() == 0)
                         {
                             rec = records[i];
                             break;
@@ -257,11 +323,38 @@ namespace YuniClient
                     }
                 }
                 rec.key = (byte)(key_t.Text.ToCharArray()[0]);
-                rec.time = (ushort)(System.Convert.ToUInt16(time_t.Text)/10);
+          
                 if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
                     rec.downUp = (byte)'d';
                 else
                     rec.downUp = (byte)'u';
+                if(endEvent.SelectedItem == null || endEvent.SelectedItem == "TIME")
+                {
+                    rec.end_event = (byte)end_events.EVENT_TIME;
+                    rec.setBigNum((ushort)(System.Convert.ToUInt16(time_t.Text)/10));
+                }
+                else if(endEvent.SelectedItem == "SENSOR_LEVEL_HIGHER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_HIGHER;
+                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
+                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
+                }
+                else if(endEvent.SelectedItem == "SENSOR_LEVEL_LOWER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_LOWER;
+                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
+                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
+                }
+                else if(endEvent.SelectedItem == "RANGE_MIDDLE_HIGHER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_HIGHER;
+                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
+                }
+                else if(endEvent.SelectedItem == "RANGE_MIDDLE_LOWER")
+                {
+                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_LOWER;
+                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
+                }
             }
             textBox1.Text += "Value saved\r\n";
              List<Record> records2 = records;
@@ -286,6 +379,26 @@ namespace YuniClient
             comboBox1.SelectedItem = "Down";
             time_t.Text = "";
             behind_t.Text = "";
+        }
+        
+        void Erase_bClick(object sender, EventArgs e)
+        {
+        	if(recordsList.SelectedItem == null)
+                return;
+            char[] text = recordsList.SelectedValue.ToString().ToCharArray();
+            string id_st = "";
+            for(int i = 0; text[i] != ' '; ++i)
+                id_st += text[i];
+            int id=System.Convert.ToInt32(id_st);
+            Record rec = GetRec(id);
+            if(rec == null)
+                return;
+            rec.downUp = 0;
+            rec.key = 0;
+            rec.end_event = 0;
+            rec.event_params[0] = 0;
+            rec.event_params[1] = 0;
+            IntoList();
         }
     }
 }

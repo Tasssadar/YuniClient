@@ -30,7 +30,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "12";
+            version.Text = "13";
         }
         delegate void SetTextCallback(string text);
         char[] flash_mode_sequence = { '\x74', '\x7E', '\x7A', '\x33' };
