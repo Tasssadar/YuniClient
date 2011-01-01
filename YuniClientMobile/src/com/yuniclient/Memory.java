@@ -31,6 +31,7 @@ class memory
         short address = 0;
         short rectype = 0;
         short base_i = 0;
+        String line;
         while(true)
         {
         	if(pos - lastSendPos >= 1024)
@@ -44,7 +45,7 @@ class memory
                 break;
             c = (char)file.read();
             ++pos;
-            String line = "";
+            line = "";
             if (c == ':')
             {
                 line += c;

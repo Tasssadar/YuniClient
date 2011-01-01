@@ -558,6 +558,11 @@ public class YuniClient extends Activity {
 			state |= STATE_FLASHING;
         }
     };
+    private final Handler failedHandler = new Handler() {
+        public void handleMessage(Message msg) {
+        	dialog.dismiss();
+        }
+    };
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg)
@@ -640,10 +645,14 @@ public class YuniClient extends Activity {
 									    		Message msg = new Message();
 									    		msg.obj = mem;
 									    		//pagesHandler.sendMessage(msg);
-									    		if(!CreatePages(mem))
-									    			return;
-									    		flashHandler.sendMessage(flashHandler.obtainMessage());
+									    		if(CreatePages(mem))
+									    			flashHandler.sendMessage(flashHandler.obtainMessage());
+									    		else
+									    			failedHandler.sendEmptyMessage(0);	  
 									    	}
+									    	else
+									    		failedHandler.sendEmptyMessage(0);
+									    	
 									    } catch (IOException e) {
 									    	// TODO Auto-generated catch block
 									    	e.printStackTrace();
