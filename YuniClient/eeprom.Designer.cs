@@ -57,10 +57,12 @@ namespace YuniClient
         	this.behind_t = new System.Windows.Forms.TextBox();
         	this.label6 = new System.Windows.Forms.Label();
         	this.label7 = new System.Windows.Forms.Label();
-        	this.endEvent = new System.Windows.Forms.ComboBox();
         	this.label5 = new System.Windows.Forms.Label();
         	this.byte1 = new System.Windows.Forms.TextBox();
         	this.byte2 = new System.Windows.Forms.TextBox();
+        	this.endEvent = new System.Windows.Forms.TextBox();
+        	this.label8 = new System.Windows.Forms.Label();
+        	this.eraseAll = new System.Windows.Forms.Button();
         	this.SuspendLayout();
         	// 
         	// read_b
@@ -178,7 +180,7 @@ namespace YuniClient
         	// 
         	this.save_b.Location = new System.Drawing.Point(305, 228);
         	this.save_b.Name = "save_b";
-        	this.save_b.Size = new System.Drawing.Size(164, 23);
+        	this.save_b.Size = new System.Drawing.Size(152, 23);
         	this.save_b.TabIndex = 15;
         	this.save_b.Text = "Save";
         	this.save_b.UseVisualStyleBackColor = true;
@@ -187,11 +189,11 @@ namespace YuniClient
         	// textBox1
         	// 
         	this.textBox1.Enabled = false;
-        	this.textBox1.Location = new System.Drawing.Point(305, 257);
+        	this.textBox1.Location = new System.Drawing.Point(463, 44);
         	this.textBox1.Multiline = true;
         	this.textBox1.Name = "textBox1";
         	this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-        	this.textBox1.Size = new System.Drawing.Size(164, 90);
+        	this.textBox1.Size = new System.Drawing.Size(164, 207);
         	this.textBox1.TabIndex = 16;
         	// 
         	// Add_b
@@ -238,21 +240,6 @@ namespace YuniClient
         	this.label7.TabIndex = 21;
         	this.label7.Text = "End event";
         	// 
-        	// endEvent
-        	// 
-        	this.endEvent.FormattingEnabled = true;
-        	this.endEvent.Items.AddRange(new object[] {
-        	        	        	"TIME",
-        	        	        	"SENSOR_LEVEL_HIGHER",
-        	        	        	"SENSOR_LEVEL_LOWER",
-        	        	        	"RANGE_MIDDLE_HIGHER",
-        	        	        	"RANGE_MIDDLE_LOWER"});
-        	this.endEvent.Location = new System.Drawing.Point(373, 123);
-        	this.endEvent.Name = "endEvent";
-        	this.endEvent.Size = new System.Drawing.Size(96, 21);
-        	this.endEvent.TabIndex = 22;
-        	this.endEvent.Text = "TIME";
-        	// 
         	// label5
         	// 
         	this.label5.Location = new System.Drawing.Point(305, 153);
@@ -276,15 +263,44 @@ namespace YuniClient
         	this.byte2.Size = new System.Drawing.Size(39, 20);
         	this.byte2.TabIndex = 25;
         	// 
+        	// endEvent
+        	// 
+        	this.endEvent.Location = new System.Drawing.Point(373, 123);
+        	this.endEvent.Name = "endEvent";
+        	this.endEvent.Size = new System.Drawing.Size(75, 20);
+        	this.endEvent.TabIndex = 26;
+        	// 
+        	// label8
+        	// 
+        	this.label8.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+        	this.label8.Location = new System.Drawing.Point(353, 272);
+        	this.label8.Name = "label8";
+        	this.label8.Size = new System.Drawing.Size(232, 62);
+        	this.label8.TabIndex = 27;
+        	this.label8.Text = "EVENT_TIME               = 1,\r\nEVENT_SENSOR_LEVEL_HIGHER= 2,\r\nEVENT_SENSOR_LEVEL_" +
+        	"LOWER = 4,\r\nEVENT_RANGE_MIDDLE_HIGHER= 8,\r\nEVENT_RANGE_MIDDLE_LOWER = 16,";
+        	// 
+        	// eraseAll
+        	// 
+        	this.eraseAll.Location = new System.Drawing.Point(552, 14);
+        	this.eraseAll.Name = "eraseAll";
+        	this.eraseAll.Size = new System.Drawing.Size(75, 23);
+        	this.eraseAll.TabIndex = 28;
+        	this.eraseAll.Text = "Erase all";
+        	this.eraseAll.UseVisualStyleBackColor = true;
+        	this.eraseAll.Click += new System.EventHandler(this.EraseAllClick);
+        	// 
         	// eeprom
         	// 
         	this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         	this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        	this.ClientSize = new System.Drawing.Size(481, 359);
+        	this.ClientSize = new System.Drawing.Size(637, 358);
+        	this.Controls.Add(this.eraseAll);
+        	this.Controls.Add(this.label8);
+        	this.Controls.Add(this.endEvent);
         	this.Controls.Add(this.byte2);
         	this.Controls.Add(this.byte1);
         	this.Controls.Add(this.label5);
-        	this.Controls.Add(this.endEvent);
         	this.Controls.Add(this.label7);
         	this.Controls.Add(this.label6);
         	this.Controls.Add(this.behind_t);
@@ -310,9 +326,11 @@ namespace YuniClient
         	this.ResumeLayout(false);
         	this.PerformLayout();
         }
+        private System.Windows.Forms.Button eraseAll;
+        private System.Windows.Forms.Label label8;
         private System.Windows.Forms.TextBox byte2;
         private System.Windows.Forms.TextBox byte1;
-        private System.Windows.Forms.ComboBox endEvent;
+        private System.Windows.Forms.TextBox endEvent;
         private System.Windows.Forms.Label label7;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.TextBox behind_t;

@@ -247,56 +247,38 @@ namespace YuniClient
                 comboBox1.SelectedItem = "Down";
             else
                 comboBox1.SelectedItem = "Up";
-            time_t.Text = (rec.getBigNum()*10).ToString();
+            endEvent.Text = rec.end_event.ToString();
+            switch(rec.end_event)
+            {
+                case (int)end_events.EVENT_TIME:
+                    time_t.Text = (rec.getBigNum()*10).ToString();
+                    break;
+                case (int)end_events.EVENT_RANGE_MIDDLE_HIGHER:
+                case (int)end_events.EVENT_RANGE_MIDDLE_LOWER:
+                    time_t.Text = rec.getBigNum().ToString();
+                    break;
+                case (int)end_events.EVENT_SENSOR_LEVEL_HIGHER:
+                case (int)end_events.EVENT_SENSOR_LEVEL_LOWER:
+                    byte1.Text = rec.event_params[0].ToString();
+                    byte2.Text = rec.event_params[1].ToString();
+                    break;
+            }
         }
         
         void Save_bClick(object sender, EventArgs e)
         {
-            if(key_t.Text == "" || (time_t.Text == "" && byte1.Text == "" && byte2.Text == ""))
+            if(key_t.Text == "" || (time_t.Text == "" && byte1.Text == "" && byte2.Text == "") || endEvent.Text == "")
                 return;
             
+            Record rec = null;
             if(id_t.Text != "")
             {
-                Record rec = GetRec(System.Convert.ToInt32(id_t.Text));
+                rec = GetRec(System.Convert.ToInt32(id_t.Text));
                 if(rec == null)
                     return;
-                rec.key = (byte)(key_t.Text.ToCharArray()[0]);
-                if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
-                    rec.downUp = (byte)'d';
-                else
-                    rec.downUp = (byte)'u';
-                if(endEvent.SelectedItem == null || endEvent.SelectedItem == "TIME")
-                {
-                    rec.end_event = (byte)end_events.EVENT_TIME;
-                    rec.setBigNum((ushort)(System.Convert.ToUInt16(time_t.Text)/10));
-                }
-                else if(endEvent.SelectedItem == "SENSOR_LEVEL_HIGHER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_HIGHER;
-                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
-                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
-                }
-                else if(endEvent.SelectedItem == "SENSOR_LEVEL_LOWER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_LOWER;
-                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
-                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
-                }
-                else if(endEvent.SelectedItem == "RANGE_MIDDLE_HIGHER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_HIGHER;
-                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
-                }
-                else if(endEvent.SelectedItem == "RANGE_MIDDLE_LOWER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_LOWER;
-                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
-                }
             }
             else
             {
-                Record rec = null;
-                
                 int behind = -1;
                 if(behind_t.Text != "")
                 {
@@ -304,7 +286,7 @@ namespace YuniClient
                     
                     for(int i = 1; i < records.Count; ++i)
                     {
-                        rec = GetRec(behind+i);
+                        rec = records[i];
                         rec.id += 1;
                     }
                     rec = new Record(); 
@@ -322,42 +304,30 @@ namespace YuniClient
                         }
                     }
                 }
-                rec.key = (byte)(key_t.Text.ToCharArray()[0]);
-          
-                if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
-                    rec.downUp = (byte)'d';
-                else
-                    rec.downUp = (byte)'u';
-                if(endEvent.SelectedItem == null || endEvent.SelectedItem == "TIME")
-                {
-                    rec.end_event = (byte)end_events.EVENT_TIME;
+            }
+            rec.key = (byte)(key_t.Text.ToCharArray()[0]);
+            if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
+                rec.downUp = (byte)'d';
+            else
+                rec.downUp = (byte)'u';
+            rec.end_event = (byte)System.Convert.ToInt32(endEvent.Text);
+                
+            switch(System.Convert.ToInt32(endEvent.Text))
+            {
+                case (int)end_events.EVENT_TIME:
                     rec.setBigNum((ushort)(System.Convert.ToUInt16(time_t.Text)/10));
-                }
-                else if(endEvent.SelectedItem == "SENSOR_LEVEL_HIGHER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_HIGHER;
+                    break;
+                case (int)end_events.EVENT_RANGE_MIDDLE_HIGHER:
+                case (int)end_events.EVENT_RANGE_MIDDLE_LOWER:
+                    rec.setBigNum((ushort)System.Convert.ToUInt16(time_t.Text));
+                    break;
+                case (int)end_events.EVENT_SENSOR_LEVEL_HIGHER:
+                case (int)end_events.EVENT_SENSOR_LEVEL_LOWER:
                     rec.event_params[0] = System.Convert.ToByte(byte1.Text);
                     rec.event_params[1] = System.Convert.ToByte(byte2.Text);
-                }
-                else if(endEvent.SelectedItem == "SENSOR_LEVEL_LOWER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_SENSOR_LEVEL_LOWER;
-                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
-                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
-                }
-                else if(endEvent.SelectedItem == "RANGE_MIDDLE_HIGHER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_HIGHER;
-                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
-                }
-                else if(endEvent.SelectedItem == "RANGE_MIDDLE_LOWER")
-                {
-                    rec.end_event = (byte)end_events.EVENT_RANGE_MIDDLE_LOWER;
-                    rec.setBigNum(System.Convert.ToUInt16(time_t.Text));
-                }
+                    break;
             }
             textBox1.Text += "Value saved\r\n";
-             List<Record> records2 = records;
             IntoList();
         }
         
@@ -396,9 +366,20 @@ namespace YuniClient
             rec.downUp = 0;
             rec.key = 0;
             rec.end_event = 0;
-            rec.event_params[0] = 0;
-            rec.event_params[1] = 0;
+            rec.setBigNum(0);
             IntoList();
+        }
+        
+        void EraseAllClick(object sender, EventArgs e)
+        {
+        	for(int i = 0; i < records.Count; ++i)
+            {
+        	    records[i].key = 0;
+        	    records[i].downUp = 0;
+        	    records[i].end_event = 0;
+        	    records[i].setBigNum(0);
+        	}
+        	IntoList();
         }
     }
 }
