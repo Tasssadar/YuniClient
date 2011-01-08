@@ -55,16 +55,16 @@
             android:layout_toRightOf="@id/Record_b"
             android:text="P"/>
            
-        <Button android:id="@+id/Return_b"
+        <Button android:id="@+id/Sensors_b"
             android:layout_width="108px"
             android:layout_height="40px"
             android:layout_below="@id/Record_b"
-            android:text="Back"/> 
+            android:text="Turn on"/> 
       <Button android:id="@+id/Regulator_b"
             android:layout_width="108px"
             android:layout_height="40px"
             android:layout_below="@id/Record_b"
-            android:layout_toRightOf="@id/Return_b"
+            android:layout_toRightOf="@id/Sensors_b"
             android:text="Q"/>
       <Button android:id="@+id/Clear_b"
             android:layout_width="108px"
