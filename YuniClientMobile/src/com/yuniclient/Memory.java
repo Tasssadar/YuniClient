@@ -13,12 +13,12 @@ import android.os.Message;
 
 class memory
 {
-	public int Get(int index) { return m_buffer.get(index); }
-	public int size() { return m_buffer.size(); }
+    public int Get(int index) { return m_buffer.get(index); }
+    public int size() { return m_buffer.size(); }
     public int data() { if(m_buffer.size() == 0) return 0; else return m_buffer.get(0); }
     public boolean Load(File filePath, Handler handler) throws IOException
     {
-    	m_buffer = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
+        m_buffer = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
         
         List<Integer> rec_nums = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
         FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
@@ -34,13 +34,13 @@ class memory
         String line;
         while(true)
         {
-        	if(pos - lastSendPos >= 1024)
-        	{
-        		msg = new Message();
-        		msg.arg1 = (int)(pos/1024);
-        		handler.sendMessage(msg);
-        		lastSendPos = pos;
-        	}
+            if(pos - lastSendPos >= 1024)
+            {
+                msg = new Message();
+                msg.arg1 = (int)(pos/1024);
+                handler.sendMessage(msg);
+                lastSendPos = pos;
+            }
             if (pos >= filePath.length())
                 break;
             c = (char)file.read();
@@ -68,7 +68,7 @@ class memory
             rec_nums.clear();
             for (short i = 1; i + 1 < line.length(); ++i)
             {
-            	digit = "0x";
+                digit = "0x";
                 digit += line.charAt(i);
                 ++i;
                 digit += line.charAt(i);
@@ -114,7 +114,7 @@ class memory
         return true;
     }
 
-	public List<Integer> m_buffer;
+    public List<Integer> m_buffer;
 };
 
 class Page
@@ -125,7 +125,7 @@ class Page
 
 class HexFilter implements FilenameFilter {
     public boolean accept(File dir, String name) {
-    	File file = new File(dir, name);
+        File file = new File(dir, name);
         return (name.endsWith(".hex") || file.isDirectory());
     }
 }

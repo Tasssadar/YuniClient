@@ -51,7 +51,7 @@
               android:layout_toRightOf="@id/event_label"
               android:layout_below="@id/downUp_input"
               android:maxLength="3"
-              android:text="" />
+              android:text="0" />
     
     <TextView android:id="@+id/byte_label"
     		  android:text="Bytes"
@@ -68,7 +68,7 @@
               android:layout_marginRight="20px"
               android:layout_below="@id/event_input"
               android:maxLength="3"
-              android:text="" />
+              android:text="0" />
     <EditText android:id="@+id/byte2_input" 
               android:layout_width="80px" 
               android:layout_height="wrap_content" 
@@ -77,7 +77,7 @@
               android:layout_toRightOf="@id/byte1_input"
               android:layout_below="@id/event_input"
               android:maxLength="3"
-              android:text="" />
+              android:text="0" />
     
     <TextView android:id="@+id/big_label"
     		  android:text="BigNum"
@@ -92,19 +92,22 @@
               android:background="@android:drawable/editbox_background"
               android:layout_toRightOf="@id/big_label"
               android:layout_below="@id/byte2_input"
-              android:text="" />
+              android:text="0" />
               
     <TextView android:id="@+id/eventstext"
-    		  android:text="EVENT_TIME               = 1,
-EVENT_SENSOR_LEVEL_HIGHER= 2,
-EVENT_SENSOR_LEVEL_LOWER = 4,
-EVENT_RANGE_MIDDLE_HIGHER= 8,
-EVENT_RANGE_MIDDLE_LOWER = 16,
-EVENT_DISTANCE           = 32,"
+    		  android:text="TIME               = 1,
+SENSOR_LEVEL_HIGHER= 2,
+SENSOR_LEVEL_LOWER = 3,          
+RANGE_HIGHER       = 4, (224,226,228)  
+RANGE_LOWER        = 5,              
+DISTANCE           = 6,                
+DISTANCE_LEFT      = 7,                 
+DISTANCE_RIGHT     = 8"
     		  android:layout_width="fill_parent"
     		  android:layout_marginTop="15px"
     		  android:layout_below="@id/big_input"
-    		  android:layout_height="wrap_content" />      
+    		  android:layout_height="wrap_content"
+    		  android:typeface="monospace" />      
     		     
     <Button android:id="@+id/button_save_eeprom_item"
         android:layout_width="fill_parent"
