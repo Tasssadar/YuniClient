@@ -4,39 +4,42 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 
 class memory
 {
-    public int Get(int index) { return m_buffer[index]; }
+    public byte Get(int index) { return m_buffer[index]; }
     public int size() { return size; }
     public int data() { if(size == 0) return 0; else return m_buffer[0]; }
     
     public boolean Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
     {
-        FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
-        byte[] rec_nums = new byte[50];
+        final FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
+        final byte[] fileBuff = new byte[(int) filePath.length()];
+        file.read(fileBuff);
+        file.close();
+        
+        final byte[] rec_nums = new byte[50];
         byte rec_nums_itr = 0;
         m_buffer = new byte[deviceInfo.mem_size];
         size = 0;
-        long pos = 0;
+        int pos = 0;
         long lastSendPos = 0;
         Message msg = null;
-        char c = (char)0;
         String digit = null;
         short length = 0;
         short address = 0;
         short rectype = 0;
         short base_i = 0;
-        String line;
+        char[] line = new char[50];
+        byte lineLenght;
+
         while(true)
         {
-            if(pos - lastSendPos >= 1024)
+            if(Debug.isDebuggerConnected() && pos - lastSendPos >= 1024)
             {
                 msg = new Message();
                 msg.arg1 = (int)(pos/1024);
@@ -45,36 +48,31 @@ class memory
             }
             if (pos >= filePath.length())
                 break;
-            c = (char)file.read();
+            
+            line[0] = (char)fileBuff[pos];
+            lineLenght = 1;
             ++pos;
-            line = "";
-            if (c == ':')
+            if (line[0] == ':')
             {
-                line += c;
                 while (pos + 1 != filePath.length())
                 {
-                    c = (char)file.read();
-                    ++pos;
-                    handler.sendMessage(handler.obtainMessage());
-                    if (c == '\r' && (char)file.read() == '\n')
+                    if ((char)fileBuff[pos] == '\r' && (char)fileBuff[pos+1] == '\n')
                     {
-                        c = '\n';
-                        ++pos;
+                        pos+=2;
                         break;
                     }
-                    line += c;
+                    line[lineLenght] = (char)fileBuff[pos];
+                    ++pos;
+                    ++lineLenght;
                 }
             }
-            if (line.charAt(0) != ':' || line.length() % 2 != 1)
+            if (line[0] != ':' || lineLenght % 2 != 1)
                 return false;
             rec_nums_itr = 0;
-            for (short i = 1; i + 1 < line.length(); ++i)
+            for (short i = 1; i + 1 < lineLenght; i+=2)
             {
-                digit = "0x";
-                digit += line.charAt(i);
-                ++i;
-                digit += line.charAt(i);
-                rec_nums[rec_nums_itr] = Integer.decode(digit).byteValue();
+                digit = String.copyValueOf(line, i, 2);
+                rec_nums[rec_nums_itr] = (byte) Integer.parseInt(digit, 16);
                 ++rec_nums_itr;
             }
             length = (short) (0xFF & (int)rec_nums[0]);
@@ -112,9 +110,6 @@ class memory
                 m_buffer[base_i + address + i] = rec_nums[i + 4];
             }
         }
-        file.close();
-        file = null;
-        rec_nums = null;
         msg = null;
         digit = null;
         return true;
@@ -128,7 +123,7 @@ class memory
 class Page
 {
     public int address;
-    public List<Integer> data;
+    public byte[] data;
 };
 
 class HexFilter implements FilenameFilter {

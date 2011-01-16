@@ -21,6 +21,7 @@ import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.view.KeyEvent;
@@ -1030,14 +1031,17 @@ public class YuniClient extends Activity {
                                 final TextView file = (TextView)findViewById(R.id.hex_file);
                                 File hex = new File(file.getText().toString());
                                 dialog.dismiss();
-                                dialog= new ProgressDialog(context);
-                                dialog.setProgress(0);
-                                dialog.setMax((int)(hex.length()/1024));
-                                dialog.setProgress(0);
-                                dialog.setCancelable(false);
-                                dialog.setMessage("Loading file...");
-                                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                dialog.show();
+                                if(Debug.isDebuggerConnected())
+                                {
+                                    dialog= new ProgressDialog(context);
+                                    dialog.setProgress(0);
+                                    dialog.setMax((int)(hex.length()/1024));
+                                    dialog.setProgress(0);
+                                    dialog.setCancelable(false);
+                                    dialog.setMessage("Loading file...");
+                                    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                                    dialog.show();
+                                }
                                 Thread load = new Thread (new Runnable()
                                 {
                                     public void run()
@@ -1049,9 +1053,6 @@ public class YuniClient extends Activity {
                                         {
                                             if(mem.Load(hex, progressHandler2, deviceInfo))
                                             {
-                                                Message msg = new Message();
-                                                msg.obj = mem;
-                                                //pagesHandler.sendMessage(msg);
                                                 if(CreatePages(mem))
                                                     flashHandler.sendMessage(flashHandler.obtainMessage());
                                                 else
@@ -1109,6 +1110,7 @@ public class YuniClient extends Activity {
                                 dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                                 dialog.setMax(curEditId);
                                 dialog.setProgress(0);
+                                dialog.setCancelable(false);
                                 dialog.show();
                             }
                             else if(itr_buff >= 510 || (itr_buff >= curEditId*REC_SIZE && itr_buff%5 == 0))
@@ -1137,22 +1139,11 @@ public class YuniClient extends Activity {
     private void SendPage(Page page)
     {	
         final byte[] out = { 0x10 };
-        mChatService.write(out.clone());
-        // second value must be 128 or 0, wish c# would allow overflow...
-        int adress_sec = page.address;
-        while (adress_sec > 255)
-            adress_sec -= 256;
+        mChatService.write(out);
 
-        final byte[] adress = { (byte)(page.address >> 8), (byte)(adress_sec) };
+        final byte[] adress = { (byte)(page.address >> 8), (byte)(page.address) };
         mChatService.write(adress);
-        byte[] data = new byte[page.data.size()];
-        for (int i = 0; i < page.data.size(); ++i)
-            data[i] = (byte)(page.data.get(i).shortValue());
-
-        mChatService.write(data);
-        TextView error = (TextView)findViewById(R.id.error);
-        final float percent = (float)(pagesItr +1) / ((float)pages.size() / 100);
-        error.setText("Flashing " + (int)percent + "%...");
+        mChatService.write(page.data);
         if(dialog.isShowing())
             dialog.setProgress(pagesItr+1);
     }
@@ -1172,20 +1163,23 @@ public class YuniClient extends Activity {
         boolean add_alt_page = deviceInfo.patch_pos != 0;
 
         int i = 0;
+        short pageItr = 0;
         Page cur_page = new Page();
         for (boolean generate = true; generate && i < deviceInfo.mem_size / deviceInfo.page_size; ++i)
         {
             cur_page = new Page();
-            cur_page.data = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
+            cur_page.data = new byte[deviceInfo.page_size];
             cur_page.address = i * deviceInfo.page_size;
+            pageItr = 0;
             if (mem.size() <= (i + 1) * deviceInfo.page_size)
             {
                 for (int y = 0; y < deviceInfo.page_size; ++y)
                 {
                     if (i * deviceInfo.page_size + y < mem.size())
-                        cur_page.data.add(mem.Get(i * deviceInfo.page_size + y));
+                        cur_page.data[pageItr] = mem.Get(i * deviceInfo.page_size + y);
                     else
-                        cur_page.data.add(0xff);
+                        cur_page.data[pageItr] = (byte) 0xff;
+                    ++pageItr;
                 }
                 generate = false;
             }
@@ -1193,29 +1187,29 @@ public class YuniClient extends Activity {
             {
                 for (int y = i * deviceInfo.page_size; y < (i + 1) * deviceInfo.page_size; ++y)
                 {
-                    cur_page.data.add(mem.Get(y));
+                    cur_page.data[pageItr] = mem.Get(y);
+                    ++pageItr;
                 }
             }
 
-            if (!patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size))
+            if (!patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr))
                 return false; 
             pages.add(cur_page);
 
             if (i == alt_entry_page)
                 add_alt_page = false;
-            //progressHandler.sendMessage(progressHandler.obtainMessage());
         }
         if (add_alt_page)
         {
             for (int y = 0; y < deviceInfo.page_size; ++y)
-                cur_page.data.set(y, 0xff);
+                cur_page.data[y] = (byte)0xff;
             cur_page.address = alt_entry_page * deviceInfo.page_size;
-            patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size);
+            patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr);
             pages.add(cur_page);
         }
         return true;
     }
-    private boolean patch_page(memory mem, Page page, int patch_pos, int boot_reset)
+    private boolean patch_page(memory mem, Page page, int patch_pos, int boot_reset, short page_pos)
     {
         if (patch_pos == 0)
             return true;
@@ -1225,17 +1219,17 @@ public class YuniClient extends Activity {
             int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;
             if((entrypt_jmp & 0xf000) != 0xc000)
                 return false;
-            page.data.set(0, entrypt_jmp);
-            page.data.set(1, (entrypt_jmp >> 8));
+            page.data[0] = (byte) entrypt_jmp;
+            page.data[1] = (byte) (entrypt_jmp >> 8);
             return true;
         }
 
-        if (page.address > patch_pos || page.address + page.data.size() <= patch_pos)
+        if (page.address > patch_pos || page.address + page_pos <= patch_pos)
             return true;
 
         int new_patch_pos = patch_pos - page.address;
 
-        if (page.data.get(new_patch_pos) != 0xff || page.data.get(new_patch_pos + 1) != 0xff)
+        if (page.data[new_patch_pos] != (byte)0xff || page.data[new_patch_pos + 1] != (byte)0xff)
             return false;
 
         int entrypt_jmp2 = mem.Get(0) | (mem.Get(1) << 8);
@@ -1244,9 +1238,8 @@ public class YuniClient extends Activity {
 
         int entry_addr = (entrypt_jmp2 & 0x0fff) + 1;
         entrypt_jmp2 = ((entry_addr - patch_pos / 2 - 1) & 0xfff) | 0xc000;
-        page.data.set(new_patch_pos, entrypt_jmp2);
-        page.data.set(new_patch_pos + 1, (entrypt_jmp2 >> 8));
+        page.data[new_patch_pos] = (byte) entrypt_jmp2;
+        page.data[new_patch_pos + 1] =  (byte) (entrypt_jmp2 >> 8);
         return true;
     }
-   
 }
