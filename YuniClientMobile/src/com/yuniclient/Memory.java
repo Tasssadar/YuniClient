@@ -13,15 +13,17 @@ import android.os.Message;
 
 class memory
 {
-    public int Get(int index) { return m_buffer.get(index); }
-    public int size() { return m_buffer.size(); }
-    public int data() { if(m_buffer.size() == 0) return 0; else return m_buffer.get(0); }
-    public boolean Load(File filePath, Handler handler) throws IOException
+    public int Get(int index) { return m_buffer[index]; }
+    public int size() { return size; }
+    public int data() { if(size == 0) return 0; else return m_buffer[0]; }
+    
+    public boolean Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
     {
-        m_buffer = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
-        
-        List<Integer> rec_nums = Collections.checkedList(new ArrayList<Integer>(), Integer.class);
         FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
+        byte[] rec_nums = new byte[50];
+        byte rec_nums_itr = 0;
+        m_buffer = new byte[deviceInfo.mem_size];
+        size = 0;
         long pos = 0;
         long lastSendPos = 0;
         Message msg = null;
@@ -65,27 +67,27 @@ class memory
             }
             if (line.charAt(0) != ':' || line.length() % 2 != 1)
                 return false;
-            rec_nums.clear();
+            rec_nums_itr = 0;
             for (short i = 1; i + 1 < line.length(); ++i)
             {
                 digit = "0x";
                 digit += line.charAt(i);
                 ++i;
                 digit += line.charAt(i);
-                rec_nums.add(Integer.decode(digit));
-                // Form1.ActiveForm.Controls.Find("textBox1", true)[0].Text += "d"+digit +" " + res + "\r\n";
+                rec_nums[rec_nums_itr] = Integer.decode(digit).byteValue();
+                ++rec_nums_itr;
             }
-            length = rec_nums.get(0).shortValue();
-            address = (short) (rec_nums.get(1).shortValue() * 0x100 + rec_nums.get(2).shortValue());
-            rectype = rec_nums.get(3).shortValue();
-            if (length != rec_nums.size() - 5)
+            length = (short) (0xFF & (int)rec_nums[0]);
+            address = (short) ((0xFF & (int)rec_nums[1]) * 0x100 + (0xFF & (int)rec_nums[2]));
+            rectype = (short)(0xFF & (int)rec_nums[3]);
+            if (length != rec_nums_itr - 5)
                 return false;
 
             if (rectype == 2)
             {
                 if (length != 2)
                     return false;
-                base_i = (short) ((rec_nums.get(4).shortValue() * 0x100 + rec_nums.get(5).shortValue()) * 16);
+                base_i = (short)((((0xFF & (int)rec_nums[4]) * 0x100 + (0xFF & (int)rec_nums[5])) * 16));
                 continue;
             }
 
@@ -97,13 +99,17 @@ class memory
 
             for (int i = 0; i < length; ++i)
             {
-                while (base_i + address + i >= m_buffer.size())
-                    m_buffer.add(0xff);
+                for (;base_i + address + i >= size; ++size)
+                {
+                    if(size >= deviceInfo.mem_size)
+                        return false;
+                    m_buffer[size] = (byte) 0xFF;
+                }
 
-                if (m_buffer.get(base_i + address + i) != 0xff)
+                if (m_buffer[base_i + address + i] != (byte)0xff)
                     return false;
 
-                m_buffer.set(base_i + address + i, rec_nums.get(i + 4));
+                m_buffer[base_i + address + i] = rec_nums[i + 4];
             }
         }
         file.close();
@@ -114,7 +120,9 @@ class memory
         return true;
     }
 
-    public List<Integer> m_buffer;
+    private byte[] m_buffer;
+    private int size;
+    
 };
 
 class Page

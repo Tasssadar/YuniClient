@@ -179,6 +179,8 @@ public class YuniClient extends Activity {
             {
                 public void onCancel(DialogInterface dia)
                 {
+                    if(mChatService != null)
+                        mChatService.stop();
                     EnableConnect(true);
                 }
             });
@@ -254,11 +256,11 @@ public class YuniClient extends Activity {
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {	 
-              if((state & STATE_CONTROLS) != 0 || (state & STATE_EEPROM) != 0)
+              if((state & STATE_CONTROLS) != 0 || ((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0))
                   InitMain();
               else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
                   InitEEPROMList();
-              else if((state & STATE_CONNECTED) != 0)
+              else if((state & STATE_CONNECTED) != 0 || (state & STATE_EEPROM) != 0)
                   Disconnect(true);
               else
                   finish();
@@ -266,7 +268,8 @@ public class YuniClient extends Activity {
         }
         else if(keyCode == KeyEvent.KEYCODE_MENU)
         {
-            if((state & STATE_EEPROM) != 0)
+            if(((state & STATE_EEPROM) != 0  || (state & STATE_CONNECTED) == 0) &&
+               (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
                 return super.onKeyDown(keyCode, event);
             moveTaskToBack(true);
             return true;
@@ -275,11 +278,28 @@ public class YuniClient extends Activity {
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        if((state & STATE_EEPROM) == 0)
-            return false;
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu, menu);
+        prepareMenu(menu);
         return true;
+    }
+    @Override
+    public boolean onPrepareOptionsMenu (Menu menu)
+    {
+        prepareMenu(menu);
+        return true;
+    }
+    void prepareMenu(Menu menu)
+    {
+        MenuInflater inflater = getMenuInflater();
+        if((state & STATE_EEPROM) != 0 && menu.findItem(R.id.write) == null)
+        {
+            menu.clear();
+            inflater.inflate(R.menu.menu, menu);
+        }
+        else if((state & STATE_EEPROM) == 0 && menu.findItem(R.id.offline) == null)
+        {
+            menu.clear();
+            inflater.inflate(R.menu.menu2, menu);
+        }
     }
     // INITS
     public void init()
@@ -389,6 +409,9 @@ public class YuniClient extends Activity {
                 controls = (Button) findViewById(R.id.Flash_b);
                 controls.setEnabled(false);
                 controls.setClickable(false);
+                controls = (Button) findViewById(R.id.eeprom_b);
+                controls.setEnabled(true);
+                controls.setClickable(true);
              }
         });
         button = (Button) findViewById(R.id.Stop_b);
@@ -416,6 +439,9 @@ public class YuniClient extends Activity {
                 button2 = (Button) findViewById(R.id.Flash_b);
                 button2.setEnabled(true);
                 button2.setClickable(true);
+                button2 = (Button) findViewById(R.id.eeprom_b);
+                button2.setEnabled(false);
+                button2.setClickable(false);
              }
         });
         button = (Button) findViewById(R.id.Flash_b);
@@ -575,7 +601,10 @@ public class YuniClient extends Activity {
         {
             EEPROM = new eeprom();
             mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
-            LoadEEPROM();
+            if((state & STATE_CONNECTED) != 0)
+                LoadEEPROM();
+            //else
+            //	OpenLoadDialog();
         }
         mEEPROMEntries.clear();
         ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
@@ -711,70 +740,113 @@ public class YuniClient extends Activity {
                 EEPROM.set(curEditId+3, (byte)(Integer.valueOf(edit.getText().toString()).intValue() >> 8));
                 EEPROM.set(curEditId+4, (byte)(Integer.valueOf(edit.getText().toString()).intValue() & 0xFF));
                 break;
-            
         }
         InitEEPROMList();
     }
-    
+    void OpenLoadDialog()
+    {
+        final AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+        curFolder = new File("/mnt/sdcard/YuniData/");
+        final CharSequence[] items = curFolder.list();
+        builder2.setTitle("Chose file");
+        builder2.setItems(items, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int item) {
+                final CharSequence[] items = curFolder.list();
+                File file = new File(curFolder, items[item].toString());
+                if(!file.isFile())
+                    return;
+                dialog.dismiss();
+                try {
+                    EEPROM.fromFile(file, mHandler);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        });
+        final AlertDialog alert = builder2.create();
+        alert.show();
+    }
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
-        case R.id.reload:
-            LoadEEPROM();
-            return true;
-        case R.id.write:
-            state |= STATE_EEPROM_WRITE;
-            dialog= new ProgressDialog(this);
-            dialog.setMessage("Erasing EEPROM...");
-            dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
-            dialog.setMax(0);
-            dialog.setProgress(0);
-            dialog.setCancelable(false);
-            dialog.show();
-            itr_buff = 0;
-            byte[] out = {0x1C};
-            mChatService.write(out);
-            curEditId = mEEPROMEntries.getCount();
-            return true;
-        case R.id.save:
-            AlertDialog.Builder builder;
-            alertDialog = null;
-            LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-            View layout = inflater.inflate(R.layout.save_data,
-                                           (ViewGroup) findViewById(R.id.layout_root));
-            builder = new AlertDialog.Builder(context);
-            builder.setView(layout);
-            builder.setNeutralButton("Save", saveDataFile);
-            builder.setTitle("Chose filename");
-            alertDialog = builder.create();
-            alertDialog.show();
-            return true;
-        case R.id.load:
-            final AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-            curFolder = new File("/mnt/sdcard/YuniData/");
-            final CharSequence[] items = curFolder.list();
-            builder2.setTitle("Chose file");
-            builder2.setItems(items, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int item) {
-                    final CharSequence[] items = curFolder.list();
-                    File file = new File(curFolder, items[item].toString());
-                    if(!file.isFile())
-                        return;
-                    dialog.dismiss();
-                    try {
-                        EEPROM.fromFile(file, mHandler);
-                    } catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            });
-            final AlertDialog alert = builder2.create();
-            alert.show();
-            return true;
-        default:
-            return super.onOptionsItemSelected(item);
+            case R.id.New_entry:
+                curEditId = mEEPROMEntries.getCount()*REC_SIZE;
+                state |= STATE_EEPROM_NEW_ADD;
+                state &= ~(STATE_EEPROM);
+                setContentView(R.layout.eeprom_edit);
+                Button button = (Button) findViewById(R.id.button_save_eeprom_item);
+                button.setOnClickListener(new View.OnClickListener() {
+                     public void onClick(View v) {
+                        SaveEntry();
+                        state &= ~(STATE_EEPROM_NEW_ADD);
+                     }
+                  });
+                return true;
+            case R.id.eraseAll:
+                AlertDialog.Builder builder2 = new AlertDialog.Builder(this);
+                builder2.setMessage("Do you really want to erase all entries?")
+                       .setCancelable(false)
+                       .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                           public void onClick(DialogInterface dialog, int id) {
+                               mEEPROMEntries.clear();
+                               EEPROM.clear();
+                               dialog.dismiss();
+                           }
+                       })
+                       .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                           public void onClick(DialogInterface dialog, int id) {
+                                dialog.dismiss();
+                           }
+                       });
+                AlertDialog alert = builder2.create();
+                alert.show();
+                return true;
+            case R.id.reload:
+                if((state & STATE_CONNECTED) != 0)
+                    LoadEEPROM();
+                return true;
+            case R.id.write:
+                if((state & STATE_CONNECTED) == 0)
+                    return true;
+                state |= STATE_EEPROM_WRITE;
+                dialog= new ProgressDialog(this);
+                dialog.setMessage("Erasing EEPROM...");
+                dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
+                dialog.setMax(0);
+                dialog.setProgress(0);
+                dialog.setCancelable(false);
+                dialog.show();
+                itr_buff = 0;
+                byte[] out = {0x1C};
+                mChatService.write(out);
+                curEditId = mEEPROMEntries.getCount();
+                return true;
+            case R.id.save:
+                AlertDialog.Builder builder;
+                alertDialog = null;
+                LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+                View layout = inflater.inflate(R.layout.save_data,
+                                               (ViewGroup) findViewById(R.id.layout_root));
+                builder = new AlertDialog.Builder(context);
+                builder.setView(layout);
+                builder.setNeutralButton("Save", saveDataFile);
+                builder.setTitle("Chose filename");
+                alertDialog = builder.create();
+                alertDialog.show();
+                return true;
+            case R.id.load:
+                OpenLoadDialog();
+                return true;
+            case R.id.offline:
+                InitEEPROMList();
+                return true;
+            case R.id.exit:
+                finish();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
     }
     private final OnClickListener saveDataFile = new DialogInterface.OnClickListener() {
@@ -975,7 +1047,7 @@ public class YuniClient extends Activity {
                                         memory mem = new memory();
                                         try
                                         {
-                                            if(mem.Load(hex, progressHandler2))
+                                            if(mem.Load(hex, progressHandler2, deviceInfo))
                                             {
                                                 Message msg = new Message();
                                                 msg.obj = mem;
