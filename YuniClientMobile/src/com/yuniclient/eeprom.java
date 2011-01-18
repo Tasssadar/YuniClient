@@ -13,9 +13,47 @@ import android.os.Message;
 class eeprom
 {
     public eeprom() { buffer = new byte[512]; }
-    public void set(int index, byte val) { buffer[index] = val ;}
-    public byte get(int index) { return buffer[index]; }
-    public void clear() { for(short i = 0; i < 512; ++i) buffer[i] = 0; }
+    public void set(int index, byte val)
+    {
+    	if(YuniClient.eeprom_part == 2)
+            index += YuniClient.EEPROM_PART2;
+     	buffer[index] = val ;
+    }
+    public void set_nopart(int index, byte val){buffer[index] = val ;}
+    
+    public byte get(int index)
+    {
+    	if(YuniClient.eeprom_part == 2)
+    		index += YuniClient.EEPROM_PART2;
+    	return buffer[index];
+    }
+    public void clear()
+    {
+    	for(short i = 0; i < 255; ++i)
+    		buffer[(YuniClient.eeprom_part == 2) ? (i + YuniClient.EEPROM_PART2) : i] = 0;
+    }
+    public short getTotalRecCount()
+    {
+        short count = 0;
+        for(short i = 0; i < 510; i+=5)
+        {
+        	if(buffer[i] != 0 && buffer[i+1] != 0)
+        		++count; 
+        }
+        
+        return count;
+    }
+    public short getPartRecCount(boolean firstPart)
+    {
+    	short count = 0;
+        final short limit = (short) ((firstPart) ? 255 : 510);
+    	for(short i = (short) (firstPart ? 0 : 255); i < limit; i+=5)
+        {
+        	if(buffer[i] != 0 && buffer[i+1] != 0)
+        		++count; 
+        }
+    	return count;
+    }
     
     public void toFile(String name, Handler handler) throws IOException
     {
@@ -52,6 +90,8 @@ class eeprom
     
     public void erase(int index)
     {
+    	if(YuniClient.eeprom_part == 2)
+    		index += YuniClient.EEPROM_PART2;
         byte[] tmp =  new byte[512];
         short y = 0;
         for(short i = 0; i < 512;++i)
@@ -66,6 +106,8 @@ class eeprom
     
     public void insert(int index)
     {
+    	if(YuniClient.eeprom_part == 2)
+    		index += YuniClient.EEPROM_PART2;
         byte[] tmp =  new byte[512];
         short y = 0;
         for(short i = 0; i < 512;++i)

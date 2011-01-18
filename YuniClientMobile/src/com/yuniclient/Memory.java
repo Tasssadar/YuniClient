@@ -15,9 +15,9 @@ class memory
     public int size() { return size; }
     public int data() { if(size == 0) return 0; else return m_buffer[0]; }
     
-    public boolean Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
+    public String Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
     {
-        final FileInputStream file = new FileInputStream(filePath);//openFileOutput(filePath.getAbsoluteFile().toString(), Context.MODE_PRIVATE);
+        final FileInputStream file = new FileInputStream(filePath);
         final byte[] fileBuff = new byte[(int) filePath.length()];
         file.read(fileBuff);
         file.close();
@@ -67,7 +67,7 @@ class memory
                 }
             }
             if (line[0] != ':' || lineLenght % 2 != 1)
-                return false;
+                return "Wrong line format";
             rec_nums_itr = 0;
             for (short i = 1; i + 1 < lineLenght; i+=2)
             {
@@ -79,12 +79,12 @@ class memory
             address = (short) ((0xFF & (int)rec_nums[1]) * 0x100 + (0xFF & (int)rec_nums[2]));
             rectype = (short)(0xFF & (int)rec_nums[3]);
             if (length != rec_nums_itr - 5)
-                return false;
+                return "Wrong line length";
 
             if (rectype == 2)
             {
                 if (length != 2)
-                    return false;
+                    return "Wrong rectype 2 length";
                 base_i = (short)((((0xFF & (int)rec_nums[4]) * 0x100 + (0xFF & (int)rec_nums[5])) * 16));
                 continue;
             }
@@ -93,26 +93,26 @@ class memory
                 break;
 
             if (rectype != 0)
-                return false;
+                return "Unexpected rectype";
 
             for (int i = 0; i < length; ++i)
             {
                 for (;base_i + address + i >= size; ++size)
                 {
                     if(size >= deviceInfo.mem_size)
-                        return false;
+                        return "File is too big for this device";
                     m_buffer[size] = (byte) 0xFF;
                 }
 
                 if (m_buffer[base_i + address + i] != (byte)0xff)
-                    return false;
+                    return "wtf?";
 
                 m_buffer[base_i + address + i] = rec_nums[i + 4];
             }
         }
         msg = null;
         digit = null;
-        return true;
+        return "";
     }
 
     private byte[] m_buffer;

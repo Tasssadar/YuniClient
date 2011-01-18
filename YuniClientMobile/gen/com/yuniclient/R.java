@@ -51,7 +51,6 @@ public final class R {
         public static final int eeprom_b=0x7f060026;
         public static final int eeprom_entries=0x7f060024;
         public static final int entry_id=0x7f060016;
-        public static final int eraseAll=0x7f060032;
         public static final int error=0x7f06002d;
         public static final int event_input=0x7f06001c;
         public static final int event_label=0x7f06001b;
@@ -69,6 +68,7 @@ public final class R {
         public static final int paired_devices=0x7f060012;
         public static final int reload=0x7f060033;
         public static final int save=0x7f060036;
+        public static final int switchPart=0x7f060032;
         public static final int title_new_devices=0x7f060013;
         public static final int title_paired_devices=0x7f060011;
         public static final int write=0x7f060034;

@@ -82,6 +82,10 @@ public class YuniClient extends Activity {
     public static final short STATE_EEPROM_NEW_ADD=0x800;
     public static final byte REC_SIZE = 5;
     
+    public static final short EEPROM_PART2=255;
+    public static byte eeprom_part = 1;
+    public static byte eeprom_write_part = 1;
+    
     public int state;
     public List<Page> pages;
     public int pagesItr = 0;
@@ -257,11 +261,32 @@ public class YuniClient extends Activity {
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {	 
-              if((state & STATE_CONTROLS) != 0 || ((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0))
+        	  if((state & STATE_EEPROM) != 0)
+        	  {
+        		  AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+                  builder2.setMessage("Do you really want to leave EEPROM interface?")
+                         .setCancelable(false)
+                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                             public void onClick(DialogInterface dialog, int id) {
+                                 if((state & STATE_CONNECTED) != 0)
+                                 	InitMain();
+                                 else
+                                	 Disconnect(true); 
+                             }
+                         })
+                         .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                             public void onClick(DialogInterface dialog, int id) {
+                                  dialog.dismiss();
+                             }
+                         });
+                  AlertDialog alert = builder2.create();
+                  alert.show();
+        	  }
+        	  else if((state & STATE_CONTROLS) != 0)
                   InitMain();
               else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
                   InitEEPROMList();
-              else if((state & STATE_CONNECTED) != 0 || (state & STATE_EEPROM) != 0)
+              else if((state & STATE_CONNECTED) != 0)
                   Disconnect(true);
               else
                   finish();
@@ -301,6 +326,20 @@ public class YuniClient extends Activity {
             menu.clear();
             inflater.inflate(R.menu.menu2, menu);
         }
+    }
+    void ShowAlert(CharSequence text)
+    {
+    	if(dialog != null)
+    		dialog.dismiss();
+	    AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+	    builder2.setMessage(text)
+	           .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+	               public void onClick(DialogInterface dialog, int id) {
+	            	   dialog.dismiss();
+	               }
+	           });
+	    AlertDialog alert = builder2.create();
+	    alert.show();
     }
     // INITS
     public void init()
@@ -595,17 +634,19 @@ public class YuniClient extends Activity {
     {
         state |= STATE_EEPROM;
         state &= ~(STATE_EEPROM_EDIT);
+        state &= ~(STATE_EEPROM_NEW_ADD);
         setContentView(R.layout.eeprom_list);
         if(EEPROM != null && mEEPROMEntries != null)
             readHandler.sendEmptyMessage(0);
         else
         {
+        	eeprom_part = 1;
             EEPROM = new eeprom();
             mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
             if((state & STATE_CONNECTED) != 0)
                 LoadEEPROM();
-            //else
-            //	OpenLoadDialog();
+            else
+            	OpenLoadDialog();
         }
         mEEPROMEntries.clear();
         ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
@@ -678,7 +719,7 @@ public class YuniClient extends Activity {
                 int arg2, long arg3)
         {
             final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            CharSequence[] items = {"Add new behind this one", "Delete"};
+            CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
             String info = ((TextView) arg1).getText().toString();
             curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
             builder.setItems(items, new DialogInterface.OnClickListener() {
@@ -703,6 +744,25 @@ public class YuniClient extends Activity {
                             mEEPROMEntries.clear();
                             readHandler.sendEmptyMessage(0);
                             break;
+                        case 2:
+                        	AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+                            builder2.setMessage("Do you really want to erase all entries?")
+                                   .setCancelable(false)
+                                   .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                       public void onClick(DialogInterface dialog, int id) {
+                                           mEEPROMEntries.clear();
+                                           EEPROM.clear();
+                                           dialog.dismiss();
+                                       }
+                                   })
+                                   .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                       public void onClick(DialogInterface dialog, int id) {
+                                            dialog.dismiss();
+                                       }
+                                   });
+                            AlertDialog alert = builder2.create();
+                            alert.show();
+                        	break;
                     }
                 }
             });
@@ -785,33 +845,29 @@ public class YuniClient extends Activity {
                      }
                   });
                 return true;
-            case R.id.eraseAll:
-                AlertDialog.Builder builder2 = new AlertDialog.Builder(this);
-                builder2.setMessage("Do you really want to erase all entries?")
-                       .setCancelable(false)
-                       .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                           public void onClick(DialogInterface dialog, int id) {
-                               mEEPROMEntries.clear();
-                               EEPROM.clear();
-                               dialog.dismiss();
-                           }
-                       })
-                       .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                           public void onClick(DialogInterface dialog, int id) {
-                                dialog.dismiss();
-                           }
-                       });
-                AlertDialog alert = builder2.create();
-                alert.show();
-                return true;
+            case R.id.switchPart:
+            	if(eeprom_part == 1) eeprom_part = 2;
+            	else eeprom_part = 1;
+            	mEEPROMEntries.clear();
+            	readHandler.sendEmptyMessage(0);
+            	Toast.makeText(context, "Switched to part " + eeprom_part,
+                        Toast.LENGTH_SHORT).show();
+            	return true;
             case R.id.reload:
                 if((state & STATE_CONNECTED) != 0)
                     LoadEEPROM();
+                else
+                	ShowAlert("You are in offline mode");
                 return true;
             case R.id.write:
                 if((state & STATE_CONNECTED) == 0)
+                {
+                	ShowAlert("You are in offline mode");
                     return true;
+                }
                 state |= STATE_EEPROM_WRITE;
+                eeprom_write_part = eeprom_part;
+                eeprom_part = 1;
                 dialog= new ProgressDialog(this);
                 dialog.setMessage("Erasing EEPROM...");
                 dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
@@ -822,7 +878,7 @@ public class YuniClient extends Activity {
                 itr_buff = 0;
                 byte[] out = {0x1C};
                 mChatService.write(out);
-                curEditId = mEEPROMEntries.getCount();
+                curEditId = EEPROM.getTotalRecCount();
                 return true;
             case R.id.save:
                 AlertDialog.Builder builder;
@@ -906,6 +962,8 @@ public class YuniClient extends Activity {
     };
     private final Handler failedHandler = new Handler() {
         public void handleMessage(Message msg) {
+        	final String text = msg.getData().getString("text");
+        	ShowAlert(text);
             dialog.dismiss();
         }
     };
@@ -917,7 +975,7 @@ public class YuniClient extends Activity {
             state &= ~(STATE_EEPROM_READING);
             
             String item = null;
-            for(int itr = 0; itr < 510;)
+            for(int itr = 0; itr < 255;)
             {
                 if(EEPROM.get(itr) == 0 && EEPROM.get(itr+1) == 0)
                     break;
@@ -925,6 +983,9 @@ public class YuniClient extends Activity {
                 item = itr + " Key " + (char)EEPROM.get(itr) + " " + (char)EEPROM.get(itr+1) + "\n";
                 switch(EEPROM.get(itr+2))
                 {
+                    case 0:
+                    	item += "NONE";
+                    	break;
                     case 1:
                         item += "TIME, " + (((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF)*10) + "ms";
                         break;
@@ -1051,15 +1112,29 @@ public class YuniClient extends Activity {
                                         memory mem = new memory();
                                         try
                                         {
-                                            if(mem.Load(hex, progressHandler2, deviceInfo))
+                                        	String result = mem.Load(hex, progressHandler2, deviceInfo);
+                                            if(result == "")
                                             {
-                                                if(CreatePages(mem))
+                                            	result = CreatePages(mem);
+                                                if(result == "")
                                                     flashHandler.sendMessage(flashHandler.obtainMessage());
                                                 else
-                                                    failedHandler.sendEmptyMessage(0);	  
+                                                {
+                                                	Message msg = new Message();
+                                                	Bundle bundle = new Bundle();
+                                                    bundle.putString("text", "Failed to create pages (" + result + ")");
+                                                    msg.setData(bundle);
+                                                    failedHandler.sendMessage(msg);
+                                                }
                                             }
                                             else
-                                                failedHandler.sendEmptyMessage(0);
+                                            {
+                                            	Message msg = new Message();
+                                            	Bundle bundle = new Bundle();
+                                                bundle.putString("text", "Failed to load hex file (" + result + ")");
+                                                msg.setData(bundle);
+                                                failedHandler.sendMessage(msg);
+                                            }
                                             
                                         } catch (IOException e) {
                                             // TODO Auto-generated catch block
@@ -1094,7 +1169,7 @@ public class YuniClient extends Activity {
                             {
                                 if(skip && itr == 0)
                                     continue;
-                                EEPROM.set(itr_buff, buffer[itr]);
+                                EEPROM.set_nopart(itr_buff, buffer[itr]);
                                 ++itr_buff;
                             }
                             if(itr_buff >= 512)
@@ -1108,21 +1183,33 @@ public class YuniClient extends Activity {
                                 dialog= new ProgressDialog(context);
                                 dialog.setMessage("Writing into EEPROM...");
                                 dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                dialog.setMax(curEditId);
+                                dialog.setMax(EEPROM.getTotalRecCount());
                                 dialog.setProgress(0);
                                 dialog.setCancelable(false);
                                 dialog.show();
                             }
-                            else if(itr_buff >= 510 || (itr_buff >= curEditId*REC_SIZE && itr_buff%5 == 0))
+                            else if(buffer[0] != 0x1F)
+                                return;
+                            
+                            if(eeprom_part == 1 && itr_buff >= EEPROM.getPartRecCount(true)*REC_SIZE && curEditId != 0)
+                            {
+                            	eeprom_part = 2;
+                            	byte[] out = {0x16};
+                                mChatService.write(out);
+                                curEditId -= itr_buff/REC_SIZE;
+                                itr_buff = 0;
+                                break;
+                            }
+                            else if(itr_buff >= 510 || (itr_buff >= curEditId*REC_SIZE && itr_buff%5 == 0) || curEditId == 0)
                             {
                                 writeCompleteHandler.sendEmptyMessage(0);
                                 dialog.incrementProgressBy(1);
                                 byte[] out = {0x1E};
                                 mChatService.write(out);
+                                eeprom_part = eeprom_write_part;
                                 return;
                             }
-                            else if(buffer[0] != 0x1F)
-                                return;
+                            
                             byte[] out = {EEPROM.get(itr_buff)};
                             mChatService.write(out);
                             if(itr_buff%5 == 0)
@@ -1148,17 +1235,14 @@ public class YuniClient extends Activity {
             dialog.setProgress(pagesItr+1);
     }
     
-    private boolean CreatePages(memory mem)
+    private String CreatePages(memory mem)
     {
         pages.clear();
         final TextView error = (TextView)findViewById(R.id.error);
         if (mem.size() > deviceInfo.mem_size)
             for (int a = deviceInfo.mem_size; a < mem.size(); ++a)
                 if (mem.Get(a) != 0xff)
-                {
-                    error.setText(error.getText() + "Failed, program is too big!\n");
-                    return false;
-                }
+                    return "Program is too big!";
         int alt_entry_page = deviceInfo.patch_pos / deviceInfo.page_size;
         boolean add_alt_page = deviceInfo.patch_pos != 0;
 
@@ -1193,7 +1277,7 @@ public class YuniClient extends Activity {
             }
 
             if (!patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr))
-                return false; 
+                return "Failed patching page"; 
             pages.add(cur_page);
 
             if (i == alt_entry_page)
@@ -1207,7 +1291,7 @@ public class YuniClient extends Activity {
             patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr);
             pages.add(cur_page);
         }
-        return true;
+        return "";
     }
     private boolean patch_page(memory mem, Page page, int patch_pos, int boot_reset, short page_pos)
     {
