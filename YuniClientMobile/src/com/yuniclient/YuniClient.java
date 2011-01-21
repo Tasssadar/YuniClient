@@ -399,7 +399,7 @@ public class YuniClient extends Activity {
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
         context = this;
-        curFolder = new File("/mnt/sdcard/");
+        curFolder = new File("/mnt/sdcard/hex/");
         fileSelect = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
                 dialog.dismiss();
@@ -435,53 +435,34 @@ public class YuniClient extends Activity {
         button = (Button) findViewById(R.id.Start_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                final byte[] out = { 0x11 };
-                mChatService.write(out.clone());
-                state &= ~(STATE_STOPPED);
-                Button controls = (Button) findViewById(R.id.Controls_b);
-                controls.setEnabled(true);
-                controls.setClickable(true);
-                ((Button)v).setEnabled(false);
-                ((Button)v).setClickable(false);
-                controls = (Button) findViewById(R.id.Stop_b);
-                controls.setEnabled(true);
-                controls.setClickable(true);
-                controls = (Button) findViewById(R.id.Flash_b);
-                controls.setEnabled(false);
-                controls.setClickable(false);
-                controls = (Button) findViewById(R.id.eeprom_b);
-                controls.setEnabled(true);
-                controls.setClickable(true);
+                StartStop((Button)v, ((state & STATE_STOPPED) != 0));
              }
         });
-        button = (Button) findViewById(R.id.Stop_b);
+        button = (Button) findViewById(R.id.SendSpec_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                final byte[] out = { 0x74, 0x7E, 0x7A, 0x33 };
-                mChatService.write(out.clone());
-                try {
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                state |= STATE_STOPPING;
-                mChatService.write(out.clone());
-                TextView error = (TextView)findViewById(R.id.error);
-                error.setText("Stopping...");
-                Button button2 = (Button) findViewById(R.id.Controls_b);
-                button2.setEnabled(false);
-                button2.setClickable(false);
-                ((Button)v).setEnabled(false);
-                ((Button)v).setClickable(false);
-                button2 = (Button) findViewById(R.id.Start_b);
-                button2.setEnabled(true);
-                button2.setClickable(true);
-                button2 = (Button) findViewById(R.id.Flash_b);
-                button2.setEnabled(true);
-                button2.setClickable(true);
-                button2 = (Button) findViewById(R.id.eeprom_b);
-                button2.setEnabled(false);
-                button2.setClickable(false);
+                 AlertDialog.Builder builder;
+                 alertDialog = null;
+                 LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+                 View layout = inflater.inflate(R.layout.save_data,
+                                                (ViewGroup) findViewById(R.id.layout_root));
+                 builder = new AlertDialog.Builder(context);
+                 builder.setView(layout);
+                 builder.setNeutralButton("Send", new DialogInterface.OnClickListener() {
+                     public void onClick(DialogInterface arg0, int arg1) {
+                        EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+                        byte[] out = new byte[text.getText().length()];
+                        for(short i = 0; i < text.getText().length(); ++i)
+                            out[i] = (byte) text.getText().charAt(i);
+                        mChatService.write(out.clone());
+                        Toast.makeText(context, "Text \"" + text.getText().toString() + "\" sent",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
+                 builder.setTitle("Send text");
+                 alertDialog = builder.create();
+                 alertDialog.setCancelable(true);
+                 alertDialog.show();
              }
         });
         button = (Button) findViewById(R.id.Flash_b);
@@ -507,7 +488,7 @@ public class YuniClient extends Activity {
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-                    curFolder = new File("/mnt/sdcard/");
+                    curFolder = new File("/mnt/sdcard/hex/");
                     FilenameFilter filter = new HexFilter();
                     final CharSequence[] items = curFolder.list(filter);
                                         
@@ -518,6 +499,46 @@ public class YuniClient extends Activity {
              }
         });
         
+    }
+    void StartStop(Button v, boolean start)
+    {
+        byte[] out = null;
+        if(start)
+        {
+            state &= ~(STATE_STOPPED);
+            out = new byte[1];
+            out[0] = 0x11;
+            state &= ~(STATE_STOPPED);
+            v.setText("Stop");
+        }
+        else
+        {
+            out = new byte[4];
+            out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
+            mChatService.write(out.clone());
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            state |= STATE_STOPPING;
+            TextView error = (TextView)findViewById(R.id.error);
+            error.setText("Stopping...");
+            v.setText("Start");
+        }
+        v = (Button) findViewById(R.id.Controls_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        v = (Button) findViewById(R.id.SendSpec_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        v = (Button) findViewById(R.id.Flash_b);
+        v.setEnabled(!start);
+        v.setClickable(!start);
+        v = (Button) findViewById(R.id.eeprom_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        mChatService.write(out.clone());
     }
     private final Handler fileClick = new Handler() {
         @Override
