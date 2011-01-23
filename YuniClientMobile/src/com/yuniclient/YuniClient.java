@@ -65,7 +65,7 @@ public class YuniClient extends Activity {
     private ArrayAdapter<String> mEEPROMEntries;
     
     private BluetoothChatService mChatService = null;
-    private View.OnTouchListener keyTouch;	
+    private View.OnTouchListener keyTouch;
     public DialogInterface.OnClickListener fileSelect;
     
     public static final byte STATE_CONNECTED = 0x01;
@@ -87,6 +87,8 @@ public class YuniClient extends Activity {
     public static byte eeprom_write_part = 1;
     
     public int state;
+    public byte btTurnOn;
+    private View connectView = null;
     public List<Page> pages;
     public int pagesItr = 0;
     
@@ -119,17 +121,16 @@ public class YuniClient extends Activity {
         super.onCreate(savedInstanceState);
         context = this;
         state = 0;
+        btTurnOn = 0;
         pages = Collections.checkedList(new ArrayList<Page>(), Page.class);
         setContentView(R.layout.device_list);
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter);
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter != null) {
-            if (!mBluetoothAdapter.isEnabled()) {
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }
-        }
+        if (mBluetoothAdapter == null)
+            ShowAlert("This device does not have bluetooth adapter");
+        else if (!mBluetoothAdapter.isEnabled())
+                EnableBT();
         init();
     }
     public void onDestroy() 
@@ -138,7 +139,26 @@ public class YuniClient extends Activity {
         Disconnect(false);
         unregisterReceiver(mReceiver);
     }
-    
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode != REQUEST_ENABLE_BT || btTurnOn == 0)
+            return;
+        if (resultCode == Activity.RESULT_OK)
+        {
+            switch(btTurnOn)
+            {
+                case 1:
+                    FindDevices();
+                    break;
+                case 2:
+                    Connect(connectView);
+                    break;
+            }
+            btTurnOn = 0;
+            connectView = null;
+        }
+        else
+           ShowAlert("Bluetooth is disabled!");
+    } 
     public void Disconnect(boolean resetUI)
     {
         state = 0;
@@ -166,7 +186,7 @@ public class YuniClient extends Activity {
         {
             pages = null;
             context = null;
-            mBluetoothAdapter = null;		
+            mBluetoothAdapter = null;
         }
     }
         
@@ -177,7 +197,7 @@ public class YuniClient extends Activity {
             dialog= new ProgressDialog(this);
             dialog.setCancelable(true);
             dialog.setMessage("Connecting...");
-            dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
+            dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
             dialog.setMax(0);
             dialog.setProgress(0);
             dialog.setOnCancelListener(new Dialog.OnCancelListener()
@@ -200,15 +220,27 @@ public class YuniClient extends Activity {
         listView = (ListView) findViewById(R.id.paired_devices);
         listView.setEnabled(enable);
     }
-
+    
+    void EnableBT()
+    {
+        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    }
+    
     public void FindDevices()
     {
+        if(!mBluetoothAdapter.isEnabled())
+        {
+            btTurnOn = 1;
+            EnableBT();
+            return;
+        }
         if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
         
         mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
         mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
-        
+
         ListView newDevicesListView = (ListView) findViewById(R.id.new_devices);
         newDevicesListView.setAdapter(mArrayAdapter);
         newDevicesListView.setOnItemClickListener(mDeviceClickListener);
@@ -230,48 +262,59 @@ public class YuniClient extends Activity {
     }
     private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
-            EnableConnect(false);
-            
-            // Cancel discovery because it's costly and we're about to connect
-            mBluetoothAdapter.cancelDiscovery();
-            if(mChatService != null)
-                mChatService.stop();
-            mChatService = new BluetoothChatService(this, mHandler);
-            if(mChatService.getState() == BluetoothChatService.STATE_CONNECTING)
+            if(!mBluetoothAdapter.isEnabled())
+            {
+                btTurnOn = 2;
+                connectView = v;
+                EnableBT();
                 return;
-            // Get the device MAC address, which is the last 17 chars in the View
-            String info = ((TextView) v).getText().toString();
-            String address = info.substring(info.length() - 17);
-
-            // Create the result Intent and include the MAC address
-            Intent intent = new Intent();
-            intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
-
-            // Set result and finish this Activity
-            setResult(Activity.RESULT_OK, intent);
-            BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-            mChatService.start();
-            if(device != null)
-                mChatService.connect(device);
+            }
+            Connect(v);
         }
     }; 
-    
+
+    void Connect(View v)
+    {
+        EnableConnect(false);
+        // Cancel discovery because it's costly and we're about to connect
+        mBluetoothAdapter.cancelDiscovery();
+        if(mChatService != null)
+            mChatService.stop();
+        mChatService = new BluetoothChatService(mHandler);
+        if(mChatService.getState() == BluetoothChatService.STATE_CONNECTING)
+            return;
+        // Get the device MAC address, which is the last 17 chars in the View
+        String info = ((TextView) v).getText().toString();
+        String address = info.substring(info.length() - 17);
+
+        // Create the result Intent and include the MAC address
+        Intent intent = new Intent();
+        intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
+
+        // Set result and finish this Activity
+        setResult(Activity.RESULT_OK, intent);
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+        mChatService.start();
+        if(device != null)
+            mChatService.connect(device);
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
-        {	 
-        	  if((state & STATE_EEPROM) != 0)
-        	  {
-        		  AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+        {
+              if((state & STATE_EEPROM) != 0)
+              {
+                  AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
                   builder2.setMessage("Do you really want to leave EEPROM interface?")
                          .setCancelable(false)
                          .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                              public void onClick(DialogInterface dialog, int id) {
                                  if((state & STATE_CONNECTED) != 0)
-                                 	InitMain();
+                                     InitMain();
                                  else
-                                	 Disconnect(true); 
+                                     Disconnect(true); 
                              }
                          })
                          .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -281,8 +324,8 @@ public class YuniClient extends Activity {
                          });
                   AlertDialog alert = builder2.create();
                   alert.show();
-        	  }
-        	  else if((state & STATE_CONTROLS) != 0)
+              }
+              else if((state & STATE_CONTROLS) != 0)
                   InitMain();
               else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
                   InitEEPROMList();
@@ -329,17 +372,18 @@ public class YuniClient extends Activity {
     }
     void ShowAlert(CharSequence text)
     {
-    	if(dialog != null)
-    		dialog.dismiss();
-	    AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-	    builder2.setMessage(text)
-	           .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
-	               public void onClick(DialogInterface dialog, int id) {
-	            	   dialog.dismiss();
-	               }
-	           });
-	    AlertDialog alert = builder2.create();
-	    alert.show();
+        if(dialog != null)
+            dialog.dismiss();
+        AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+        builder2.setMessage(text)
+               .setTitle("Error")
+               .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       dialog.dismiss();
+                   }
+               });
+        AlertDialog alert = builder2.create();
+        alert.show();
     }
     // INITS
     public void init()
@@ -529,9 +573,6 @@ public class YuniClient extends Activity {
         v = (Button) findViewById(R.id.Controls_b);
         v.setEnabled(start);
         v.setClickable(start);
-        v = (Button) findViewById(R.id.SendSpec_b);
-        v.setEnabled(start);
-        v.setClickable(start);
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
@@ -554,7 +595,7 @@ public class YuniClient extends Activity {
                 curFolder = file;
                 AlertDialog.Builder builder = new AlertDialog.Builder(context);
                 FilenameFilter filter = new HexFilter();
-                final CharSequence[] items = curFolder.list(filter); 		 	
+                final CharSequence[] items = curFolder.list(filter);              
                 builder.setTitle("Chose file");
                 builder.setItems(items, fileSelect);
                 AlertDialog alert = builder.create();
@@ -661,13 +702,13 @@ public class YuniClient extends Activity {
             readHandler.sendEmptyMessage(0);
         else
         {
-        	eeprom_part = 1;
+            eeprom_part = 1;
             EEPROM = new eeprom();
             mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
             if((state & STATE_CONNECTED) != 0)
                 LoadEEPROM();
             else
-            	OpenLoadDialog();
+                OpenLoadDialog();
         }
         mEEPROMEntries.clear();
         ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
@@ -681,7 +722,7 @@ public class YuniClient extends Activity {
         mEEPROMEntries.clear();
         dialog= new ProgressDialog(this);
         dialog.setMessage("Reading EEPROM...");
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
+        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
         dialog.setMax(0);
         dialog.setProgress(0);
         dialog.setCancelable(true);
@@ -766,7 +807,7 @@ public class YuniClient extends Activity {
                             readHandler.sendEmptyMessage(0);
                             break;
                         case 2:
-                        	AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+                            AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
                             builder2.setMessage("Do you really want to erase all entries?")
                                    .setCancelable(false)
                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
@@ -783,7 +824,7 @@ public class YuniClient extends Activity {
                                    });
                             AlertDialog alert = builder2.create();
                             alert.show();
-                        	break;
+                            break;
                     }
                 }
             });
@@ -796,7 +837,7 @@ public class YuniClient extends Activity {
         if((state & STATE_EEPROM_NEW_ADD) != 0)
             EEPROM.insert(curEditId);
         EditText edit = (EditText)findViewById(R.id.key_input);
-        EEPROM.set(curEditId, (byte)edit.getText().charAt(0));	
+        EEPROM.set(curEditId, (byte)edit.getText().charAt(0));    
         edit = (EditText)findViewById(R.id.downUp_input);
         EEPROM.set(curEditId+1, (byte)edit.getText().charAt(0));
         
@@ -867,23 +908,23 @@ public class YuniClient extends Activity {
                   });
                 return true;
             case R.id.switchPart:
-            	if(eeprom_part == 1) eeprom_part = 2;
-            	else eeprom_part = 1;
-            	mEEPROMEntries.clear();
-            	readHandler.sendEmptyMessage(0);
-            	Toast.makeText(context, "Switched to part " + eeprom_part,
+                if(eeprom_part == 1) eeprom_part = 2;
+                else eeprom_part = 1;
+                mEEPROMEntries.clear();
+                readHandler.sendEmptyMessage(0);
+                Toast.makeText(context, "Switched to part " + eeprom_part,
                         Toast.LENGTH_SHORT).show();
-            	return true;
+                return true;
             case R.id.reload:
                 if((state & STATE_CONNECTED) != 0)
                     LoadEEPROM();
                 else
-                	ShowAlert("You are in offline mode");
+                    ShowAlert("You are in offline mode");
                 return true;
             case R.id.write:
                 if((state & STATE_CONNECTED) == 0)
                 {
-                	ShowAlert("You are in offline mode");
+                    ShowAlert("You are in offline mode");
                     return true;
                 }
                 state |= STATE_EEPROM_WRITE;
@@ -891,7 +932,7 @@ public class YuniClient extends Activity {
                 eeprom_part = 1;
                 dialog= new ProgressDialog(this);
                 dialog.setMessage("Erasing EEPROM...");
-                dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);	
+                dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
                 dialog.setMax(0);
                 dialog.setProgress(0);
                 dialog.setCancelable(false);
@@ -983,8 +1024,8 @@ public class YuniClient extends Activity {
     };
     private final Handler failedHandler = new Handler() {
         public void handleMessage(Message msg) {
-        	final String text = msg.getData().getString("text");
-        	ShowAlert(text);
+            final String text = msg.getData().getString("text");
+            ShowAlert(text);
             dialog.dismiss();
         }
     };
@@ -1005,8 +1046,8 @@ public class YuniClient extends Activity {
                 switch(EEPROM.get(itr+2))
                 {
                     case 0:
-                    	item += "NONE";
-                    	break;
+                        item += "NONE";
+                        break;
                     case 1:
                         item += "TIME, " + (((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF)*10) + "ms";
                         break;
@@ -1133,16 +1174,16 @@ public class YuniClient extends Activity {
                                         memory mem = new memory();
                                         try
                                         {
-                                        	String result = mem.Load(hex, progressHandler2, deviceInfo);
+                                            String result = mem.Load(hex, progressHandler2, deviceInfo);
                                             if(result == "")
                                             {
-                                            	result = CreatePages(mem);
+                                                result = CreatePages(mem);
                                                 if(result == "")
                                                     flashHandler.sendMessage(flashHandler.obtainMessage());
                                                 else
                                                 {
-                                                	Message msg = new Message();
-                                                	Bundle bundle = new Bundle();
+                                                    Message msg = new Message();
+                                                    Bundle bundle = new Bundle();
                                                     bundle.putString("text", "Failed to create pages (" + result + ")");
                                                     msg.setData(bundle);
                                                     failedHandler.sendMessage(msg);
@@ -1150,8 +1191,8 @@ public class YuniClient extends Activity {
                                             }
                                             else
                                             {
-                                            	Message msg = new Message();
-                                            	Bundle bundle = new Bundle();
+                                                Message msg = new Message();
+                                                Bundle bundle = new Bundle();
                                                 bundle.putString("text", "Failed to load hex file (" + result + ")");
                                                 msg.setData(bundle);
                                                 failedHandler.sendMessage(msg);
@@ -1214,8 +1255,8 @@ public class YuniClient extends Activity {
                             
                             if(eeprom_part == 1 && itr_buff >= EEPROM.getPartRecCount(true)*REC_SIZE && curEditId != 0)
                             {
-                            	eeprom_part = 2;
-                            	byte[] out = {0x16};
+                                eeprom_part = 2;
+                                byte[] out = {0x16};
                                 mChatService.write(out);
                                 curEditId -= itr_buff/REC_SIZE;
                                 itr_buff = 0;
@@ -1245,7 +1286,7 @@ public class YuniClient extends Activity {
     // HANDLERS END
     // FLASH FUNCTIONS
     private void SendPage(Page page)
-    {	
+    {    
         final byte[] out = { 0x10 };
         mChatService.write(out);
 
@@ -1259,7 +1300,6 @@ public class YuniClient extends Activity {
     private String CreatePages(memory mem)
     {
         pages.clear();
-        final TextView error = (TextView)findViewById(R.id.error);
         if (mem.size() > deviceInfo.mem_size)
             for (int a = deviceInfo.mem_size; a < mem.size(); ++a)
                 if (mem.Get(a) != 0xff)
