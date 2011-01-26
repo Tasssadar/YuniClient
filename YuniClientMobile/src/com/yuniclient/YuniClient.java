@@ -32,6 +32,10 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
@@ -42,6 +46,7 @@ import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 
 public class YuniClient extends Activity {
     private static final int REQUEST_ENABLE_BT = 2;
@@ -102,6 +107,31 @@ public class YuniClient extends Activity {
     public Context context = null;
     
     public Thread autoScrollThread = null;
+    
+    private int[] EEPROMTouchLastX = null;
+    private int[] EEPROMTouchLastY = null;
+    private byte EEPROMTouchItr;
+    
+    private Animation inFromRightAnimation() {
+        Animation inFromRight = new TranslateAnimation(
+            Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
+            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
+        );
+        inFromRight.setDuration(150);
+        inFromRight.setInterpolator(new LinearInterpolator());
+        return inFromRight;
+    }
+
+    private Animation inFromLeftAnimation() {
+    
+        Animation inFromLeft = new TranslateAnimation(
+            Animation.RELATIVE_TO_PARENT,  -1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
+            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
+        );
+        inFromLeft.setDuration(150);
+        inFromLeft.setInterpolator(new LinearInterpolator());
+        return inFromLeft;
+    }
 
     final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
@@ -140,23 +170,35 @@ public class YuniClient extends Activity {
         unregisterReceiver(mReceiver);
     }
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if(requestCode != REQUEST_ENABLE_BT || btTurnOn == 0)
+        if(requestCode != REQUEST_ENABLE_BT)
             return;
+
         if (resultCode == Activity.RESULT_OK)
         {
             switch(btTurnOn)
             {
                 case 1:
+                    
                     FindDevices();
                     break;
                 case 2:
                     Connect(connectView);
                     break;
+                case 0:
+                    Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+                    if (pairedDevices.size() > 0) {
+                        mPairedDevices.clear();
+                        findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
+                        for (BluetoothDevice device : pairedDevices) {
+                            mPairedDevices.add(device.getName() + "\n" + device.getAddress());
+                        }
+                    }
+                    break;
             }
             btTurnOn = 0;
             connectView = null;
         }
-        else
+        else if(btTurnOn != 0)
            ShowAlert("Bluetooth is disabled!");
     } 
     public void Disconnect(boolean resetUI)
@@ -716,7 +758,70 @@ public class YuniClient extends Activity {
         eepromListView.setOnItemClickListener(mEditEntryListener);
         eepromListView.setLongClickable(true);
         eepromListView.setOnItemLongClickListener(mEditEntryLongListener);
+        if(EEPROMTouchLastX == null)
+        {
+            EEPROMTouchLastX = new int[50];
+            EEPROMTouchLastY = new int[50];
+        }
+        eepromListView.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_MOVE)
+                {
+                    if(EEPROMTouchItr >= 50)
+                        EEPROMTouchItr = 0;
+                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
+                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
+                    ++EEPROMTouchItr;
+                    return false;
+                }
+                else if(event.getAction() == MotionEvent.ACTION_DOWN)
+                    EEPROMTouchItr = 0;
+                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
+                {
+                    boolean right = false;
+                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 20;
+                    
+                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
+                    {
+                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
+                            right = true;
+                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
+                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right) ||
+                                fabs(EEPROMTouchLastY[i-1] - EEPROMTouchLastY[i]) > 38)
+                            correct = false;
+                    }
+                    if(correct)
+                        ChangeEEPROMPart(true, right);     
+                }
+                return false;
+            }
+
+            private int fabs(int i) {
+                if(i >= 0) return i;
+                return -i;
+            }
+           });
     }
+    
+    void ChangeEEPROMPart(boolean animation, boolean right)
+    {
+        if(eeprom_part == 1) eeprom_part = 2;
+        else eeprom_part = 1;
+        if(animation)
+        {
+            final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper);
+            flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
+            flipper.showNext();    
+        }
+        else
+            Toast.makeText(context, "Switched to part " + eeprom_part,
+                    Toast.LENGTH_SHORT).show();
+        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
+        header.setText("EEPROM part " + eeprom_part);
+        mEEPROMEntries.clear();
+        readHandler.sendEmptyMessage(0);
+    }
+    
     private void LoadEEPROM()
     {
         mEEPROMEntries.clear();
@@ -908,23 +1013,18 @@ public class YuniClient extends Activity {
                   });
                 return true;
             case R.id.switchPart:
-                if(eeprom_part == 1) eeprom_part = 2;
-                else eeprom_part = 1;
-                mEEPROMEntries.clear();
-                readHandler.sendEmptyMessage(0);
-                Toast.makeText(context, "Switched to part " + eeprom_part,
-                        Toast.LENGTH_SHORT).show();
+                ChangeEEPROMPart(false, false);
                 return true;
             case R.id.reload:
                 if((state & STATE_CONNECTED) != 0)
                     LoadEEPROM();
                 else
-                    ShowAlert("You are in offline mode");
+                    ShowAlert("You are in offline mode!");
                 return true;
             case R.id.write:
                 if((state & STATE_CONNECTED) == 0)
                 {
-                    ShowAlert("You are in offline mode");
+                    ShowAlert("You are in offline mode!");
                     return true;
                 }
                 state |= STATE_EEPROM_WRITE;
