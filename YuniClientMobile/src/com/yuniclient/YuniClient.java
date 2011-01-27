@@ -117,7 +117,7 @@ public class YuniClient extends Activity {
             Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
             Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
         );
-        inFromRight.setDuration(150);
+        inFromRight.setDuration(100);
         inFromRight.setInterpolator(new LinearInterpolator());
         return inFromRight;
     }
@@ -128,7 +128,7 @@ public class YuniClient extends Activity {
             Animation.RELATIVE_TO_PARENT,  -1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
             Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
         );
-        inFromLeft.setDuration(150);
+        inFromLeft.setDuration(100);
         inFromLeft.setInterpolator(new LinearInterpolator());
         return inFromLeft;
     }
@@ -740,6 +740,9 @@ public class YuniClient extends Activity {
         state &= ~(STATE_EEPROM_EDIT);
         state &= ~(STATE_EEPROM_NEW_ADD);
         setContentView(R.layout.eeprom_list);
+        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
+        header.setText("EEPROM part " + eeprom_part);
+
         if(EEPROM != null && mEEPROMEntries != null)
             readHandler.sendEmptyMessage(0);
         else
@@ -772,26 +775,26 @@ public class YuniClient extends Activity {
                     EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
                     EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
                     ++EEPROMTouchItr;
-                    return false;
                 }
                 else if(event.getAction() == MotionEvent.ACTION_DOWN)
                     EEPROMTouchItr = 0;
                 else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
                 {
                     boolean right = false;
-                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 20;
+                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
+                      // and x movement must be bigger than Y movement
+                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
                     
                     for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
                     {
                         if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
                             right = true;
                         else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
-                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right) ||
-                                fabs(EEPROMTouchLastY[i-1] - EEPROMTouchLastY[i]) > 38)
+                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
                             correct = false;
                     }
                     if(correct)
-                        ChangeEEPROMPart(true, right);     
+                        ChangeEEPROMPart(true, right);
                 }
                 return false;
             }
