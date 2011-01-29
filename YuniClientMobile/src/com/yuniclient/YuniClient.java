@@ -32,7 +32,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
@@ -111,6 +110,7 @@ public class YuniClient extends Activity {
     private int[] EEPROMTouchLastX = null;
     private int[] EEPROMTouchLastY = null;
     private byte EEPROMTouchItr;
+    private int[] EEPROMScrollPos = {0,0};
     
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -756,7 +756,7 @@ public class YuniClient extends Activity {
                 OpenLoadDialog();
         }
         mEEPROMEntries.clear();
-        ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
         eepromListView.setAdapter(mEEPROMEntries);
         eepromListView.setOnItemClickListener(mEditEntryListener);
         eepromListView.setLongClickable(true);
@@ -804,10 +804,13 @@ public class YuniClient extends Activity {
                 return -i;
             }
            });
+        scrollEEPROMHandler.sendEmptyMessage(0);
     }
     
     void ChangeEEPROMPart(boolean animation, boolean right)
     {
+        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+        EEPROMScrollPos[eeprom_part-1] = eepromListView.getFirstVisiblePosition();
         if(eeprom_part == 1) eeprom_part = 2;
         else eeprom_part = 1;
         if(animation)
@@ -823,6 +826,7 @@ public class YuniClient extends Activity {
         header.setText("EEPROM part " + eeprom_part);
         mEEPROMEntries.clear();
         readHandler.sendEmptyMessage(0);
+        scrollEEPROMHandler.sendEmptyMessage(0);
     }
     
     private void LoadEEPROM()
@@ -851,6 +855,7 @@ public class YuniClient extends Activity {
     private final OnItemClickListener mEditEntryListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
         {
+            EEPROMScrollPos[eeprom_part-1] = arg2 - Math.round((float)v.getTop()/(float)v.getHeight());
             state |= STATE_EEPROM_EDIT;
             state &= ~(STATE_EEPROM);
             setContentView(R.layout.eeprom_edit);
@@ -888,6 +893,7 @@ public class YuniClient extends Activity {
         public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
                 int arg2, long arg3)
         {
+            EEPROMScrollPos[eeprom_part-1] = arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight());
             final AlertDialog.Builder builder = new AlertDialog.Builder(context);
             CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
             String info = ((TextView) arg1).getText().toString();
@@ -1106,6 +1112,13 @@ public class YuniClient extends Activity {
         public void handleMessage(Message msg) {
             if(msg.arg1 != 0)
                 dialog.setProgress(msg.arg1);
+        }
+    };
+    private final Handler scrollEEPROMHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+            eepromListView.setSelection(EEPROMScrollPos[eeprom_part-1]);
         }
     };
     
@@ -1375,11 +1388,10 @@ public class YuniClient extends Activity {
                                 return;
                             }
                             
-                            byte[] out = {EEPROM.get(itr_buff)};
+                            byte[] out = EEPROM.getRec(itr_buff);
                             mChatService.write(out);
-                            if(itr_buff%5 == 0)
-                                dialog.incrementProgressBy(1);
-                            ++itr_buff;
+                            dialog.incrementProgressBy(1);
+                            itr_buff += 5;
                         }
                     }
                     break;
