@@ -1,4 +1,4 @@
-namespace YuniClient
+﻿namespace YuniClient
 {
     partial class Form1
     {
@@ -236,7 +236,6 @@ namespace YuniClient
         	// 
         	// eeprom_open
         	// 
-        	this.eeprom_open.Enabled = false;
         	this.eeprom_open.Location = new System.Drawing.Point(762, 5);
         	this.eeprom_open.Name = "eeprom_open";
         	this.eeprom_open.Size = new System.Drawing.Size(75, 23);
@@ -249,7 +248,7 @@ namespace YuniClient
         	// 
         	this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         	this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        	this.ClientSize = new System.Drawing.Size(929, 429);
+        	this.ClientSize = new System.Drawing.Size(929, 434);
         	this.Controls.Add(this.eeprom_open);
         	this.Controls.Add(this.version);
         	this.Controls.Add(this.Clear_b);

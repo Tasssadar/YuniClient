@@ -39,6 +39,7 @@
     <Compile Include="eeprom.Designer.cs">
       <DependentUpon>eeprom.cs</DependentUpon>
     </Compile>
+    <Compile Include="eeprom_mem.cs" />
     <Compile Include="Form1.cs" />
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>

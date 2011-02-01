@@ -25,35 +25,6 @@ enum eeprom_states
     STATE_WRITING_WAIT= 0x04,
 };
 
-enum end_events
-{
-    EVENT_TIME               = 0x01,
-    EVENT_SENSOR_LEVEL_HIGHER= 0x02,
-    EVENT_SENSOR_LEVEL_LOWER = 0x04,
-    EVENT_RANGE_MIDDLE_HIGHER= 0x08,
-    EVENT_RANGE_MIDDLE_LOWER = 0x10,
-};
-
-class Record
-{
-    public Record() { event_params = new byte[2]; key = 0; }
-    public int id;
-    public byte key;
-    public byte downUp;
-    public byte end_event;
-    public byte[] event_params;
-    
-    public ushort getBigNum() {
-        return (ushort)((event_params[0] << 8) | (event_params[1] & 0xFF));
-    }
-    public void setBigNum(ushort num)
-    {
-        event_params[0] = (byte)(num >> 8);
-        event_params[1] = (byte)(num & 0xFF);
-    }
-};
-
-
 namespace YuniClient
 {
     /// <summary>
@@ -68,7 +39,8 @@ namespace YuniClient
             InitializeComponent();     
             serialPort1 = port;
             serialPort1.DataReceived += SerialPort1DataReceived;
-            records = new List<Record>();
+            EEPROM = new eeprom_mem();
+            part = 1;
         }
         
         delegate void SetTextCallback(byte[] bytes, int lenght);
@@ -78,9 +50,10 @@ namespace YuniClient
         char[] eeprom_write_stop_seq  = { '\x1E'};
         
         short state = 0;
-        Record curRec;
-        byte recItr = 0;
-        List<Record> records;        
+        
+        eeprom_mem EEPROM;
+        int itr_buff;
+        byte part;
         
         void EepromFormClosed(object sender, FormClosedEventArgs e)
         {
@@ -91,15 +64,16 @@ namespace YuniClient
         
         void Read_bClick(object sender, EventArgs e)
         {
+            if(!serialPort1.IsOpen)
+                return;
             serialPort1.Write(eeprom_read_seq, 0, 1);
+            state |= (short)eeprom_states.STATE_READING;
         }
         
         void SerialPort1DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            if((state & (short)eeprom_states.STATE_WRITING_WAIT) != 0)
-                return;
-        	byte[] bytes = new byte[serialPort1.ReadBufferSize];
-        	serialPort1.Read(bytes, 0, serialPort1.ReadBufferSize);
+            byte[] bytes = new byte[serialPort1.ReadBufferSize];
+            serialPort1.Read(bytes, 0, serialPort1.ReadBufferSize);
             BotOuput(bytes, serialPort1.ReadBufferSize);
         }
         
@@ -116,235 +90,182 @@ namespace YuniClient
             }
             else
             {        
-                int itr = 0;
-                if(bytes[itr] == '\x17')
+                if((state & (short)eeprom_states.STATE_READING) != 0)
                 {
-                    state |= System.Convert.ToInt16(eeprom_states.STATE_READING);
-                    records.Clear();
-                    recItr = 0;
-                    curRec = new Record();
-                    ++itr;
-                }
-                
-                if((state & System.Convert.ToInt16(eeprom_states.STATE_READING)) != 0)
-                {
-                    for(; itr < lenght; ++itr)
+                    bool skip = (bytes[0] == '\x17');
+                    if(skip)
                     {
-                        if(/*recItr == 0 &&*/ bytes[itr] == '\x18')
-                        {
-                            state &= System.Convert.ToInt16(~(eeprom_states.STATE_READING));
-                            IntoList();
-                            break;
-                        }
-                        switch(recItr)
-                        {
-                            case 0: curRec.key = System.Convert.ToByte(bytes[itr]);    break;
-                            case 1: curRec.downUp = System.Convert.ToByte(bytes[itr]); break;
-                            case 2: curRec.end_event = System.Convert.ToByte(bytes[itr]); break;
-                            case 3: curRec.event_params[0] = System.Convert.ToByte(bytes[itr]); break;
-                            case 4:
-                                curRec.event_params[1] = System.Convert.ToByte(bytes[itr]);
-                                curRec.id = records.Count;
-                                records.Add(curRec);
-                                curRec = new Record();
-                                break;
-                        }
-                        if(recItr == 4)
-                           recItr = 0;
-                        else 
-                            ++recItr;
+                        itr_buff = 0;
+                        EEPROM.clear();
+                    }
+                    for(int itr = 0; itr_buff < 512 && itr < lenght; ++itr)
+                    {
+                        if(skip && itr == 0)
+                           continue;
+                        EEPROM.set_nopart(itr_buff, bytes[itr]);
+                        ++itr_buff;
+                    }
+                    if(itr_buff >= 512)
+                    {
+                         state &= System.Convert.ToInt16(~(eeprom_states.STATE_READING));
+                         IntoList();
+                         return;
                     }
                 }
-                else if((state & System.Convert.ToInt16(eeprom_states.STATE_WRITING)) != 0 && bytes[itr] == '\x1D')
+                else if((state & System.Convert.ToInt16(eeprom_states.STATE_WRITING)) != 0)
                 {
-                    textBox1.Text += "Sending...";
-                    byte[] buffer;
-                    state |= (short)eeprom_states.STATE_WRITING_WAIT;
-                    for(int i = 0; i < records.Count; ++i)
+                    if(bytes[0] != 0x1F)
+                        return;
+                            
+                    if(EEPROM.GetPart() == 1 && itr_buff >= EEPROM.getPartRecCount(true)*5)
                     {
-                        if(records[i].key == 0)
-                            break;
-
-                        buffer = new byte[1];
-                        buffer[0] = records[i].key;
-                        serialPort1.Write(buffer, 0, 1);
-                        while(serialPort1.ReadByte() != 0x1F) { }
-                        
-                        buffer[0] = records[i].downUp;
-                        serialPort1.Write(buffer, 0, 1);
-                        while(serialPort1.ReadByte() != 0x1F) { }
-                        
-                        buffer[0] = records[i].end_event;
-                        serialPort1.Write(buffer, 0, 1);
-                        while(serialPort1.ReadByte() != 0x1F) { }
-                        
-                        buffer[0] = records[i].event_params[0];
-                        serialPort1.Write(buffer, 0, 1);
-                        while(serialPort1.ReadByte() != 0x1F) { }
-                        
-                        buffer[0] = records[i].event_params[1];
-                        serialPort1.Write(buffer, 0, 1);
-                        while(serialPort1.ReadByte() != 0x1F) { }
-                    }
-                    serialPort1.Write(eeprom_write_stop_seq, 0, 1);
-                    textBox1.Text += "done\r\n";
-                    read_b.Enabled = true;
-                	edit_b.Enabled = true;
-                	save_b.Enabled = true;
-                	write_b.Enabled = true;
-                	state &= (short)(~(eeprom_states.STATE_WRITING_WAIT));
-                	state &= (short)(~(eeprom_states.STATE_WRITING));
+                        EEPROM.SetPart(2);
+                        byte[] send = { 0x16 };
+                        serialPort1.Write(send, 0, 1);
+                        itr_buff = 0;
+                        return;
+                     }
+                     else if(itr_buff >= 510 || (itr_buff >= EEPROM.getPartRecCount(false)*5 && itr_buff%5 == 0))
+                     {
+                         byte[] send = { 0x1E };
+                         serialPort1.Write(send, 0, 1);
+                         EEPROM.SetPart(part);
+                         state &= (short)(~(eeprom_states.STATE_WRITING));
+                         return;
+                     }
+                            
+                     byte[] send_rec = EEPROM.getRec(itr_buff);
+                     serialPort1.Write(send_rec, 0, 5);
+                     itr_buff += 5;
                 }
             }
         }
-        
-        void Parse_bClick(object sender, EventArgs e)
-        {
-            if(records.Count == 0 || (state & System.Convert.ToInt16(eeprom_states.STATE_READING)) != 0)
-                return;
-           IntoList();
-        }
+
         public void IntoList()
         {
             List<string> _items = new List<string>();
-            for(int i = 0; i < records.Count; ++i)
+            String item = null;
+            for(int itr = 0; itr < 255;)
             {
-                if(records[i].key == 0)
+                if(EEPROM.get(itr) == 0 && EEPROM.get(itr+1) == 0)
                     break;
-                _items.Add(records[i].id + " Key \""+ System.Convert.ToChar(records[i].key).ToString() +
-                           "\" " + System.Convert.ToChar(records[i].downUp).ToString() +
-                           ", end event " + (records[i].end_event).ToString()+ ", params " + 
-                           records[i].event_params[0].ToString() + " " + records[i].event_params[1].ToString()
-                           + " (" + records[i].getBigNum().ToString() + ")");
+                item = "";
+                item = itr + " Key " + (char)EEPROM.get(itr) + " " + (char)EEPROM.get(itr+1) + " - ";
+                switch(EEPROM.get(itr+2))
+                {
+                    case 0:
+                        item += "NONE";
+                        break;
+                    case 1:
+                        item += "TIME, " + (((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF)*10) + "ms";
+                        break;
+                    case 2:
+                        item += "SENSOR_LEVEL_HIGHER, sensor " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4));
+                        break;
+                    case 3:
+                        item += "SENSOR_LEVEL_LOWER, sensor " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4));
+                        break;
+                    case 4: 
+                        item += "RANGE_HIGHER adr " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4)) + "cm";
+                        break;
+                    case 5: 
+                        item += "RANGE_LOWER adr " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF &  EEPROM.get(itr+4)) + "cm";
+                        break;
+                    case 6:
+                        item += "EVENT_DISTANCE " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
+                        break;
+                    case 7:
+                        item += "EVENT_DISTANCE_LEFT " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
+                        break;
+                    case 8:
+                        item += "EVENT_DISTANCE_RIGHT " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
+                        break;
+                    default:
+                       item += "event " + EEPROM.get(itr+2) + " values " + (0xFF & EEPROM.get(itr+3)) + " " + (0xFF & EEPROM.get(itr+4)) + 
+                           " (" + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + ")";
+                       break;
+                }
+                itr += 5;
+                _items.Add(item);
             }
             recordsList.DataSource = null;
             recordsList.DataSource = _items;
-        }
-        Record GetRec(int id)
-        {
-            for(int i = 0; i < records.Count; ++i)
-            {
-                if(records[i].id == id)
-                    return records[i];
-            }
-            return null;
         }
         void Edit_bClick(object sender, EventArgs e)
         {
             if(recordsList.SelectedItem == null)
                 return;
-            char[] text = recordsList.SelectedValue.ToString().ToCharArray();
-            string id_st = "";
-            for(int i = 0; text[i] != ' '; ++i)
-                id_st += text[i];
-            int id=System.Convert.ToInt32(id_st);
-            Record rec = GetRec(id);
-            if(rec == null)
-                return;
-            id_t.Text = id_st;
-            key_t.Text = System.Convert.ToChar(rec.key).ToString();
-            if(System.Convert.ToChar(rec.downUp) == 'd')
+            String indexS = recordsList.SelectedValue.ToString().Substring(0, recordsList.SelectedValue.ToString().IndexOf(" "));
+            int index = System.Convert.ToInt32(indexS);
+            id_t.Text = index.ToString();
+            key_t.Text = ((char)EEPROM.get(index)).ToString();
+            if(EEPROM.get(index+1) == 100)
                 comboBox1.SelectedItem = "Down";
             else
                 comboBox1.SelectedItem = "Up";
-            endEvent.Text = rec.end_event.ToString();
-            switch(rec.end_event)
-            {
-                case (int)end_events.EVENT_TIME:
-                    time_t.Text = (rec.getBigNum()*10).ToString();
-                    break;
-                case (int)end_events.EVENT_RANGE_MIDDLE_HIGHER:
-                case (int)end_events.EVENT_RANGE_MIDDLE_LOWER:
-                    time_t.Text = rec.getBigNum().ToString();
-                    break;
-                case (int)end_events.EVENT_SENSOR_LEVEL_HIGHER:
-                case (int)end_events.EVENT_SENSOR_LEVEL_LOWER:
-                    byte1.Text = rec.event_params[0].ToString();
-                    byte2.Text = rec.event_params[1].ToString();
-                    break;
-            }
+            endEvent.Text = EEPROM.get(index+2).ToString(); 
+            byte1.Text = EEPROM.get(index+3).ToString(); 
+            byte2.Text = EEPROM.get(index+4).ToString(); 
+            time_t.Text = ((EEPROM.get(index+3) << 8) | (EEPROM.get(index+4)) & 0xFF).ToString();         
         }
         
         void Save_bClick(object sender, EventArgs e)
         {
-            if(key_t.Text == "" || (time_t.Text == "" && byte1.Text == "" && byte2.Text == "") || endEvent.Text == "")
-                return;
-            
-            Record rec = null;
+            int index = 0;
             if(id_t.Text != "")
+                index = System.Convert.ToInt32(id_t.Text);
+            else if(behind_t.Text != "")
             {
-                rec = GetRec(System.Convert.ToInt32(id_t.Text));
-                if(rec == null)
-                    return;
+                index = System.Convert.ToInt32(behind_t.Text)+5;
+                EEPROM.insert(index);
             }
-            else
+               EEPROM.set(index,   System.Convert.ToByte(key_t.Text.ToCharArray()[0]));
+               if(comboBox1.SelectedItem == "Down")
+                   EEPROM.set(index+1, 100);
+               else
+                   EEPROM.set(index+1, 117);
+               EEPROM.set(index+2, System.Convert.ToByte(endEvent.Text));
+               switch(EEPROM.get(index+2))
             {
-                int behind = -1;
-                if(behind_t.Text != "")
-                {
-                    behind = System.Convert.ToInt32(behind_t.Text);
-                    
-                    for(int i = 1; i < records.Count; ++i)
-                    {
-                        rec = records[i];
-                        rec.id += 1;
-                    }
-                    rec = new Record(); 
-                    rec.id = behind+1;
-                    records.Add(rec);
-                }
-                else
-                {
-                    for(int i = 0; i < records.Count; ++i)
-                    {
-                        if(records[i].key == 0 && records[i].getBigNum() == 0)
-                        {
-                            rec = records[i];
-                            break;
-                        }
-                    }
-                }
-            }
-            rec.key = (byte)(key_t.Text.ToCharArray()[0]);
-            if(comboBox1.SelectedItem == null || comboBox1.SelectedItem == "Down")
-                rec.downUp = (byte)'d';
-            else
-                rec.downUp = (byte)'u';
-            rec.end_event = (byte)System.Convert.ToInt32(endEvent.Text);
-                
-            switch(System.Convert.ToInt32(endEvent.Text))
-            {
-                case (int)end_events.EVENT_TIME:
-                    rec.setBigNum((ushort)(System.Convert.ToUInt16(time_t.Text)/10));
+                   case 0: // EVENT_NONE
+                       EEPROM.set(index+3, 0);
+                       EEPROM.set(index+4, 0);
+                       break;
+                case 2: // EVENT_SENSOR_LEVEL_HIGHER
+                case 3: // EVENT_SENSOR_LEVEL_LOWER
+                case 4: // EVENT_RANGE_HIGHER
+                case 5: // EVENT_RANGE_LOWER
+                    EEPROM.set(index+3,  System.Convert.ToByte(byte1.Text));
+                    EEPROM.set(index+4,  System.Convert.ToByte(byte2.Text));
                     break;
-                case (int)end_events.EVENT_RANGE_MIDDLE_HIGHER:
-                case (int)end_events.EVENT_RANGE_MIDDLE_LOWER:
-                    rec.setBigNum((ushort)System.Convert.ToUInt16(time_t.Text));
-                    break;
-                case (int)end_events.EVENT_SENSOR_LEVEL_HIGHER:
-                case (int)end_events.EVENT_SENSOR_LEVEL_LOWER:
-                    rec.event_params[0] = System.Convert.ToByte(byte1.Text);
-                    rec.event_params[1] = System.Convert.ToByte(byte2.Text);
+                case 1: // EVENT_TIME
+                case 6: // EVENT_DISTANCE 
+                case 7: // EVENT_DISTANCE_LEFT
+                case 8: // EVENT_DISTANCE_RIGHT
+                default:
+                    EEPROM.set(index+3,  (byte)(System.Convert.ToUInt32(time_t.Text) >> 8));
+                    EEPROM.set(index+4,  (byte)(System.Convert.ToUInt32(time_t.Text) & 0xFF ));
                     break;
             }
-            textBox1.Text += "Value saved\r\n";
-            IntoList();
-        }
-        
+               IntoList();
+       }
+       
         void Write_bClick(object sender, EventArgs e)
         {
-        	read_b.Enabled = false;
-        	edit_b.Enabled = false;
-        	save_b.Enabled = false;
-        	write_b.Enabled = false;
-        	serialPort1.Write(eeprom_write_seq, 0, 1);
-        	textBox1.Text += "Erasing EEPROM...\r\n";
-        	state |= System.Convert.ToInt16(eeprom_states.STATE_WRITING);
+            if(!serialPort1.IsOpen)
+                return;
+            read_b.Enabled = false;
+            edit_b.Enabled = false;
+            save_b.Enabled = false;
+            write_b.Enabled = false;
+            serialPort1.Write(eeprom_write_seq, 0, 1);
+            state |= System.Convert.ToInt16(eeprom_states.STATE_WRITING);
+            EEPROM.SetPart(1);
         }
         
         void Add_bClick(object sender, EventArgs e)
         {
-        	id_t.Text = "";
+            id_t.Text = "";
             key_t.Text = "";
             comboBox1.SelectedItem = "Down";
             time_t.Text = "";
@@ -353,33 +274,49 @@ namespace YuniClient
         
         void Erase_bClick(object sender, EventArgs e)
         {
-        	if(recordsList.SelectedItem == null)
+            if(recordsList.SelectedItem == null)
                 return;
-            char[] text = recordsList.SelectedValue.ToString().ToCharArray();
-            string id_st = "";
-            for(int i = 0; text[i] != ' '; ++i)
-                id_st += text[i];
-            int id=System.Convert.ToInt32(id_st);
-            Record rec = GetRec(id);
-            if(rec == null)
-                return;
-            rec.downUp = 0;
-            rec.key = 0;
-            rec.end_event = 0;
-            rec.setBigNum(0);
+            String indexS = recordsList.SelectedValue.ToString().Substring(0, recordsList.SelectedValue.ToString().IndexOf(" "));
+            int index = System.Convert.ToInt32(indexS);
+            EEPROM.erase(index);
             IntoList();
         }
         
         void EraseAllClick(object sender, EventArgs e)
         {
-        	for(int i = 0; i < records.Count; ++i)
-            {
-        	    records[i].key = 0;
-        	    records[i].downUp = 0;
-        	    records[i].end_event = 0;
-        	    records[i].setBigNum(0);
-        	}
-        	IntoList();
+            EEPROM.clear();
+            IntoList();
+        }
+        
+        void Open_fileClick(object sender, EventArgs e)
+        {
+            openFileDialog1.ShowDialog();
+        }
+        
+        void OpenFileDialog1FileOk(object sender, CancelEventArgs e)
+        {
+            EEPROM.clear_all();
+            EEPROM.fromFile(openFileDialog1.FileName);
+            IntoList();
+        }
+        
+        void To_fileClick(object sender, EventArgs e)
+        {
+            saveFileDialog1.ShowDialog();
+        }
+        
+        void SaveFileDialog1FileOk(object sender, CancelEventArgs e)
+        {
+            EEPROM.toFile(saveFileDialog1.FileName);
+        }
+        
+        void Switch_partClick(object sender, EventArgs e)
+        {
+            if(part == 1) part = 2;
+            else part = 1;
+            EEPROM.SetPart(part);
+            part_l.Text = "Part " + part.ToString();
+            IntoList();
         }
     }
 }

@@ -30,7 +30,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "14";
+            version.Text = "15";
         }
         delegate void SetTextCallback(string text);
         char[] flash_mode_sequence = { '\x74', '\x7E', '\x7A', '\x33' };
@@ -57,7 +57,7 @@ namespace YuniClient
                 con_info.port = portName.Text;
                 con_info.rate_val = System.Convert.ToInt32(rate.Text);
                 con_info.serialPort = serialPort1;
-    
+
                 _bw.DoWork += connect_v;
                 _bw.RunWorkerCompleted += bw_connect_complete;
                 _bw.RunWorkerAsync(con_info);
@@ -79,7 +79,6 @@ namespace YuniClient
                 flash.Enabled = false;
                 portName.Enabled = true;
                 rate.Enabled = true;
-                eeprom_open.Enabled = false;
                 state_b.Text = "Stop";
                 deviceId = "";
             }
@@ -504,7 +503,7 @@ namespace YuniClient
             {
                 int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;
                 Debug.Assert((entrypt_jmp & 0xf000) == 0xc000);
-                
+
                 int entrypt_jmp_sec = entrypt_jmp;
                 while (entrypt_jmp_sec > 255)
                    entrypt_jmp_sec -= 256;
@@ -593,7 +592,7 @@ namespace YuniClient
             textBox1.ScrollToCaret();
             textBox1.Refresh();
         }
-        
+
         void Form1Resize(object sender, EventArgs e)
         {
             try
@@ -606,7 +605,7 @@ namespace YuniClient
             }
             catch(Exception) {}
         }
-        
+
         void Eeprom_openClick(object sender, EventArgs e)
         {
             Enabled = false;
