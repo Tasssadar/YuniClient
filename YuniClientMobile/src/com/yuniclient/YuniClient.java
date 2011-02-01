@@ -61,7 +61,7 @@ public class YuniClient extends Activity {
     public static final String TOAST = "toast";
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
     
-    public DeviceInfo deviceInfo = null;
+    public static DeviceInfo deviceInfo = null;
 
     BluetoothAdapter mBluetoothAdapter = null;
     private ArrayAdapter<String> mArrayAdapter;
@@ -110,7 +110,7 @@ public class YuniClient extends Activity {
     private int[] EEPROMTouchLastX = null;
     private int[] EEPROMTouchLastY = null;
     private byte EEPROMTouchItr;
-    private int[] EEPROMScrollPos = {0,0};
+    private short[] EEPROMScrollPos = {0,0};
     
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -152,7 +152,6 @@ public class YuniClient extends Activity {
         context = this;
         state = 0;
         btTurnOn = 0;
-        pages = Collections.checkedList(new ArrayList<Page>(), Page.class);
         setContentView(R.layout.device_list);
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter);
@@ -219,6 +218,7 @@ public class YuniClient extends Activity {
         mEEPROMEntries = null;
         EEPROM = null;
         alertDialog = null;
+        deviceInfo = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -810,7 +810,7 @@ public class YuniClient extends Activity {
     void ChangeEEPROMPart(boolean animation, boolean right)
     {
         final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-        EEPROMScrollPos[eeprom_part-1] = eepromListView.getFirstVisiblePosition();
+        EEPROMScrollPos[eeprom_part-1] = (short) eepromListView.getFirstVisiblePosition();
         if(eeprom_part == 1) eeprom_part = 2;
         else eeprom_part = 1;
         if(animation)
@@ -855,7 +855,7 @@ public class YuniClient extends Activity {
     private final OnItemClickListener mEditEntryListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
         {
-            EEPROMScrollPos[eeprom_part-1] = arg2 - Math.round((float)v.getTop()/(float)v.getHeight());
+            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)v.getTop()/(float)v.getHeight()));
             state |= STATE_EEPROM_EDIT;
             state &= ~(STATE_EEPROM);
             setContentView(R.layout.eeprom_edit);
@@ -893,7 +893,7 @@ public class YuniClient extends Activity {
         public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
                 int arg2, long arg3)
         {
-            EEPROMScrollPos[eeprom_part-1] = arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight());
+            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight()));
             final AlertDialog.Builder builder = new AlertDialog.Builder(context);
             CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
             String info = ((TextView) arg1).getText().toString();
@@ -959,6 +959,10 @@ public class YuniClient extends Activity {
         EEPROM.set(curEditId+2, Integer.valueOf(edit.getText().toString()).byteValue());
         switch(EEPROM.get(curEditId+2))
         {
+            case 0: // EVENT_NONE
+               EEPROM.set(curEditId+3, (byte) 0);
+               EEPROM.set(curEditId+4, (byte) 0);
+               break;
             case 2: // EVENT_SENSOR_LEVEL_HIGHER
             case 3: // EVENT_SENSOR_LEVEL_LOWER
             case 4: // EVENT_RANGE_HIGHER
@@ -1124,14 +1128,19 @@ public class YuniClient extends Activity {
     
     private final Handler flashHandler = new Handler() {
         public void handleMessage(Message msg) {
-            dialog.dismiss();
-            dialog= new ProgressDialog(context);
-            dialog.setCancelable(false);
-            dialog.setMessage("Flashing into device...");
-            dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-            dialog.setMax(pages.size());
-            dialog.setProgress(0);
-            dialog.show();
+            if(Debug.isDebuggerConnected())
+            {
+                dialog.dismiss();
+                dialog= new ProgressDialog(context);
+                dialog.setCancelable(false);
+                dialog.setMessage("Flashing into " + YuniClient.deviceInfo.name + "...");
+                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                dialog.setMax(pages.size());
+                dialog.setProgress(0);
+                dialog.show();
+            }
+            else
+                dialog.setMax(pages.size());
             pagesItr = 0;
             SendPage(pages.get(pagesItr));
             ++pagesItr;
@@ -1191,6 +1200,7 @@ public class YuniClient extends Activity {
                     default:
                        item += "event " + EEPROM.get(itr+2) + " values " + (0xFF & EEPROM.get(itr+3)) + " " + (0xFF & EEPROM.get(itr+4)) + 
                            " (" + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + ")";
+                       break;
                 }
                 itr += 5;
                 mEEPROMEntries.add(item);
@@ -1281,6 +1291,16 @@ public class YuniClient extends Activity {
                                     dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                                     dialog.show();
                                 }
+                                else
+                                {
+                                    dialog= new ProgressDialog(context);
+                                    dialog.setCancelable(false);
+                                    dialog.setMessage("Flashing into " + deviceInfo.name + "...");
+                                    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                                    dialog.setMax(100);
+                                    dialog.setProgress(0);
+                                    dialog.show();
+                                }
                                 Thread load = new Thread (new Runnable()
                                 {
                                     public void run()
@@ -1303,10 +1323,13 @@ public class YuniClient extends Activity {
                                                     bundle.putString("text", "Failed to create pages (" + result + ")");
                                                     msg.setData(bundle);
                                                     failedHandler.sendMessage(msg);
+                                                    pages = null;
                                                 }
+                                                deviceInfo = null;
                                             }
                                             else
                                             {
+                                                deviceInfo = null;
                                                 Message msg = new Message();
                                                 Bundle bundle = new Bundle();
                                                 bundle.putString("text", "Failed to load hex file (" + result + ")");
@@ -1333,6 +1356,7 @@ public class YuniClient extends Activity {
                                 TextView error = (TextView)findViewById(R.id.error);
                                 error.setText("Flashing done");
                                 dialog.dismiss();
+                                pages = null;
                             }
                         }
                         else if((state & STATE_EEPROM_READING) != 0)
@@ -1414,7 +1438,7 @@ public class YuniClient extends Activity {
     
     private String CreatePages(memory mem)
     {
-        pages.clear();
+        pages = Collections.checkedList(new ArrayList<Page>(), Page.class);
         if (mem.size() > deviceInfo.mem_size)
             for (int a = deviceInfo.mem_size; a < mem.size(); ++a)
                 if (mem.Get(a) != 0xff)

@@ -13,11 +13,15 @@ class memory
 {
     public byte Get(int index) { return m_buffer[index]; }
     public int size() { return size; }
-    public int data() { if(size == 0) return 0; else return m_buffer[0]; }
     
     public String Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
     {
         final FileInputStream file = new FileInputStream(filePath);
+        if(filePath.length() >= Integer.MAX_VALUE)
+        {
+             file.close();
+             return "You really should not try to flash files bigger than 2 gigabytes."; 
+        }
         final byte[] fileBuff = new byte[(int) filePath.length()];
         file.read(fileBuff);
         file.close();
@@ -27,9 +31,8 @@ class memory
         m_buffer = new byte[deviceInfo.mem_size];
         size = 0;
         int pos = 0;
-        long lastSendPos = 0;
+        int lastSendPos = 0;
         Message msg = null;
-        String digit = null;
         short length = 0;
         short address = 0;
         short rectype = 0;
@@ -64,6 +67,15 @@ class memory
                     line[lineLenght] = (char)fileBuff[pos];
                     ++pos;
                     ++lineLenght;
+                    if(lineLenght >= 50)
+                    {
+                        char[] tmp = line;
+                        line = new char[100];
+                        for(byte z = 0; z < 50; ++z)
+                            line[z] = tmp[z];
+                    }
+                    else if(lineLenght >= 100)
+                        return "Wrong line length";
                 }
             }
             if (line[0] != ':' || lineLenght % 2 != 1)
@@ -71,8 +83,7 @@ class memory
             rec_nums_itr = 0;
             for (short i = 1; i + 1 < lineLenght; i+=2)
             {
-                digit = String.copyValueOf(line, i, 2);
-                rec_nums[rec_nums_itr] = (byte) Integer.parseInt(digit, 16);
+                rec_nums[rec_nums_itr] = (byte) Integer.parseInt(String.copyValueOf(line, i, 2), 16);
                 ++rec_nums_itr;
             }
             length = (short) (0xFF & (int)rec_nums[0]);
@@ -111,7 +122,6 @@ class memory
             }
         }
         msg = null;
-        digit = null;
         return "";
     }
 

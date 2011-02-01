@@ -42,6 +42,11 @@ class eeprom
         for(short i = 0; i < 255; ++i)
             buffer[(YuniClient.eeprom_part == 2) ? (i + YuniClient.EEPROM_PART2) : i] = 0;
     }
+    public void clear_all()
+    {
+        for(short i = 0; i < 512; ++i)
+            buffer[i] = 0;
+    }
     public short getTotalRecCount()
     {
         short count = 0;
