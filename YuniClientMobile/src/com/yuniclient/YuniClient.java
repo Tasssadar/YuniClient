@@ -46,6 +46,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
+import com.yuni.client.R;
 
 public class YuniClient extends Activity {
     private static final int REQUEST_ENABLE_BT = 2;
@@ -111,6 +112,8 @@ public class YuniClient extends Activity {
     private int[] EEPROMTouchLastY = null;
     private byte EEPROMTouchItr;
     private short[] EEPROMScrollPos = {0,0};
+    
+    private controlAPI api = new controlAPI();
     
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -382,7 +385,10 @@ public class YuniClient extends Activity {
             if(((state & STATE_EEPROM) != 0  || (state & STATE_CONNECTED) == 0) &&
                (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
                 return super.onKeyDown(keyCode, event);
-            moveTaskToBack(true);
+            else if((state & STATE_CONTROLS) != 0)
+            	ShowAPIDialog();
+            else
+                moveTaskToBack(true);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -459,22 +465,47 @@ public class YuniClient extends Activity {
                  boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
                  if(((Button)v).getId() == R.id.LeftForw_b)
                  {
-                    ButtonTouched("W", down);
-                    ButtonTouched("A", down);
+                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
+                    else
+                    {
+                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                        SendMovementKey(controlAPI.MOVE_LEFT, down);
+                    }   
                  }
                  else if(((Button)v).getId() == R.id.RightForw_b)
                  {
-                        ButtonTouched("W", down);
-                        ButtonTouched("D", down);
+                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
+                    else
+                    {
+                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                        SendMovementKey(controlAPI.MOVE_RIGHT, down);
+                    }
                  }
-                 else if(((Button)v).getId() == R.id.Space_b)
+                 else if(((Button)v).getId() == R.id.Forward_b)
+                     SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                 else if(((Button)v).getId() == R.id.Backward_b)
+                     SendMovementKey(controlAPI.MOVE_BACKWARD, down);
+                 else if(((Button)v).getId() == R.id.Left_b)
+                     SendMovementKey(controlAPI.MOVE_LEFT, down);
+                 else if(((Button)v).getId() == R.id.Right_b)
+                     SendMovementKey(controlAPI.MOVE_RIGHT, down);
+                 else if(((Button)v).getId() == R.id.Space_b && api.GetAPIType() != controlAPI.API_PACKETS)
                         ButtonTouched(" ", down);
-                 else
+                 else if(api.GetAPIType() != controlAPI.API_PACKETS)
                      ButtonTouched(((Button)v).getText(), down);
                 }
                 return false;
          }
         };
+    }
+    
+    public void SendMovementKey(byte button, boolean down)
+    {
+        byte[] out = api.BuildMovementPacket(button, down);
+        if(out != null)
+        mChatService.write(out);     
     }
     
     void InitMain()
@@ -733,7 +764,22 @@ public class YuniClient extends Activity {
             scroll.scrollTo(0, out.getHeight());
         }
     };
-    
+    private void ShowAPIDialog()
+    {
+    	final CharSequence[] items = {"Keyboard", "YuniRC", "Packets"};
+
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	builder.setTitle("Choose control API");
+    	builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
+    	    public void onClick(DialogInterface dialog, int item) {
+    	    	api.SetAPIType((byte) item);
+    	        Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
+    	        dialog.dismiss();
+    	    }
+    	});
+    	AlertDialog alert = builder.create();
+    	alert.show();
+    }
     private void InitEEPROMList()
     {
         state |= STATE_EEPROM;
@@ -1389,6 +1435,13 @@ public class YuniClient extends Activity {
                                 dialog.setProgress(0);
                                 dialog.setCancelable(false);
                                 dialog.show();
+                            }
+                            else if(buffer[0] == 0x15)
+                            {
+                            	dialog.dismiss();
+                            	ShowAlert("Cannot write, EEPROM is protected!");
+                            	eeprom_part = eeprom_write_part;
+                            	state &= ~(STATE_EEPROM_WRITE);
                             }
                             else if(buffer[0] != 0x1F)
                                 return;

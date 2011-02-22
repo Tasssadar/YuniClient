@@ -30,6 +30,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.widget.AdapterView.OnItemClickListener;
+import com.yuni.client.R;
 
 /**
  * This class does all the work for setting up and managing Bluetooth

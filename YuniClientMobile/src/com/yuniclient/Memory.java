@@ -8,6 +8,7 @@ import java.io.IOException;
 import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
+import com.yuni.client.R;
 
 class memory
 {
