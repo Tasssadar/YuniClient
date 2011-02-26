@@ -85,6 +85,7 @@ public class YuniClient extends Activity {
     public static final short STATE_EEPROM_EDIT= 0x200;
     public static final short STATE_EEPROM_WRITE= 0x400;
     public static final short STATE_EEPROM_NEW_ADD=0x800;
+    public static final short STATE_EEPROM_PLAY=0x1000;
     public static final byte REC_SIZE = 5;
     
     public static final short EEPROM_PART2=255;
@@ -113,7 +114,22 @@ public class YuniClient extends Activity {
     private byte EEPROMTouchItr;
     private short[] EEPROMScrollPos = {0,0};
     
-    private controlAPI api = new controlAPI();
+    private final Handler PlayHandler = new Handler() {
+        public void handleMessage(Message msg) {
+        	if(msg.what == 1 && msg.obj != null)
+        	    mChatService.write((byte[])msg.obj);
+        	else if(msg.what == 2)
+        		api.received((Packet)msg.obj);
+        	
+        	if(msg.what == 1 || msg.what == 2)
+        	    PlayLog(msg.getData().getString("log"));
+        }
+    };
+    
+    private controlAPI api = new controlAPI(PlayHandler);
+    private Protocol protocol = new Protocol(PlayHandler);
+    
+    private LogFile log =  null;
     
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -222,6 +238,9 @@ public class YuniClient extends Activity {
         EEPROM = null;
         alertDialog = null;
         deviceInfo = null;
+        if(log != null)
+        	log.close();
+        log = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -391,6 +410,15 @@ public class YuniClient extends Activity {
                 moveTaskToBack(true);
             return true;
         }
+        else if(keyCode == KeyEvent.KEYCODE_SEARCH)
+        {
+        	if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && 
+                (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
+            {
+                InitPlay();       
+            }
+                    
+        }
         return super.onKeyDown(keyCode, event);
     }
     @Override
@@ -515,6 +543,8 @@ public class YuniClient extends Activity {
         autoScrollThread = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
+        state &= ~(STATE_EEPROM_PLAY);
+        api.StopPlay();
         context = this;
         curFolder = new File("/mnt/sdcard/hex/");
         fileSelect = new DialogInterface.OnClickListener() {
@@ -764,6 +794,16 @@ public class YuniClient extends Activity {
             scroll.scrollTo(0, out.getHeight());
         }
     };
+    public final Handler scrollHandlerPlay = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            final TextView out = (TextView) findViewById(R.id.PlayLog);
+            final ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewPlay);
+            if(scroll == null || out == null)
+                return;
+            scroll.scrollTo(0, out.getHeight());
+        }
+    };
     private void ShowAPIDialog()
     {
     	final CharSequence[] items = {"Keyboard", "YuniRC", "Packets"};
@@ -796,9 +836,9 @@ public class YuniClient extends Activity {
             eeprom_part = 1;
             EEPROM = new eeprom();
             mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
-            if((state & STATE_CONNECTED) != 0)
-                LoadEEPROM();
-            else
+            //if((state & STATE_CONNECTED) != 0)
+            //    LoadEEPROM();
+            //else
                 OpenLoadDialog();
         }
         mEEPROMEntries.clear();
@@ -1054,6 +1094,69 @@ public class YuniClient extends Activity {
         final AlertDialog alert = builder2.create();
         alert.show();
     }
+    void InitPlay()
+    {
+        if(EEPROM.getPartRecCount(eeprom_part == 1) == 0)
+        {
+        	ShowAlert("This part has no etries!");
+        	return;
+        }
+        state |= STATE_EEPROM_PLAY;
+        setContentView(R.layout.play);
+        if(log == null)
+            log = new LogFile();
+        else
+           log.close();
+        log.init(true);
+        
+        autoScrollThread = new Thread (new Runnable()
+        {
+            public void run()
+            {
+                TextView out = (TextView) findViewById(R.id.PlayLog);
+                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewPlay);
+                while(true)
+                {
+                    if((state & STATE_EEPROM_PLAY) == 0)
+                        break;
+
+                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
+                    {
+                        scrollHandlerPlay.sendEmptyMessage(0);
+                        state &= ~(STATE_SCROLL);
+                    }
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        autoScrollThread.setPriority(1);
+        autoScrollThread.start();
+        
+        PlayLog("Playing eeprom data, part " + eeprom_part);
+        if(api.GetAPIType() != controlAPI.API_PACKETS)
+        {
+        	api.SetAPIType(controlAPI.API_PACKETS);
+        	PlayLog("Setting API type to API_PACKETS");
+        }
+        PlayLog("Passing control to controlAPI...");
+        api.Play(EEPROM);
+    }
+    
+    void PlayLog(String text)
+    {
+        if((state & STATE_EEPROM_PLAY) == 0)
+        	return;
+        log.writeString(text);
+        ((TextView) findViewById(R.id.PlayLog)).append(text + "\r\n");
+        state |= STATE_SCROLL;
+    }
+    
+    
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
@@ -1298,6 +1401,11 @@ public class YuniClient extends Activity {
                     if(msg.obj != null)
                     {
                         final byte[] buffer = (byte[])msg.obj;
+                        if((state & STATE_EEPROM_PLAY) != 0)
+                        {
+                        	protocol.parseData(buffer, (byte) msg.arg1);
+                        	break;
+                        }
                         String seq = "";
                         for(int y = 0; y < msg.arg1; ++y)
                             seq += (char)buffer[y];
