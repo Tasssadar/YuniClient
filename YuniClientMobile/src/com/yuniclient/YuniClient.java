@@ -183,8 +183,6 @@ public class YuniClient extends Activity {
         else if (!mBluetoothAdapter.isEnabled())
                 EnableBT();
         init();
-        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
-        	.newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient play lock");
     }
     public void onDestroy() 
     {
@@ -246,7 +244,8 @@ public class YuniClient extends Activity {
         if(log != null)
         	log.close();
         log = null;
-        lock.release();
+        if(lock != null)
+            lock.release();
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -552,7 +551,8 @@ public class YuniClient extends Activity {
         state &= ~(STATE_EEPROM_PLAY);
         api.StopPlay();
         context = this;
-        lock.release();
+        if(lock != null)
+            lock.release();
         curFolder = new File("/mnt/sdcard/hex/");
         fileSelect = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
@@ -1144,6 +1144,8 @@ public class YuniClient extends Activity {
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
         
+        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
+    	    .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient play lock");
         lock.acquire();
         PlayLog("Screen lock acquired");
         PlayLog("Playing eeprom data, part " + eeprom_part);
