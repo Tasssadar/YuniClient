@@ -118,13 +118,13 @@ public class YuniClient extends Activity {
     
     private final Handler PlayHandler = new Handler() {
         public void handleMessage(Message msg) {
-        	if(msg.what == 1 && msg.obj != null)
-        	    mChatService.write((byte[])msg.obj);
-        	else if(msg.what == 2)
-        		api.received((Packet)msg.obj);
-        	
-        	if(msg.what == 1 || msg.what == 2)
-        	    PlayLog(msg.getData().getString("log"));
+            if(msg.what == 1 && msg.obj != null)
+                mChatService.write((byte[])msg.obj);
+            else if(msg.what == 2)
+                api.received((Packet)msg.obj);
+            
+            if(msg.what == 1 || msg.what == 2 || msg.what == 3)
+                PlayLog(msg.getData().getString("log"));
         }
     };
     
@@ -242,7 +242,7 @@ public class YuniClient extends Activity {
         alertDialog = null;
         deviceInfo = null;
         if(log != null)
-        	log.close();
+            log.close();
         log = null;
         if(lock != null)
             lock.release();
@@ -410,14 +410,14 @@ public class YuniClient extends Activity {
                (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
                 return super.onKeyDown(keyCode, event);
             else if((state & STATE_CONTROLS) != 0)
-            	ShowAPIDialog();
+                ShowAPIDialog();
             else
                 moveTaskToBack(true);
             return true;
         }
         else if(keyCode == KeyEvent.KEYCODE_SEARCH)
         {
-        	if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && 
+            if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && 
                 (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
             {
                 InitPlay();       
@@ -543,8 +543,8 @@ public class YuniClient extends Activity {
     
     void InitMain()
     {
-        mEEPROMEntries = null;
-        EEPROM = null;
+        //mEEPROMEntries = null;
+        //EEPROM = null;
         autoScrollThread = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
@@ -552,7 +552,10 @@ public class YuniClient extends Activity {
         api.StopPlay();
         context = this;
         if(lock != null)
+        {
             lock.release();
+            lock = null;
+        }
         curFolder = new File("/mnt/sdcard/hex/");
         fileSelect = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
@@ -813,19 +816,19 @@ public class YuniClient extends Activity {
     };
     private void ShowAPIDialog()
     {
-    	final CharSequence[] items = {"Keyboard", "YuniRC", "Packets"};
+        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets"};
 
-    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
-    	builder.setTitle("Choose control API");
-    	builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
-    	    public void onClick(DialogInterface dialog, int item) {
-    	    	api.SetAPIType((byte) item);
-    	        Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
-    	        dialog.dismiss();
-    	    }
-    	});
-    	AlertDialog alert = builder.create();
-    	alert.show();
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose control API");
+        builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int item) {
+                api.SetAPIType((byte) item);
+                Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.show();
     }
     private void InitEEPROMList()
     {
@@ -1105,8 +1108,8 @@ public class YuniClient extends Activity {
     {
         if(EEPROM.getPartRecCount(eeprom_part == 1) == 0)
         {
-        	ShowAlert("This part has no etries!");
-        	return;
+            ShowAlert("This part has no etries!");
+            return;
         }
         state |= STATE_EEPROM_PLAY;
         setContentView(R.layout.play);
@@ -1145,14 +1148,14 @@ public class YuniClient extends Activity {
         autoScrollThread.start();
         
         lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
-    	    .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient play lock");
+            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient play lock");
         lock.acquire();
         PlayLog("Screen lock acquired");
         PlayLog("Playing eeprom data, part " + eeprom_part);
         if(api.GetAPIType() != controlAPI.API_PACKETS)
         {
-        	api.SetAPIType(controlAPI.API_PACKETS);
-        	PlayLog("Setting API type to API_PACKETS");
+            api.SetAPIType(controlAPI.API_PACKETS);
+            PlayLog("Setting API type to API_PACKETS");
         }
         PlayLog("Passing control to controlAPI...");
         api.Play(EEPROM);
@@ -1161,7 +1164,7 @@ public class YuniClient extends Activity {
     void PlayLog(String text)
     {
         if((state & STATE_EEPROM_PLAY) == 0)
-        	return;
+            return;
         log.writeString(text);
         ((TextView) findViewById(R.id.PlayLog)).append(text + "\r\n");
         state |= STATE_SCROLL;
@@ -1414,8 +1417,8 @@ public class YuniClient extends Activity {
                         final byte[] buffer = (byte[])msg.obj;
                         if((state & STATE_EEPROM_PLAY) != 0)
                         {
-                        	protocol.parseData(buffer, (byte) msg.arg1);
-                        	break;
+                            protocol.parseData(buffer, (byte) msg.arg1);
+                            break;
                         }
                         String seq = "";
                         for(int y = 0; y < msg.arg1; ++y)
@@ -1557,10 +1560,10 @@ public class YuniClient extends Activity {
                             }
                             else if(buffer[0] == 0x15)
                             {
-                            	dialog.dismiss();
-                            	ShowAlert("Cannot write, EEPROM is protected!");
-                            	eeprom_part = eeprom_write_part;
-                            	state &= ~(STATE_EEPROM_WRITE);
+                                dialog.dismiss();
+                                ShowAlert("Cannot write, EEPROM is protected!");
+                                eeprom_part = eeprom_write_part;
+                                state &= ~(STATE_EEPROM_WRITE);
                             }
                             else if(buffer[0] != 0x1F)
                                 return;

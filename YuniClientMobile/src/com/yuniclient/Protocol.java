@@ -129,7 +129,7 @@ class Packet
         int firstByte = (0xFF & ((int)m_data[m_readPos]));
         int secondByte = (0xFF & ((int)m_data[m_readPos+1]));
         m_readPos += 2;
-        return  (firstByte << 8 | secondByte);
+        return  ((firstByte << 8) | secondByte);
     }
     
     public String readString()

@@ -20,15 +20,14 @@ class PacketHandler
                 log = "CMSG_PONG received";
                 break;
             case Protocol.CMSG_GET_RANGE_VAL:
-                log = "CMSG_GET_RANGE_VAL received, adress was " + packet.readByte() + " and range is " + packet.readUInt16();
+                log = "CMSG_GET_RANGE_VAL adr " + packet.readByte() + " range " + packet.readUInt16();
                 break;
             case Protocol.CMSG_EMERGENCY_START:
-                //log = "CMSG_EMERGENCY_START received";
-                //break;
+                log = "CMSG_EMERGENCY_START received";
+                break;
             case Protocol.CMSG_EMERGENCY_END:
-                //log = "CMSG_EMERGENCY_END received";
-                //break;
-            	return;
+                log = "CMSG_EMERGENCY_END received";
+                break;
             case Protocol.CMSG_ENCODER_SEND:
                 log = "Encoders left: " + packet.readUInt16() + " right: " + packet.readUInt16();
                 break;
