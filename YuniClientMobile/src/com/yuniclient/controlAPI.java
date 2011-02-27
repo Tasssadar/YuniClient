@@ -211,30 +211,30 @@ class controlAPI
                     break;
                     case 4:  // EVENT_RANGE_HIGHER
                     case 5:  // EVENT_RANGE_LOWER
-                    canContinue = false;
-                    endEvent = rec[2];
-                    endData = (0xFF & rec[4]);
-                    byte[] range = new byte[4];
-                    range [0] = 1;
-                    range [1] = Protocol.SMSG_GET_RANGE_VAL;
-                    range [2] = 1;
-                    range [3] = rec[3];
-                    
-                    while(!canContinue)
+                        canContinue = false;
+                        endEvent = rec[2];
+                        endData = (0xFF & rec[4]);
+                        byte[] range = new byte[4];
+                        range [0] = 1;
+                        range [1] = Protocol.SMSG_GET_RANGE_VAL;
+                        range [2] = 1;
+                        range [3] = rec[3];
+                        
+                        while(!canContinue)
                         {
-                        msg = new Message();
-                        msg.what = 1;
-                        msg.obj = range.clone();
-                        msg.getData().putString("log", "Get range adr " + (0xFF & rec[3]) + ", target " + endData);
-                        mHandler.sendMessage(msg);
-                        try {
-                                Thread.sleep(300);
-                            } catch (InterruptedException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                            }
+                            msg = new Message();
+                            msg.what = 1;
+                            msg.obj = range.clone();
+                            msg.getData().putString("log", "Get range adr " + (0xFF & rec[3]) + ", target " + endData);
+                            mHandler.sendMessage(msg);
+                            try {
+                                    Thread.sleep(300);
+                                } catch (InterruptedException e) {
+                                    // TODO Auto-generated catch block
+                                    e.printStackTrace();
+                                }
                         } 
-                    endEvent = 0;
+                        endEvent = 0;
                         break;
                     case 6:  // EVENT_DISTANCE
                     case 7:  // EVENT_DISTANCE_LEFT
@@ -335,13 +335,13 @@ class controlAPI
                     break;
                 case 4:
                 case 5:
-                if(pkt.getOpcode() != Protocol.CMSG_GET_RANGE_VAL)
-                return;
-                pkt.setPos((byte)1);
-                if((endEvent == 4 && pkt.readUInt16() >= endData) ||
-                (endEvent == 5 && pkt.readUInt16() <= endData))
-                canContinue = true;
-                break;
+                    if(pkt.getOpcode() != Protocol.CMSG_GET_RANGE_VAL)
+                        return;
+                    pkt.setPos((byte)1);
+                    if((endEvent == 4 && pkt.readUInt16() >= endData) ||
+                        (endEvent == 5 && pkt.readUInt16() <= endData))
+                        canContinue = true;
+                    break;
                 case 6:
                 case 7:
                 case 8:

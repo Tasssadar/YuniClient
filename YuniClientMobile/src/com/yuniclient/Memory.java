@@ -15,6 +15,7 @@ class memory
     public byte Get(int index) { return m_buffer[index]; }
     public int size() { return size; }
     
+    
     public String Load(File filePath, Handler handler, DeviceInfo deviceInfo) throws IOException
     {
         final FileInputStream file = new FileInputStream(filePath);
@@ -27,7 +28,7 @@ class memory
         file.read(fileBuff);
         file.close();
         
-        final byte[] rec_nums = new byte[50];
+     /*   final byte[] rec_nums = new byte[50];
         byte rec_nums_itr = 0;
         m_buffer = new byte[deviceInfo.mem_size];
         size = 0;
@@ -122,10 +123,16 @@ class memory
                 m_buffer[base_i + address + i] = rec_nums[i + 4];
             }
         }
-        msg = null;
+        msg = null;*/
+        m_buffer = null;
+        System.loadLibrary("load_hex");
+        m_buffer = parseHexFile(fileBuff, deviceInfo.mem_size, (int) filePath.length());
+        if(m_buffer == null)
+            return "Corrupted hex file!";
+        for(size = deviceInfo.mem_size; m_buffer[size-1] == 0; --size) {};
         return "";
     }
-
+    public native byte[] parseHexFile(byte[] file, int memsize, int fileLenght);
     private byte[] m_buffer;
     private int size;
     

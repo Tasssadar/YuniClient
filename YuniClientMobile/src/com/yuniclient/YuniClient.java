@@ -133,7 +133,7 @@ public class YuniClient extends Activity {
     
     private LogFile log =  null;
     private WakeLock lock = null;
-    
+
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
             Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
@@ -183,6 +183,7 @@ public class YuniClient extends Activity {
         else if (!mBluetoothAdapter.isEnabled())
                 EnableBT();
         init();
+
     }
     public void onDestroy() 
     {
@@ -417,12 +418,12 @@ public class YuniClient extends Activity {
         }
         else if(keyCode == KeyEvent.KEYCODE_SEARCH)
         {
-            if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && 
-                (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0)
+            if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && (state & STATE_EEPROM_EDIT) == 0 
+                && (state & STATE_EEPROM_NEW_ADD) == 0 && (state & STATE_EEPROM_PLAY) == 0)
             {
-                InitPlay();       
-            }
-                    
+                InitPlay();  
+                return true;
+            }     
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -1291,7 +1292,7 @@ public class YuniClient extends Activity {
     
     private final Handler flashHandler = new Handler() {
         public void handleMessage(Message msg) {
-            if(Debug.isDebuggerConnected())
+          /*  if(Debug.isDebuggerConnected())
             {
                 dialog.dismiss();
                 dialog= new ProgressDialog(context);
@@ -1302,7 +1303,7 @@ public class YuniClient extends Activity {
                 dialog.setProgress(0);
                 dialog.show();
             }
-            else
+            else*/
                 dialog.setMax(pages.size());
             pagesItr = 0;
             SendPage(pages.get(pagesItr));
@@ -1448,7 +1449,7 @@ public class YuniClient extends Activity {
                                 final TextView file = (TextView)findViewById(R.id.hex_file);
                                 File hex = new File(file.getText().toString());
                                 dialog.dismiss();
-                                if(Debug.isDebuggerConnected())
+                               /* if(Debug.isDebuggerConnected())
                                 {
                                     dialog= new ProgressDialog(context);
                                     dialog.setProgress(0);
@@ -1459,7 +1460,7 @@ public class YuniClient extends Activity {
                                     dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                                     dialog.show();
                                 }
-                                else
+                                else*/
                                 {
                                     dialog= new ProgressDialog(context);
                                     dialog.setCancelable(false);
