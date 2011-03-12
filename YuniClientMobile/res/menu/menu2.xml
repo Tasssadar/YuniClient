@@ -3,5 +3,5 @@
     <item android:id="@+id/offline"
           android:title="Edit EEPROM data files" />
     <item android:id="@+id/exit"
-          android:title="Exit" />    
+          android:title="Exit" />      
 </menu>

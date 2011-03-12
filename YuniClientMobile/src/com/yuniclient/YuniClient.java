@@ -20,8 +20,11 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.Debug;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
@@ -48,6 +51,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
+
 import com.yuni.client.R;
 
 public class YuniClient extends Activity {
@@ -75,19 +79,21 @@ public class YuniClient extends Activity {
     private View.OnTouchListener keyTouch;
     public DialogInterface.OnClickListener fileSelect;
     
-    public static final byte STATE_CONNECTED = 0x01;
-    public static final byte STATE_CONTROLS  = 0x02;
-    public static final byte STATE_STOPPING  = 0x04;
-    public static final byte STATE_STOPPED   = 0x08;
-    public static final byte STATE_WAITING_ID= 0x10;
-    public static final byte STATE_FLASHING  = 0x20;
-    public static final byte STATE_SCROLL    = 0x40;
-    public static final short STATE_EEPROM   = 0x80;
-    public static final short STATE_EEPROM_READING = 0x100;
-    public static final short STATE_EEPROM_EDIT= 0x200;
-    public static final short STATE_EEPROM_WRITE= 0x400;
-    public static final short STATE_EEPROM_NEW_ADD=0x800;
-    public static final short STATE_EEPROM_PLAY=0x1000;
+    public static final byte STATE_CONNECTED        = 0x01;
+    public static final byte STATE_CONTROLS          = 0x02;
+    public static final byte STATE_STOPPING         = 0x04;
+    public static final byte STATE_STOPPED           = 0x08;
+    public static final byte STATE_WAITING_ID        = 0x10;
+    public static final byte STATE_FLASHING          = 0x20;
+    public static final byte STATE_SCROLL            = 0x40;
+    public static final short STATE_EEPROM           = 0x80;
+    public static final short STATE_EEPROM_READING  = 0x100;
+    public static final short STATE_EEPROM_EDIT     = 0x200;
+    public static final short STATE_EEPROM_WRITE    = 0x400;
+    public static final short STATE_EEPROM_NEW_ADD  = 0x800;
+    public static final short STATE_EEPROM_PLAY     = 0x1000;
+    public static final short STATE_ACCELEROMETER   = 0x2000;
+    public static final short STATE_BALL            = 0x4000;
     public static final byte REC_SIZE = 5;
     
     public static final short EEPROM_PART2=255;
@@ -130,9 +136,16 @@ public class YuniClient extends Activity {
     
     private controlAPI api = new controlAPI(PlayHandler);
     private Protocol protocol = new Protocol(PlayHandler);
+    AccelerometerListener accelerometerListener = null;
     
     private LogFile log =  null;
     private WakeLock lock = null;
+    
+    private SensorManager mSensorManager;
+    private byte mMovementFlags = 0;
+    private byte mSpeed = 0;
+    
+    
 
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -171,6 +184,11 @@ public class YuniClient extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if(savedInstanceState != null)
+        {
+            finish();
+            return;
+        }
         context = this;
         state = 0;
         btTurnOn = 0;
@@ -182,14 +200,17 @@ public class YuniClient extends Activity {
             ShowAlert("This device does not have bluetooth adapter");
         else if (!mBluetoothAdapter.isEnabled())
                 EnableBT();
+        
         init();
-
     }
     public void onDestroy() 
     {
         super.onDestroy();
-        Disconnect(false);
-        unregisterReceiver(mReceiver);
+        if(isFinishing())
+        {
+            Disconnect(false);
+            unregisterReceiver(mReceiver);
+        }
     }
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode != REQUEST_ENABLE_BT)
@@ -247,6 +268,9 @@ public class YuniClient extends Activity {
         log = null;
         if(lock != null)
             lock.release();
+        accelerometerListener = null;
+        api.SetDefXY(0, 0);
+        mSensorManager = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -395,7 +419,9 @@ public class YuniClient extends Activity {
                   AlertDialog alert = builder2.create();
                   alert.show();
               }
-              else if((state & STATE_CONTROLS) != 0)
+              else if((state & STATE_ACCELEROMETER) != 0)
+                  StopAccelerometer();
+              else if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0)
                   InitMain();
               else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
                   InitEEPROMList();
@@ -537,7 +563,7 @@ public class YuniClient extends Activity {
     
     public void SendMovementKey(byte button, boolean down)
     {
-        byte[] out = api.BuildMovementPacket(button, down);
+        byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
         if(out != null)
         mChatService.write(out);     
     }
@@ -581,6 +607,13 @@ public class YuniClient extends Activity {
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
                 InitEEPROMList();
+             }
+        });
+        button = (Button) findViewById(R.id.ball_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                if((state & STATE_STOPPED) == 0)
+                    InitBall();
              }
         });
         button = (Button) findViewById(R.id.Controls_b);
@@ -687,6 +720,9 @@ public class YuniClient extends Activity {
         v = (Button) findViewById(R.id.Controls_b);
         v.setEnabled(start);
         v.setClickable(start);
+        v = (Button) findViewById(R.id.ball_b);
+        v.setEnabled(start);
+        v.setClickable(start);
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
@@ -755,7 +791,7 @@ public class YuniClient extends Activity {
         button = (Button) findViewById(R.id.Sensors_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                InitMain();
+                 InitAccelerometer();
              }
           });
 
@@ -1171,6 +1207,154 @@ public class YuniClient extends Activity {
         state |= STATE_SCROLL;
     }
     
+    private void InitAccelerometer()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Accelerometer control");
+        builder.setMessage("Controlling device via accelerometer. Press back or dismiss to stop.");
+        builder.setCancelable(true);
+        builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                StopAccelerometer();
+                dialog.dismiss();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.show();
+        state |= STATE_ACCELEROMETER;
+         // Get an instance of the SensorManager
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        accelerometerListener = new AccelerometerListener();
+        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), 100);
+        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
+            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
+        lock.acquire();
+        mMovementFlags = 0;
+        mSpeed = 0;
+    }
+    private void StopAccelerometer()
+    {
+        if(lock != null)
+            lock.release();
+        lock = null;
+        byte[] data = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
+        if(data != null)
+            mChatService.write(data);
+        
+        mSensorManager.unregisterListener(accelerometerListener);
+        accelerometerListener = null;
+        api.SetDefXY(0, 0);
+        state &= ~(STATE_ACCELEROMETER);
+        mSensorManager = null;
+    }
+    
+    private class AccelerometerListener implements SensorEventListener {
+        
+        public AccelerometerListener()
+        {
+        }
+
+        public void onAccuracyChanged(Sensor arg0, int arg1) {
+            // TODO Auto-generated method stub
+            
+        }
+
+        public void onSensorChanged(SensorEvent event) {
+            // TODO Auto-generated method stub
+            if((state & STATE_ACCELEROMETER) == 0)
+            {
+                ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
+                return;
+            }
+            if (event.sensor.getType() != Sensor.TYPE_ORIENTATION)
+                return;
+            
+            
+            if(api.GetDefX() == 0 && api.GetDefX() == 0)
+            {
+                api.SetDefXY(event.values[1], event.values[2]);
+                return;
+            }
+            byte[] moveFlags = api.XYToMoveFlags(event.values[1], event.values[2]);
+
+            if(moveFlags == null || (mMovementFlags == moveFlags[0] && mSpeed == moveFlags[1]))
+                return;
+            
+            mSpeed = moveFlags[1];
+            if(api.GetAPIType() != controlAPI.API_PACKETS)
+            {
+                byte[] speedData = null;
+                if(api.GetAPIType() == controlAPI.API_KEYBOARD)
+                    speedData = new byte[1];
+                else
+                {
+                    speedData = new byte[2];
+                    speedData[1] = (byte)'d';
+                }
+                if(mSpeed == 50)
+                    speedData[0] = (byte)'a';
+                else if(mSpeed == 100)
+                    speedData[0] = (byte)'b';
+                else 
+                    speedData[0] = (byte)'c';
+                mChatService.write(speedData.clone());
+                if(api.GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
+                {
+                    speedData = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
+                    if(speedData != null)
+                        mChatService.write(speedData.clone());
+                }
+            }
+            
+            mMovementFlags = moveFlags[0];
+            if(moveFlags[0] != 0 || api.GetAPIType() == controlAPI.API_PACKETS)
+            {
+                byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
+                if(data != null)
+                    mChatService.write(data.clone());
+            }
+        }
+    }
+    
+    private void InitBall()
+    {
+        setContentView(api.new MTView(this));
+        state |= STATE_BALL;
+        if(api.GetAPIType() != controlAPI.API_PACKETS)
+        {
+            api.SetAPIType(controlAPI.API_PACKETS);
+            Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    public final Handler ballHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg)
+        {
+            MotionEvent event = (MotionEvent)msg.obj;
+            float y = event.getY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2);
+            float dx = event.getX() - msg.arg1/2;
+            float dy = y - msg.arg2/2;
+            float dist = (float) Math.sqrt((dx*dx) + (dy*dy));
+            
+            if(event.getAction() != MotionEvent.ACTION_UP && dist <= msg.arg1/2)
+            {
+                byte[] flags = api.BallXYToFlags(event.getX(), y, msg.arg1, msg.arg2);
+                byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
+                if(data != null)
+                    mChatService.write(data.clone());
+                mMovementFlags = flags[0];
+            }
+            else if(mMovementFlags != 0)
+            {
+                byte[] data = api.BuildMovementPacket((byte)0, false, (byte)127);
+                if(data != null)
+                    mChatService.write(data.clone());
+                mMovementFlags = 0;
+            }
+        }
+    };
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -1446,8 +1630,6 @@ public class YuniClient extends Activity {
                             deviceInfo = new DeviceInfo(seq);
                             if(deviceInfo.isSet())
                             {
-                                final TextView file = (TextView)findViewById(R.id.hex_file);
-                                File hex = new File(file.getText().toString());
                                 dialog.dismiss();
                                /* if(Debug.isDebuggerConnected())
                                 {

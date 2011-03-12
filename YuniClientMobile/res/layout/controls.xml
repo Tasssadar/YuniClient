@@ -59,7 +59,7 @@
             android:layout_width="108px"
             android:layout_height="40px"
             android:layout_below="@id/Record_b"
-            android:text="Turn on"/> 
+            android:text="Accelerometer"/> 
       <Button android:id="@+id/Regulator_b"
             android:layout_width="108px"
             android:layout_height="40px"
