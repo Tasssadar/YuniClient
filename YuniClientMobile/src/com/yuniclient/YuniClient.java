@@ -1226,7 +1226,8 @@ public class YuniClient extends Activity {
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
         accelerometerListener = new AccelerometerListener();
-        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), 100);
+        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
+        
         lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
             .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
         lock.acquire();
@@ -1333,7 +1334,7 @@ public class YuniClient extends Activity {
         public void handleMessage(Message msg)
         {
             MotionEvent event = (MotionEvent)msg.obj;
-            float y = event.getY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2);
+            float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2);
             float dx = event.getX() - msg.arg1/2;
             float dy = y - msg.arg2/2;
             float dist = (float) Math.sqrt((dx*dx) + (dy*dy));
@@ -1341,10 +1342,13 @@ public class YuniClient extends Activity {
             if(event.getAction() != MotionEvent.ACTION_UP && dist <= msg.arg1/2)
             {
                 byte[] flags = api.BallXYToFlags(event.getX(), y, msg.arg1, msg.arg2);
+                if(flags[0] == mMovementFlags && flags[1] == mSpeed)
+                    return;
                 byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
                 if(data != null)
                     mChatService.write(data.clone());
                 mMovementFlags = flags[0];
+                mSpeed = flags[1];
             }
             else if(mMovementFlags != 0)
             {
@@ -1352,6 +1356,7 @@ public class YuniClient extends Activity {
                 if(data != null)
                     mChatService.write(data.clone());
                 mMovementFlags = 0;
+                mSpeed = 0;
             }
         }
     };

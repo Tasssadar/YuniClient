@@ -100,9 +100,9 @@ class controlAPI
             //speed
             if(fabs(y - mDefY) < 30)
                 flags[1] = 50;
-            if(fabs(y - mDefY) < 35)
+            else if(fabs(y - mDefY) < 35)
                 flags[1] = 100;
-            if(fabs(y - mDefY) >= 35)
+            else
                 flags[1] = 127;
         }
         if(fabs(x - mDefX) >= 20)
@@ -115,9 +115,9 @@ class controlAPI
             {
                 if(fabs(x - mDefX) < 30)
                     flags[1] = 50;
-                if(fabs(x - mDefX) < 35)
+                else if(fabs(x - mDefX) < 35)
                     flags[1] = 100;
-                if(fabs(x - mDefX) >= 35)
+                else
                     flags[1] = 127;
             }
         }
