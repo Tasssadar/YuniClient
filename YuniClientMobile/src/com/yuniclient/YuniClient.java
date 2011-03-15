@@ -576,6 +576,7 @@ public class YuniClient extends Activity {
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
         state &= ~(STATE_EEPROM_PLAY);
+        state &= ~(STATE_BALL);
         api.StopPlay();
         context = this;
         if(lock != null)
@@ -1217,6 +1218,13 @@ public class YuniClient extends Activity {
             public void onClick(DialogInterface dialog, int id) {
                 StopAccelerometer();
                 dialog.dismiss();
+            }
+        });
+        builder.setOnCancelListener(new Dialog.OnCancelListener()
+        {
+            public void onCancel(DialogInterface dia)
+            {
+            	StopAccelerometer();
             }
         });
         AlertDialog alert = builder.create();
