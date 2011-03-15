@@ -1489,19 +1489,7 @@ public class YuniClient extends Activity {
     
     private final Handler flashHandler = new Handler() {
         public void handleMessage(Message msg) {
-          /*  if(Debug.isDebuggerConnected())
-            {
-                dialog.dismiss();
-                dialog= new ProgressDialog(context);
-                dialog.setCancelable(false);
-                dialog.setMessage("Flashing into " + YuniClient.deviceInfo.name + "...");
-                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                dialog.setMax(pages.size());
-                dialog.setProgress(0);
-                dialog.show();
-            }
-            else*/
-                dialog.setMax(pages.size());
+            dialog.setMax(pages.size());
             pagesItr = 0;
             SendPage(pages.get(pagesItr));
             ++pagesItr;
@@ -1644,27 +1632,14 @@ public class YuniClient extends Activity {
                             if(deviceInfo.isSet())
                             {
                                 dialog.dismiss();
-                               /* if(Debug.isDebuggerConnected())
-                                {
-                                    dialog= new ProgressDialog(context);
-                                    dialog.setProgress(0);
-                                    dialog.setMax((int)(hex.length()/1024));
-                                    dialog.setProgress(0);
-                                    dialog.setCancelable(false);
-                                    dialog.setMessage("Loading file...");
-                                    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                    dialog.show();
-                                }
-                                else*/
-                                {
-                                    dialog= new ProgressDialog(context);
-                                    dialog.setCancelable(false);
-                                    dialog.setMessage("Flashing into " + deviceInfo.name + "...");
-                                    dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                    dialog.setMax(100);
-                                    dialog.setProgress(0);
-                                    dialog.show();
-                                }
+                                dialog= new ProgressDialog(context);
+                                dialog.setCancelable(false);
+                                dialog.setMessage("Flashing into " + deviceInfo.name + "...");
+                                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                                dialog.setMax(100);
+                                dialog.setProgress(0);
+                                dialog.show();
+
                                 Thread load = new Thread (new Runnable()
                                 {
                                     public void run()
