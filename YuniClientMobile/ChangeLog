@@ -4,6 +4,31 @@ YuniClientMobile 2.0 "Miranda" (?? ?? ????)
 
     * In development
 
+YuniClientMobile 1.1 "Ice-planet" (19 march 2011)
+
+    YuniClientMobile 1.1 - Implements features expected from mobile client
+    with just basic UI.
+    
+    ==== Features ====
+    * Add support for ATmega162
+    * Show precise error message when hex file is corrupted
+    * Further optimalizations to hex file loading code 
+    * Fix bug in device microcontroller recognition
+    
+    ==== Supported microcontrollers ====
+    
+    * ATmega16
+    * ATmega32
+    * ATmega48
+    * ATmega88
+    * ATmega128 (only 16-bit addresses available)
+    * ATmega162
+    * ATmega168   
+    
+    ==== Statistics ====
+
+    * 1 revision total
+    
 YuniClientMobile 1.0 "Ice-planet" (15 march 2011)
 
     YuniClientMobile 1.0 - Implements features expected from mobile client
@@ -23,7 +48,7 @@ YuniClientMobile 1.0 "Ice-planet" (15 march 2011)
     * Can edit EEPROM memory in robot if implemented in its program
     * Can save and load EEPROM content from data files
     
-    ==== Supported microcontrolers ====
+    ==== Supported microcontrollers ====
     
     * ATmega16
     * ATmega32

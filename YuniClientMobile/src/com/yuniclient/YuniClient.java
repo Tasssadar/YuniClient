@@ -1224,7 +1224,7 @@ public class YuniClient extends Activity {
         {
             public void onCancel(DialogInterface dia)
             {
-            	StopAccelerometer();
+                StopAccelerometer();
             }
         });
         AlertDialog alert = builder.create();
@@ -1650,10 +1650,10 @@ public class YuniClient extends Activity {
                                         try
                                         {
                                             String result = mem.Load(hex, progressHandler2, deviceInfo);
-                                            if(result == "")
+                                            if(result == null)
                                             {
                                                 result = CreatePages(mem);
-                                                if(result == "")
+                                                if(result == null)
                                                     flashHandler.sendMessage(flashHandler.obtainMessage());
                                                 else
                                                 {
@@ -1710,8 +1710,7 @@ public class YuniClient extends Activity {
                             {
                                 if(skip && itr == 0)
                                     continue;
-                                EEPROM.set_nopart(itr_buff, buffer[itr]);
-                                ++itr_buff;
+                                EEPROM.set_nopart(itr_buff++, buffer[itr]);
                             }
                             if(itr_buff >= 512)
                                 readHandler.sendEmptyMessage(0);
@@ -1784,9 +1783,11 @@ public class YuniClient extends Activity {
     
     private String CreatePages(memory mem)
     {
+        
+        int mem_size = mem.size();
         pages = Collections.checkedList(new ArrayList<Page>(), Page.class);
-        if (mem.size() > deviceInfo.mem_size)
-            for (int a = deviceInfo.mem_size; a < mem.size(); ++a)
+        if (mem_size > deviceInfo.mem_size)
+            for (int a = deviceInfo.mem_size; a < mem_size; ++a)
                 if (mem.Get(a) != 0xff)
                     return "Program is too big!";
         int alt_entry_page = deviceInfo.patch_pos / deviceInfo.page_size;
@@ -1795,18 +1796,21 @@ public class YuniClient extends Activity {
         int i = 0;
         short pageItr = 0;
         Page cur_page = new Page();
-        for (boolean generate = true; generate && i < deviceInfo.mem_size / deviceInfo.page_size; ++i)
+        int page_size = deviceInfo.page_size;
+        int stopGenerate = deviceInfo.mem_size / deviceInfo.page_size;
+            
+        for (boolean generate = true; generate && i < stopGenerate; ++i)
         {
             cur_page = new Page();
-            cur_page.data = new byte[deviceInfo.page_size];
-            cur_page.address = i * deviceInfo.page_size;
+            cur_page.data = new byte[page_size];
+            cur_page.address = i * page_size;
             pageItr = 0;
-            if (mem.size() <= (i + 1) * deviceInfo.page_size)
+            if (mem.size() <= (i + 1) * page_size)
             {
-                for (int y = 0; y < deviceInfo.page_size; ++y)
+                for (int y = 0; y < page_size; ++y)
                 {
-                    if (i * deviceInfo.page_size + y < mem.size())
-                        cur_page.data[pageItr] = mem.Get(i * deviceInfo.page_size + y);
+                    if (i * page_size + y < mem.size())
+                        cur_page.data[pageItr] = mem.Get(i * page_size + y);
                     else
                         cur_page.data[pageItr] = (byte) 0xff;
                     ++pageItr;
@@ -1815,7 +1819,7 @@ public class YuniClient extends Activity {
             }
             else
             {
-                for (int y = i * deviceInfo.page_size; y < (i + 1) * deviceInfo.page_size; ++y)
+                for (int y = i * page_size; y < (i + 1) * page_size; ++y)
                 {
                     cur_page.data[pageItr] = mem.Get(y);
                     ++pageItr;
@@ -1831,13 +1835,13 @@ public class YuniClient extends Activity {
         }
         if (add_alt_page)
         {
-            for (int y = 0; y < deviceInfo.page_size; ++y)
+            for (int y = 0; y < page_size; ++y)
                 cur_page.data[y] = (byte)0xff;
-            cur_page.address = alt_entry_page * deviceInfo.page_size;
+            cur_page.address = alt_entry_page * page_size;
             patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr);
             pages.add(cur_page);
         }
-        return "";
+        return null;
     }
     private boolean patch_page(memory mem, Page page, int patch_pos, int boot_reset, short page_pos)
     {
