@@ -30,7 +30,7 @@ namespace YuniClient
         public Form1()
         {
             InitializeComponent();
-            version.Text = "15";
+            version.Text = "16";
         }
         delegate void SetTextCallback(string text);
         char[] flash_mode_sequence = { '\x74', '\x7E', '\x7A', '\x33' };
@@ -274,7 +274,7 @@ namespace YuniClient
 
         private bool ReadDeviceId()
         {
-            chip_definition[] defs = new chip_definition[6];
+            chip_definition[] defs = new chip_definition[7];
             for(byte i = 0; i < 6; ++i) defs[i] = new chip_definition();
             defs[0].chip_id = "m48";  defs[0].chip_name = "atmega48";  defs[0].memory_size = 3840;  defs[0].page_size = 64;  defs[0].patch_pos = 3838;
             defs[1].chip_id = "m168"; defs[1].chip_name = "atmega168"; defs[1].memory_size = 16128; defs[1].page_size = 128; defs[1].patch_pos = 0;
@@ -283,6 +283,7 @@ namespace YuniClient
             defs[4].chip_id = "m32";  defs[4].chip_name = "atmega32";  defs[4].memory_size = 32256; defs[4].page_size = 128; defs[4].patch_pos = 0;
             /* FIXME: only 16-bit addresses are available */
             defs[5].chip_id = "m128"; defs[5].chip_name = "atmega128"; defs[5].memory_size = 65536; defs[5].page_size = 256; defs[5].patch_pos = 0;
+            defs[6].chip_id = "m162"; defs[6].chip_name = "atmega162"; defs[6].memory_size = 16128; defs[6].page_size = 128; defs[6].patch_pos = 0;
 
             foreach (chip_definition y in defs)
             {
