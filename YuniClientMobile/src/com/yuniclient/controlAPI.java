@@ -75,12 +75,9 @@ class controlAPI
             }
             case API_PACKETS:
             {
-                packet = new byte[5];
-                packet[0] = 1;
-                packet[1] = 0x03; // SMSG_SET_MOVEMENT
-                packet[2] = 2;    // lenght
-                packet[3] = speed == 0 ? 127 : speed;  // speed
-                packet[4] = down ? flags : 0;// moveflags, 0 to stop on release
+                byte[] data = {(speed == 0 ? 127 : speed),  (down ? flags : 0)};
+                Packet pkt = new Packet(Protocol.SMSG_SET_MOVEMENT, data, (byte) 2);
+                packet = pkt.getSendData();
                 break;
             }
         }
@@ -223,14 +220,12 @@ class controlAPI
                     case 2:  // EVENT_SENSOR_LEVEL_HIGHER
                         if(rec[3] == 8)
                         {
-                            byte[] emergency = new byte[4];
-                            emergency [0] = 1;
-                            emergency [1] = Protocol.SMSG_SET_EMERGENCY_INFO;
-                            emergency [2] = 1;    // lenght
-                            emergency [3] = 1;
+                            byte[] emergency = {1};
+                            Packet pkt = new Packet(Protocol.SMSG_SET_EMERGENCY_INFO, emergency, (byte) 1);
+
                             msg = new Message();
                             msg.what = 1;
-                            msg.obj = emergency.clone();
+                            msg.obj = pkt.getSendData().clone();
                             msg.getData().putString("log", "Enable emergency");
                             canContinue = false;
                             endEvent = rec[2];
@@ -244,10 +239,12 @@ class controlAPI
                                     e.printStackTrace();
                                 }
                             }
-                            emergency [3] = 0;
+                            emergency [0] = 0;
+                            pkt.set(Protocol.SMSG_SET_EMERGENCY_INFO, emergency, (byte) 1);
+                            
                             msg = new Message();
                             msg.what = 1;
-                            msg.obj = emergency.clone();
+                            msg.obj = pkt.getSendData().clone();
                             msg.getData().putString("log", "Disable emergency");
                             endEvent = 0;
                         }
@@ -257,20 +254,19 @@ class controlAPI
                     break;
                     case 4:  // EVENT_RANGE_HIGHER
                     case 5:  // EVENT_RANGE_LOWER
+                    {
                         canContinue = false;
                         endEvent = rec[2];
                         endData = (0xFF & rec[4]);
-                        byte[] range = new byte[4];
-                        range [0] = 1;
-                        range [1] = Protocol.SMSG_GET_RANGE_VAL;
-                        range [2] = 1;
-                        range [3] = rec[3];
+                        
+                        byte[] range = {rec[3]};
+                        Packet pkt = new Packet(Protocol.SMSG_GET_RANGE_VAL, range, (byte) 1);
                         
                         while(!canContinue)
                         {
                             msg = new Message();
                             msg.what = 1;
-                            msg.obj = range.clone();
+                            msg.obj = pkt.getSendData().clone();
                             msg.getData().putString("log", "Get range adr " + (0xFF & rec[3]) + ", target " + endData);
                             mHandler.sendMessage(msg);
                             try {
@@ -282,29 +278,28 @@ class controlAPI
                         } 
                         endEvent = 0;
                         break;
+                    }
                     case 6:  // EVENT_DISTANCE
                     case 7:  // EVENT_DISTANCE_LEFT
                     case 8:  // EVENT_DISTANCE_RIGHT
+                    {
                         canContinue = false;
                         endEvent = rec[2];
                         endData = ((rec[3] << 8) | (rec[4] & 0xFF))*5;
-                        byte[] encoders = new byte[3];
-                        encoders [0] = 1;
-                        encoders [1] = Protocol.SMSG_ENCODER_START;
-                        encoders [2] = 0;    // lenght
-                        msg = new Message();
-                        msg.what = 1;
-                        msg.obj = encoders.clone();
+                         Packet pkt = new Packet(Protocol.SMSG_ENCODER_START, null, (byte) 0);
+                         msg = new Message();
+                         msg.what = 1;
+                        msg.obj = pkt.getSendData().clone();
                         msg.getData().putString("log", "Starting encoders");
                         mHandler.sendMessage(msg);
                         
-                        encoders [1] = Protocol.SMSG_ENCODER_GET;
+                        pkt.set(Protocol.SMSG_ENCODER_GET, null, (byte)0);
                         
                         while(!canContinue)
                         {
                             msg = new Message();
                             msg.what = 1;
-                            msg.obj = encoders.clone();
+                            msg.obj = pkt.getSendData().clone();
                             msg.getData().putString("log", "Get encoders val");
                             mHandler.sendMessage(msg);
                             
@@ -316,18 +311,16 @@ class controlAPI
                             }
                         }
                         endEvent = 0;
-                        
-                        encoders = new byte[4];
-                        encoders [0] = 1;
-                        encoders [1] = Protocol.SMSG_ENCODER_STOP;
-                        encoders [2] = 1;
-                        encoders [3] = 1; // also clear encoders
+                        byte[] encoders = {1};
+                        pkt.set(Protocol.SMSG_ENCODER_STOP, encoders, (byte)1);
+
                         msg = new Message();
                         msg.what = 1;
-                        msg.obj = encoders.clone();
+                        msg.obj = pkt.getSendData().clone();
                         msg.getData().putString("log", "Stopping encoders");
                         mHandler.sendMessage(msg);
                         break;
+                    }
                 }
                 
             }
@@ -338,13 +331,9 @@ class controlAPI
         }
         public byte[] Movement(boolean down)
         {
-            byte[] packet = new byte[5];
-            packet[0] = 1;
-            packet[1] = Protocol.SMSG_SET_MOVEMENT; // SMSG_SET_MOVEMENT
-            packet[2] = 2;    // lenght
-            packet[3] = speed;  // speed
-            packet[4] = down ? moveFlags : 0;// moveflags, 0 to stop on release
-            return packet;
+            byte[] data = {speed,  (down ? moveFlags : 0)};
+            Packet pkt = new Packet(Protocol.SMSG_SET_MOVEMENT, data, (byte) 2);
+            return pkt.getSendData().clone();
         }
         public byte LetterToFlags(byte character)
         {

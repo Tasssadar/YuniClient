@@ -48,14 +48,14 @@ public class Protocol
         
         while(dataItr < lenght)
         {
-            if(status == 0 && lenght-dataItr < 3)
+            if(status == 0 && lenght-dataItr < 4)
             {
                 for(byte y = 0; y+dataItr < lenght; ++y, ++bytesToNextItr)
                     bytesToNext[y] = data[dataItr+y];
                 break;
             }
             
-            if(status == 0 && data[dataItr] == 1 && lenght-dataItr >= 3) // handle new packet
+            if(status == 0 && data[dataItr] == (byte)0xFF && lenght-dataItr >= 4) // handle new packet
             {
                 tmpPacket = new Packet((byte)0, null, (byte)0);
                 status = 1;
@@ -64,15 +64,15 @@ public class Protocol
                     packetData = new byte[data[dataItr+2]];
                 
                 byte y = 0;
-                for(; y < data[dataItr+2] && y+dataItr+3 < lenght; ++y)
-                    packetData[y] = data[y+dataItr+3];
-                tmpPacket.set(data[dataItr+1], packetData, data[dataItr+2]);
+                for(; y < data[dataItr+2] && y+dataItr+4 < lenght; ++y)
+                    packetData[y] = data[y+dataItr+4];
+                tmpPacket.set(data[dataItr+3], packetData, data[dataItr+2]);
                 //complete packet
                 if(y >= data[dataItr+2])
                 {
                     packetBuffer.add(tmpPacket);
                     status = 0;
-                    dataItr += 3+data[dataItr+2];
+                    dataItr += 4+data[dataItr+2];
                     continue;
                 }
                 else
@@ -159,6 +159,18 @@ class Packet
             m_data = null;
         m_lenght = lenght;
         m_readPos = 0;
+    }
+    public byte[] getSendData()
+    {
+        byte res[] = new byte[m_lenght+4];
+        res[0] = (byte) 0xFF; // start
+        res[1] = 0x01;        // address
+        res[2] = m_lenght;    // data lenght;
+        res[3] = m_opcode;    // opcode
+        if(m_data != null)
+            for(byte i = 0; i < m_lenght; ++i)
+                res[i+4] = m_data[i];
+        return res;
     }
     public boolean hasData() { return (m_data != null); }
     public byte getOpcode() { return m_opcode; }

@@ -1,7 +1,6 @@
 package com.yuniclient;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Calendar;
@@ -17,7 +16,6 @@ class LogFile
         if(initiated)
             return;
         time = withTime;
-        initiated = true;
         Calendar cal = Calendar.getInstance();
         File path = new File("/sdcard/YuniClient/logs/");
         if(!path.exists())
@@ -27,16 +25,13 @@ class LogFile
                 "_" + cal.get(Calendar.SECOND) + ".txt");    
         try {
             file.createNewFile();
+            stream = new FileOutputStream(file);
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        try {
-            stream = new FileOutputStream(file);
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+        if(stream != null)
+            initiated = true;
         writeString("YuniClient play log started \r\n");
     }
     
