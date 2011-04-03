@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="fill_parent" 
+              android:layout_height="fill_parent">
+    <LinearLayout android:id="@+id/linear_parrent" 
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent">
+        <ScrollView    
+          android:id="@+id/ScrollView01"   
+          android:layout_height="fill_parent"    
+          android:layout_width="fill_parent"
+          android:fadingEdge="none"
+          android:fillViewport="true" android:layout_weight="1">         
+        <TextView android:id="@+id/output"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:padding="3px"
+            android:textColor="#fff"
+            android:maxLines="500"
+        /> 
+        </ScrollView>   
+        
+        <LinearLayout android:layout_height="fill_parent"
+            android:id="@+id/linear_par2" 
+            android:layout_toRightOf="@id/ScrollView01"
+            android:layout_width="fill_parent" android:layout_weight="1"
+            android:orientation="vertical">
+            
+            <LinearLayout android:layout_height="wrap_content"
+                android:id="@+id/linear1" 
+                android:layout_width="fill_parent">        
+                <Button android:id="@+id/Speed1_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:text="a" android:layout_weight="1"/>
+                <Button android:id="@+id/Speed2_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:layout_toRightOf="@id/Speed1_b"
+                        android:text="b" android:layout_weight="1"/>
+                 <Button android:id="@+id/Speed3_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:layout_toRightOf="@id/Speed2_b"
+                        android:text="c" android:layout_weight="1"/>
+             </LinearLayout>
+             
+             <LinearLayout android:layout_height="wrap_content"
+                android:id="@+id/linear2" 
+                android:layout_below="@id/linear1"
+                android:layout_width="fill_parent">   
+                 <Button android:id="@+id/Space_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:text="Space" android:layout_weight="1"/>
+                 <Button android:id="@+id/Record_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:layout_toRightOf="@id/Space_b"
+                        android:text="C" android:layout_weight="1"/>
+                  <Button android:id="@+id/Play_b"
+                        android:layout_width="108dp"
+                        android:layout_height="50dp"
+                        android:layout_toRightOf="@id/Record_b"
+                        android:text="P" android:layout_weight="1"/>
+                </LinearLayout>
+                
+              <LinearLayout android:layout_height="wrap_content"
+                android:id="@+id/linear3" 
+                android:layout_below="@id/linear2"
+                android:layout_width="fill_parent">      
+                  <Button android:id="@+id/Sensors_b"
+                        android:layout_width="108dp"
+                        android:layout_height="40dp"
+                        android:text="Accelerometer" android:layout_weight="1"/> 
+                  <Button android:id="@+id/Regulator_b"
+                        android:layout_width="108dp"
+                        android:layout_height="40dp"
+                        android:layout_toRightOf="@id/Sensors_b"
+                        android:text="Q" android:layout_weight="1"/>
+                  <Button android:id="@+id/Clear_b"
+                        android:layout_width="108dp"
+                        android:layout_height="40dp"
+                        android:layout_toRightOf="@id/Speed2_b"
+                        android:text="Clear" android:layout_weight="1"/>
+              </LinearLayout>
+              <LinearLayout android:layout_height="fill_parent"
+                android:id="@+id/lineaMovement" 
+                android:layout_below="@id/linear3"
+                android:layout_width="fill_parent"
+                android:orientation="vertical" android:layout_gravity="right"> 
+                 <LinearLayout android:layout_height="wrap_content"
+                    android:id="@+id/linear4" 
+                    android:layout_width="fill_parent" android:layout_weight="1">      
+                     <Button android:id="@+id/LeftForw_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp" 
+                            android:text="Q" android:layout_weight="1" android:layout_gravity="bottom"/>     
+                     <Button android:id="@+id/Forward_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp" 
+                            android:layout_toRightOf="@id/LeftForw_b"
+                            android:text="@string/W" android:layout_weight="1" android:layout_gravity="bottom"/>
+                     <Button android:id="@+id/RightForw_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp"
+                            android:layout_toRightOf="@id/Forward_b"
+                            android:text="E" android:layout_weight="1" android:layout_gravity="bottom"/>
+                 </LinearLayout>
+            
+                 <LinearLayout android:layout_height="wrap_content"
+                    android:id="@+id/linear5" 
+                    android:layout_below="@id/linear4"
+                    android:layout_width="fill_parent" android:layout_gravity="bottom" android:layout_weight="1">       
+                     <Button android:id="@+id/Left_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp" 
+                            android:text="@string/A" android:layout_weight="1"/>
+                     <Button android:id="@+id/Backward_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp" 
+                            android:layout_toRightOf="@id/Left_b"
+                            android:text="@string/S" android:layout_weight="1"/>
+                     <Button android:id="@+id/Right_b"
+                            android:layout_width="108dp"
+                            android:layout_height="50dp"
+                            android:layout_toRightOf="@id/Backward_b"
+                            android:text="@string/D" android:layout_weight="1"/>
+                  </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</RelativeLayout>

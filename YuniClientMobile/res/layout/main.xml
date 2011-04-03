@@ -4,77 +4,86 @@
               android:layout_width="fill_parent" 
               android:layout_height="fill_parent">
         
-     <Button android:id="@+id/Disconnect_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_marginTop="10px"
-            android:layout_marginLeft="2px"
-            android:text="Disconnect"/> 
-     <Button android:id="@+id/Start_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_marginTop="10px"
-            android:layout_toRightOf="@id/Disconnect_b"
-            android:text="Stop"/>
-     <Button android:id="@+id/SendSpec_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_toRightOf="@id/Start_b"
-            android:layout_marginTop="10px"
-            android:text="Send..."/>
-     <Button android:id="@+id/eeprom_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_below="@id/Disconnect_b"
-            android:layout_marginTop="20px"
-            android:layout_marginLeft="2px"
-            android:text="EEPROM"/> 
-     <Button android:id="@+id/ball_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_below="@id/Disconnect_b"
-            android:layout_toRightOf="@id/eeprom_b"
-            android:layout_marginTop="20px"
-            android:text="BallUI"/> 
-     <Button android:id="@+id/Controls_b"
-            android:layout_width="105px"
-            android:layout_height="40px"
-            android:layout_below="@id/Disconnect_b"
-            android:layout_toRightOf="@id/ball_b"
-            android:layout_marginTop="20px"
-            android:text="Controls"/> 
+     <LinearLayout android:layout_height="wrap_content"
+        android:id="@+id/linear1" android:layout_toRightOf="@+id/photo"
+        android:layout_width="fill_parent">
+         <Button android:id="@+id/Disconnect_b"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10px"
+                android:layout_marginLeft="2px"
+                android:text="Disconnect" android:layout_width="105dp" android:layout_weight="1"/> 
+         <Button android:id="@+id/Start_b"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10px"
+                android:layout_toRightOf="@id/Disconnect_b"
+                android:text="Stop" android:layout_width="105dp" android:layout_weight="1"/>
+         <Button android:id="@+id/Terminal_b"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/Start_b"
+                android:layout_marginTop="10px"
+                android:text="Terminal" android:layout_width="105dp" android:layout_weight="1" />
+     </LinearLayout>
+     <LinearLayout android:layout_height="wrap_content"
+        android:id="@+id/linear2" 
+        android:layout_below="@id/linear1"
+        android:layout_width="fill_parent">
+         <Button android:id="@+id/eeprom_b"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/Disconnect_b"
+                android:layout_marginLeft="2px"
+                android:text="EEPROM" android:layout_weight="1"/> 
+         <Button android:id="@+id/ball_b"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/Disconnect_b"
+                android:layout_toRightOf="@id/eeprom_b"
+                android:text="BallUI" android:layout_weight="1"/> 
+         <Button android:id="@+id/Controls_b"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/Disconnect_b"
+                android:layout_toRightOf="@id/ball_b"
+                android:text="Controls" android:layout_weight="1"/> 
+     </LinearLayout>
      <EditText android:id="@+id/hex_file" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:layout_marginTop="20px"
               android:background="@android:drawable/editbox_background"
               android:text=""
-              android:layout_below="@id/Controls_b" />
-     <Button android:id="@+id/List_b"
-            android:layout_height="40px"
-            android:layout_width="160px" 
-            android:layout_below="@id/hex_file"
-            android:text="Browse.."/> 
-     <Button android:id="@+id/Flash_b"
-            android:layout_height="40px"
-            android:layout_width="160px" 
-            android:layout_below="@id/hex_file"
-            android:clickable="false"
-            android:layout_toRightOf="@id/List_b"
-            android:enabled="false"
-            android:text="Flash"/>     ¨
+              android:layout_below="@id/linear2" />
+     <LinearLayout android:layout_height="wrap_content"
+        android:id="@+id/linear3" 
+        android:layout_below="@id/hex_file"
+        android:layout_width="fill_parent">
+         <Button android:id="@+id/List_b"
+                android:layout_height="40px"
+                android:layout_width="160px" 
+                android:layout_below="@id/hex_file"
+                android:text="Browse.." android:layout_weight="1"/> 
+         <Button android:id="@+id/Flash_b"
+                android:layout_height="40px"
+                android:layout_width="160px" 
+                android:layout_below="@id/hex_file"
+                android:clickable="false"
+                android:layout_toRightOf="@id/List_b"
+                android:enabled="false"
+                android:text="Flash" android:layout_weight="1"/>     
+     </LinearLayout>
      <TextView android:id="@+id/error"
         android:layout_height="50px"
         android:text=""
         android:layout_width="fill_parent" 
         android:textColor="#fff"
-        android:layout_below="@id/Flash_b"
+        android:layout_below="@id/linear3"
         android:maxLines="500"
     />    
     <ImageView android:id="@+id/logo"
-    	android:layout_below="@id/error"
-    	android:layout_width="fill_parent" 
-    	android:layout_height="fill_parent"
-    	android:src="@drawable/eve"
-    	android:scaleType="center"/>
+        android:layout_below="@id/error"
+        android:layout_width="fill_parent" 
+        android:layout_height="fill_parent"
+        android:src="@drawable/eve"
+        android:scaleType="centerInside"
+        android:adjustViewBounds="true"/>
 </RelativeLayout>

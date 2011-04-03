@@ -11,11 +11,12 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
-class controlAPI
+public class controlAPI
 {
     public static final byte API_KEYBOARD = 0;       // just keyboard characters
     public static final byte API_YUNIRC   = 1;       // keyboard with d or u for press and release
-    public static final byte API_PACKETS  = 2;       // YuniControl packets1
+    public static final byte API_PACKETS  = 2;       // YuniControl packets
+    public static final byte API_QUORRA   = 3;       // Packets for robot Quorra  
     
     
     // For API_PACKETS
@@ -24,17 +25,18 @@ class controlAPI
     public static final byte MOVE_BACKWARD = 0x02; 
     public static final byte MOVE_LEFT     = 0x04; 
     public static final byte MOVE_RIGHT    = 0x08; 
-
-
+    
+    public static final byte QUORRA_SET_POWER = 4;
 
     public controlAPI(Handler handler)
     {
         apiType = API_YUNIRC;
         playThread = null;
         mHandler = handler;
+        quorraSpeed = 300; // base calculation speed of quorra
     }
     
-    public void SetAPIType(byte type) { apiType = type; }
+    public void SetAPIType(byte type) {    apiType = type; }
     public byte GetAPIType() { return apiType; }
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
@@ -80,6 +82,38 @@ class controlAPI
                 packet = pkt.getSendData();
                 break;
             }
+            case API_QUORRA:
+            {
+                byte[] tmp = new byte[4];
+                Packet pkt = new Packet(QUORRA_SET_POWER, tmp, (byte) 4);
+                int[] data = null;
+                if(down)
+                {
+                    int targetSpeed = quorraSpeed;
+                    switch(speed)
+                    {
+                        case 50: targetSpeed = quorraSpeed/3; break;
+                        case 100: targetSpeed = quorraSpeed/2;break;
+                        case 127:
+                        default:
+                            break;
+                    }
+                    data = MoveFlagsToQuorra(targetSpeed, flags);
+                    if(data != null)
+                    {
+                        pkt.writeUInt16(data[0]);
+                        pkt.writeUInt16(data[1]);
+                    }
+                }
+                
+                if(data == null)
+                {
+                    pkt.writeUInt16(0);
+                    pkt.writeUInt16(0);
+                }
+                packet = pkt.getSendData();
+                break;
+            }
         }
         return packet;
     }
@@ -119,6 +153,36 @@ class controlAPI
             }
         }
         return flags;
+    }
+    
+    public int[] MoveFlagsToQuorra(int speed, byte flags)
+    {
+        int[] result = {speed, speed};
+        if(speed == 0 || flags == MOVE_NONE)
+            return null;
+        
+        if((flags & MOVE_FORWARD) != 0)
+        {
+            if((flags & MOVE_LEFT) != 0)
+                result[0] = speed/3;
+            else if((flags & MOVE_RIGHT) != 0)
+                result[1] = speed/3;
+        }
+        else if((flags & MOVE_BACKWARD) != 0)
+        {
+            result[0] = -speed;
+            result[1] = -speed;
+            if((flags & MOVE_LEFT) != 0)
+                result[0] = -(speed/3);
+            else if((flags & MOVE_RIGHT) != 0)
+                result[1] = -(speed/3);
+        }
+        else if((flags & MOVE_LEFT) != 0)
+            result[0] = -speed;
+        else if((flags & MOVE_RIGHT) != 0)
+            result[1] = -speed;
+        
+        return result;
     }
     
     public void Play(eeprom mem)
@@ -439,11 +503,7 @@ class controlAPI
             c.drawLine((width/2)-20, height/2, (width/2)+20, height/2, mLine);
             c.drawLine(width/2, (height/2)-20, width/2, (height/2)+20, mLine);
             
-            float dx = event.getX() - width/2;
-            float dy = event.getY() - height/2;
-            float dist = (float) Math.sqrt((dx*dx) + (dy*dy));
-            
-            if (event.getAction() != MotionEvent.ACTION_UP && dist <= width/2)
+            if (event.getAction() != MotionEvent.ACTION_UP)
             {
                 c.drawCircle(event.getX(), event.getY(), 40, mCircle);
                 c.drawLine(0, event.getY(), width, event.getY(), mLine);
@@ -516,11 +576,14 @@ class controlAPI
         
     }
     
+    public void SetQuarraSpeed(int speed) { quorraSpeed = speed; }
+    
     private float mDefX = 0;
     private float mDefY = 0;
 
     private PlayThread playThread;
     private byte apiType;
     private Handler mHandler;
+    private int quorraSpeed;
         
 };

@@ -7,7 +7,7 @@ import android.os.Handler;
 
 public class Protocol
 {
-    public final static byte SMSG_PING                = 0x01;
+	public final static byte SMSG_PING                = 0x01;
     public final static byte CMSG_PONG                = 0x02;
     public final static byte SMSG_SET_MOVEMENT        = 0x03;
     public final static byte SMSG_SET_CORRECTION_VAL  = 0x04;
@@ -21,6 +21,16 @@ public class Protocol
     public final static byte SMSG_ENCODER_GET         = 0x12;
     public final static byte CMSG_ENCODER_SEND        = 0x13;
     public final static byte SMSG_ENCODER_STOP        = 0x14;
+    public final static byte SMSG_ENCODER_SET_EVENT   = 0x15;
+    public final static byte CMSG_ENCODER_EVENT_DONE  = 0x16;
+    public final static byte CMSG_LASER_GATE_STAT     = 0x17;
+    public final static byte SMSG_LASER_GATE_SET      = 0x18;
+    public final static byte CMSG_BUTTON_STATUS       = 0x19;
+    public final static byte SMSG_ADD_STATE           = 0x20;
+    public final static byte SMSG_REMOVE_STATE        = 0x21;
+    public final static byte SMSG_STOP                = 0x22;
+    public final static byte CMSG_LOCKED              = 0x23;
+    public final static byte SMSG_UNLOCK              = 0x24;
     
     public Protocol(Handler handler)
     {
@@ -112,6 +122,8 @@ class Packet
     {
         //if(data != null)
             set(opcode, data, lenght);
+        m_writePos = 0;
+        m_readPos = 0;
     }
     
     public short readByte()
@@ -149,6 +161,17 @@ class Packet
         return read;
     }
     
+    public void writeByte(short data)
+    {
+        m_data[m_writePos++] = (byte)data;
+    }
+    
+    public void writeUInt16(int data)
+    {
+        m_data[m_writePos++] = (byte)(data >> 8);
+        m_data[m_writePos++] = (byte) data;
+    }
+    
     public byte get(byte pos) { return (pos >= m_lenght) ? 0 : m_data[pos]; }
     public void set(byte opcode, byte[] data, byte lenght)
     {
@@ -176,9 +199,11 @@ class Packet
     public byte getOpcode() { return m_opcode; }
     public byte getLenght() { return m_lenght; }
     public void setPos(byte pos) { m_readPos = pos; } 
+    public void setWritePos(byte pos) { m_writePos = pos; }
     
     private byte m_opcode;
     private byte[] m_data;
     private byte m_lenght;
     private byte m_readPos;
+    private byte m_writePos;
 }
