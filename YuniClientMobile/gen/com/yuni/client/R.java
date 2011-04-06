@@ -24,16 +24,14 @@ public final class R {
         public static final int LeftForw_b=0x7f060011;
         public static final int Left_b=0x7f060015;
         public static final int List_b=0x7f060038;
-        public static final int New_entry=0x7f060042;
-        public static final int PlayLog=0x7f06003d;
+        public static final int New_entry=0x7f060040;
         public static final int Play_b=0x7f06000a;
         public static final int Record_b=0x7f060009;
         public static final int Regulator_b=0x7f06000d;
         public static final int RightForw_b=0x7f060013;
         public static final int Right_b=0x7f060017;
         public static final int ScrollView01=0x7f060001;
-        public static final int ScrollViewPlay=0x7f06003c;
-        public static final int ScrollViewTerminal=0x7f060040;
+        public static final int ScrollViewTerminal=0x7f06003e;
         public static final int Sensors_b=0x7f06000c;
         public static final int Space_b=0x7f060008;
         public static final int Speed1_b=0x7f060004;
@@ -50,8 +48,8 @@ public final class R {
         public static final int byte1_input=0x7f060027;
         public static final int byte2_input=0x7f060028;
         public static final int byte_label=0x7f060026;
-        public static final int clear=0x7f06004c;
-        public static final int data_file_save=0x7f06003f;
+        public static final int clear=0x7f06004a;
+        public static final int data_file_save=0x7f06003d;
         public static final int downUp_input=0x7f060023;
         public static final int downUp_label=0x7f060022;
         public static final int eeprom_b=0x7f060034;
@@ -61,12 +59,12 @@ public final class R {
         public static final int event_input=0x7f060025;
         public static final int event_label=0x7f060024;
         public static final int eventstext=0x7f06002b;
-        public static final int exit=0x7f060049;
+        public static final int exit=0x7f060047;
         public static final int flipper=0x7f06002d;
         public static final int hex_file=0x7f060037;
         public static final int key_input=0x7f060021;
         public static final int key_label=0x7f060020;
-        public static final int layout_root=0x7f06003e;
+        public static final int layout_root=0x7f06003c;
         public static final int lineaMovement=0x7f06000f;
         public static final int linear1=0x7f060003;
         public static final int linear2=0x7f060007;
@@ -75,24 +73,24 @@ public final class R {
         public static final int linear5=0x7f060014;
         public static final int linear_par2=0x7f060019;
         public static final int linear_parrent=0x7f060018;
-        public static final int load=0x7f060046;
+        public static final int load=0x7f060044;
         public static final int logo=0x7f06003b;
         public static final int new_devices=0x7f06001d;
-        public static final int offline=0x7f060048;
+        public static final int offline=0x7f060046;
         public static final int output=0x7f060002;
-        public static final int output_terminal=0x7f060041;
+        public static final int output_terminal=0x7f06003f;
         public static final int paired_devices=0x7f06001b;
         public static final int photo=0x7f060030;
-        public static final int reload=0x7f060044;
-        public static final int save=0x7f060047;
-        public static final int save_log=0x7f06004d;
-        public static final int send_byte=0x7f06004b;
-        public static final int send_string=0x7f06004a;
-        public static final int switchPart=0x7f060043;
+        public static final int reload=0x7f060042;
+        public static final int save=0x7f060045;
+        public static final int save_log=0x7f06004b;
+        public static final int send_byte=0x7f060049;
+        public static final int send_string=0x7f060048;
+        public static final int switchPart=0x7f060041;
         public static final int title_eeprom_part=0x7f06002e;
         public static final int title_new_devices=0x7f06001c;
         public static final int title_paired_devices=0x7f06001a;
-        public static final int write=0x7f060045;
+        public static final int write=0x7f060043;
     }
     public static final class layout {
         public static final int ball=0x7f030000;
@@ -103,9 +101,8 @@ public final class R {
         public static final int eeprom_edit=0x7f030005;
         public static final int eeprom_list=0x7f030006;
         public static final int main=0x7f030007;
-        public static final int play=0x7f030008;
-        public static final int save_data=0x7f030009;
-        public static final int terminal=0x7f03000a;
+        public static final int save_data=0x7f030008;
+        public static final int terminal=0x7f030009;
     }
     public static final class menu {
         public static final int menu=0x7f050000;

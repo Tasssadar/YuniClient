@@ -49,7 +49,7 @@
      <EditText android:id="@+id/hex_file" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
-              android:layout_marginTop="20px"
+              android:layout_marginTop="20dp"
               android:background="@android:drawable/editbox_background"
               android:text=""
               android:layout_below="@id/linear2" />
@@ -58,13 +58,13 @@
         android:layout_below="@id/hex_file"
         android:layout_width="fill_parent">
          <Button android:id="@+id/List_b"
-                android:layout_height="40px"
-                android:layout_width="160px" 
+                android:layout_height="40dp"
+                android:layout_width="160dp" 
                 android:layout_below="@id/hex_file"
                 android:text="Browse.." android:layout_weight="1"/> 
          <Button android:id="@+id/Flash_b"
-                android:layout_height="40px"
-                android:layout_width="160px" 
+                android:layout_height="40dp"
+                android:layout_width="160dp" 
                 android:layout_below="@id/hex_file"
                 android:clickable="false"
                 android:layout_toRightOf="@id/List_b"
@@ -72,12 +72,12 @@
                 android:text="Flash" android:layout_weight="1"/>     
      </LinearLayout>
      <TextView android:id="@+id/error"
-        android:layout_height="50px"
+        android:layout_height="50dp"
         android:text=""
         android:layout_width="fill_parent" 
         android:textColor="#fff"
         android:layout_below="@id/linear3"
-        android:maxLines="500"
+        android:maxLines="10"
     />    
     <ImageView android:id="@+id/logo"
         android:layout_below="@id/error"
