@@ -5,7 +5,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
-import android.os.Handler;
 import android.os.Message;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -26,13 +25,11 @@ public class controlAPI
     public static final byte MOVE_LEFT     = 0x04; 
     public static final byte MOVE_RIGHT    = 0x08; 
     
-    public static final byte QUORRA_SET_POWER = 4;
+    
 
-    public controlAPI(Handler handler)
+    public controlAPI()
     {
         apiType = API_YUNIRC;
-        playThread = null;
-        mHandler = handler;
         quorraSpeed = 300; // base calculation speed of quorra
     }
     
@@ -78,14 +75,14 @@ public class controlAPI
             case API_PACKETS:
             {
                 byte[] data = {(speed == 0 ? 127 : speed),  (down ? flags : 0)};
-                Packet pkt = new Packet(Protocol.SMSG_SET_MOVEMENT, data, (byte) 2);
+                Packet pkt = new Packet(Protocol.YUNICONTROL_SET_MOVEMENT, data, (byte) 2);
                 packet = pkt.getSendData();
                 break;
             }
             case API_QUORRA:
             {
                 byte[] tmp = new byte[4];
-                Packet pkt = new Packet(QUORRA_SET_POWER, tmp, (byte) 4);
+                Packet pkt = new Packet(Protocol.QUORRA_SET_POWER, tmp, (byte) 4);
                 int[] data = null;
                 if(down)
                 {
@@ -183,279 +180,6 @@ public class controlAPI
             result[1] = -speed;
         
         return result;
-    }
-    
-    public void Play(eeprom mem)
-    {
-        playThread = new PlayThread(mem, YuniClient.eeprom_part);
-        playThread.start();
-    }
-    
-    public void received(Packet pkt)
-    {
-        playThread.PacketReceived(pkt);
-    }
-    public void StopPlay()
-    {
-        if(playThread != null)
-        {
-            playThread.cancel();
-            playThread = null;
-        }
-    }
-    
-    private class PlayThread extends Thread {
-        eeprom EEPROM;
-        byte eepromPart;
-        boolean stop;
-        boolean canContinue;
-        byte speed;
-        byte moveFlags;
-        byte endEvent;
-        int endData;
-
-        public PlayThread(eeprom mem, byte part) {
-            EEPROM = mem;
-            eepromPart = part;
-            speed = 127;
-            canContinue = false;
-            stop = false;
-            endEvent = 0;
-            endData = 0;
-        }
-
-        public void run() {
-            byte[] rec = null;
-            boolean down;
-            Message msg = null;
-            byte[] packet = null;
-            int y = EEPROM.getPartRecCount(eepromPart == 1)*5;
-            for(int i = 0; i < y && !stop; i +=5)
-            {
-                rec = EEPROM.getRec(i);
-                down = rec[1] == (byte)'d';
-                packet = null;
-                // keys
-                switch(rec[0])
-                {
-                    case (byte)'W':
-                    case (byte)'S':
-                    case (byte)'A':
-                    case (byte)'D':
-                        moveFlags = LetterToFlags(rec[0]);
-                        packet = Movement(down);
-                        break;
-                    case (byte)'a':
-                        speed = 50;
-                        packet = Movement(down);
-                        break;
-                    case (byte)'b':
-                        speed = 100;
-                        packet = Movement(down);
-                        break;
-                    case (byte)'c':
-                        speed = 127;
-                        packet = Movement(down);
-                        break;
-                     
-                }
-                msg = new Message();
-                msg.what = 1;
-                msg.obj = packet;
-                msg.getData().putString("log", "Key " + (char)rec[0] + (char)rec[1] + " action sent\r\n"+
-                       "Waiting for event " + rec[2] + " ...");
-                mHandler.sendMessage(msg);
-                
-                // wait events
-                switch(rec[2])
-                {
-                    default:
-                    case 0:   // EVENT_NONE
-                        continue;
-                    case 1:   // EVENT_TIME
-                        int time = ((rec[3] << 8) | (rec[4] & 0xFF))*10;
-                        try {
-                            Thread.sleep(time);
-                        } catch (InterruptedException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
-                        }
-                        break;
-                    case 2:  // EVENT_SENSOR_LEVEL_HIGHER
-                        if(rec[3] == 8)
-                        {
-                            byte[] emergency = {1};
-                            Packet pkt = new Packet(Protocol.SMSG_SET_EMERGENCY_INFO, emergency, (byte) 1);
-
-                            msg = new Message();
-                            msg.what = 1;
-                            msg.obj = pkt.getSendData().clone();
-                            msg.getData().putString("log", "Enable emergency");
-                            canContinue = false;
-                            endEvent = rec[2];
-                            endData = rec[3];
-                            while(!canContinue)
-                            {
-                                try {
-                                    Thread.sleep(300);
-                                } catch (InterruptedException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                }
-                            }
-                            emergency [0] = 0;
-                            pkt.set(Protocol.SMSG_SET_EMERGENCY_INFO, emergency, (byte) 1);
-                            
-                            msg = new Message();
-                            msg.what = 1;
-                            msg.obj = pkt.getSendData().clone();
-                            msg.getData().putString("log", "Disable emergency");
-                            endEvent = 0;
-                        }
-                        break;
-                    case 3:  // EVENT_SENSOR_LEVEL_LOWER
-                    //TODO NYI
-                    break;
-                    case 4:  // EVENT_RANGE_HIGHER
-                    case 5:  // EVENT_RANGE_LOWER
-                    {
-                        canContinue = false;
-                        endEvent = rec[2];
-                        endData = (0xFF & rec[4]);
-                        
-                        byte[] range = {rec[3]};
-                        Packet pkt = new Packet(Protocol.SMSG_GET_RANGE_VAL, range, (byte) 1);
-                        
-                        while(!canContinue)
-                        {
-                            msg = new Message();
-                            msg.what = 1;
-                            msg.obj = pkt.getSendData().clone();
-                            msg.getData().putString("log", "Get range adr " + (0xFF & rec[3]) + ", target " + endData);
-                            mHandler.sendMessage(msg);
-                            try {
-                                    Thread.sleep(300);
-                                } catch (InterruptedException e) {
-                                    // TODO Auto-generated catch block
-                                    e.printStackTrace();
-                                }
-                        } 
-                        endEvent = 0;
-                        break;
-                    }
-                    case 6:  // EVENT_DISTANCE
-                    case 7:  // EVENT_DISTANCE_LEFT
-                    case 8:  // EVENT_DISTANCE_RIGHT
-                    {
-                        canContinue = false;
-                        endEvent = rec[2];
-                        endData = ((rec[3] << 8) | (rec[4] & 0xFF))*5;
-                         Packet pkt = new Packet(Protocol.SMSG_ENCODER_START, null, (byte) 0);
-                         msg = new Message();
-                         msg.what = 1;
-                        msg.obj = pkt.getSendData().clone();
-                        msg.getData().putString("log", "Starting encoders");
-                        mHandler.sendMessage(msg);
-                        
-                        pkt.set(Protocol.SMSG_ENCODER_GET, null, (byte)0);
-                        
-                        while(!canContinue)
-                        {
-                            msg = new Message();
-                            msg.what = 1;
-                            msg.obj = pkt.getSendData().clone();
-                            msg.getData().putString("log", "Get encoders val");
-                            mHandler.sendMessage(msg);
-                            
-                            try {
-                                Thread.sleep(300);
-                            } catch (InterruptedException e) {
-                                // TODO Auto-generated catch block
-                                e.printStackTrace();
-                            }
-                        }
-                        endEvent = 0;
-                        byte[] encoders = {1};
-                        pkt.set(Protocol.SMSG_ENCODER_STOP, encoders, (byte)1);
-
-                        msg = new Message();
-                        msg.what = 1;
-                        msg.obj = pkt.getSendData().clone();
-                        msg.getData().putString("log", "Stopping encoders");
-                        mHandler.sendMessage(msg);
-                        break;
-                    }
-                }
-                
-            }
-            msg = new Message();
-            msg.what = 3;
-            msg.getData().putString("log", "Playback finished.");
-            mHandler.sendMessage(msg);
-        }
-        public byte[] Movement(boolean down)
-        {
-            byte[] data = {speed,  (down ? moveFlags : 0)};
-            Packet pkt = new Packet(Protocol.SMSG_SET_MOVEMENT, data, (byte) 2);
-            return pkt.getSendData().clone();
-        }
-        public byte LetterToFlags(byte character)
-        {
-            switch(character)
-            {
-                case (byte)'W':
-                    return controlAPI.MOVE_FORWARD;
-                case (byte)'S':
-                    return controlAPI.MOVE_BACKWARD;
-                case (byte)'A':
-                    return controlAPI.MOVE_LEFT;
-                case (byte)'D':
-                    return controlAPI.MOVE_RIGHT;
-            }
-            return 0;
-        }
-        
-        public void cancel()
-        {
-            stop = true;
-            canContinue = true;
-        }
-        
-        public void PacketReceived(Packet pkt)
-        {
-            switch(endEvent)
-            {
-                case 0:
-                    return;
-                case 2:
-                    if(endData != 8 || pkt.getOpcode() != Protocol.CMSG_EMERGENCY_START) // TODO NYI
-                        return;
-                    canContinue = true;
-                    break;
-                case 4:
-                case 5:
-                    if(pkt.getOpcode() != Protocol.CMSG_GET_RANGE_VAL)
-                        return;
-                    pkt.setPos((byte)1);
-                    if((endEvent == 4 && pkt.readUInt16() >= endData) ||
-                        (endEvent == 5 && pkt.readUInt16() <= endData))
-                        canContinue = true;
-                    break;
-                case 6:
-                case 7:
-                case 8:
-                    if(pkt.getOpcode() != Protocol.CMSG_ENCODER_SEND)
-                        break;
-                    pkt.setPos((byte)0);
-                    int left = pkt.readUInt16();
-                    int right = pkt.readUInt16();
-                    if((endEvent == 6 && (left + right)/2 > endData) ||
-                        (endEvent == 7 && left > endData) ||
-                        (endEvent == 8 && right > endData))
-                        canContinue = true;
-                    break;
-            }
-        }        
     }
     
     private float fabs(float val)
@@ -581,9 +305,7 @@ public class controlAPI
     private float mDefX = 0;
     private float mDefY = 0;
 
-    private PlayThread playThread;
     private byte apiType;
-    private Handler mHandler;
     private int quorraSpeed;
         
 };

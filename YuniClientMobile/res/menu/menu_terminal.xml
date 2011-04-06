@@ -4,8 +4,8 @@
           android:title="Send string" />
     <item android:id="@+id/send_byte"
           android:title="Send byte" />
-    <item android:id="@+id/send_uint16"
-          android:title="Send UInt16" />
+    <!-- <item android:id="@+id/send_uint16"
+          android:title="Send UInt16" /> -->
     <item android:id="@+id/clear"
           android:title="Clear" />
     <item android:id="@+id/save_log"

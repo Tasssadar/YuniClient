@@ -96,10 +96,9 @@ public class YuniClient extends Activity {
     public static final short STATE_EEPROM_EDIT     = 0x200;
     public static final short STATE_EEPROM_WRITE    = 0x400;
     public static final short STATE_EEPROM_NEW_ADD  = 0x800;
-    public static final short STATE_EEPROM_PLAY     = 0x1000;
-    public static final short STATE_ACCELEROMETER   = 0x2000;
-    public static final short STATE_BALL            = 0x4000;
-    public static final int   STATE_TERMINAL        = 0x8000;
+    public static final short STATE_ACCELEROMETER   = 0x1000;
+    public static final short STATE_BALL            = 0x2000;
+    public static final short STATE_TERMINAL        = 0x4000;
     public static final byte REC_SIZE = 5;
     
     public static final short EEPROM_PART2 = 255;
@@ -128,20 +127,8 @@ public class YuniClient extends Activity {
     private byte EEPROMTouchItr;
     private short[] EEPROMScrollPos = {0,0};
     
-    private final Handler PlayHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            if(msg.what == 1 && msg.obj != null)
-                mChatService.write((byte[])msg.obj);
-            else if(msg.what == 2)
-                api.received((Packet)msg.obj);
-            
-            if(msg.what == 1 || msg.what == 2 || msg.what == 3)
-                PlayLog(msg.getData().getString("log"));
-        }
-    };
-    
-    private controlAPI api = new controlAPI(PlayHandler);
-    private Protocol protocol = new Protocol(PlayHandler);
+    private controlAPI api = new controlAPI();
+    private Protocol protocol = new Protocol();
     AccelerometerListener accelerometerListener = null;
     
     private LogFile log =  null;
@@ -448,7 +435,11 @@ public class YuniClient extends Activity {
               else if((state & STATE_ACCELEROMETER) != 0)
                   StopAccelerometer();
               else if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0 || (state & STATE_TERMINAL) != 0)
+              {
+                  if((state & STATE_BALL) != 0)
+                      this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
                   InitMain();
+              }
               else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
                   InitEEPROMList();
               else if((state & STATE_CONNECTED) != 0)
@@ -468,15 +459,6 @@ public class YuniClient extends Activity {
             else
                 moveTaskToBack(true);
             return true;
-        }
-        else if(keyCode == KeyEvent.KEYCODE_SEARCH)
-        {
-            if((state & STATE_EEPROM) != 0 && (state & STATE_CONNECTED) != 0 && (state & STATE_EEPROM_EDIT) == 0 
-                && (state & STATE_EEPROM_NEW_ADD) == 0 && (state & STATE_EEPROM_PLAY) == 0)
-            {
-                InitPlay();  
-                return true;
-            }     
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -602,16 +584,12 @@ public class YuniClient extends Activity {
     
     void InitMain()
     {
-        //mEEPROMEntries = null;
-        //EEPROM = null;
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         autoScrollThread = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
-        state &= ~(STATE_EEPROM_PLAY);
         state &= ~(STATE_BALL);
         state &= ~(STATE_TERMINAL);
-        api.StopPlay();
+
         context = this;
         if(lock != null)
         {
@@ -1191,71 +1169,6 @@ public class YuniClient extends Activity {
         final AlertDialog alert = builder2.create();
         alert.show();
     }
-    void InitPlay()
-    {
-        if(EEPROM.getPartRecCount(eeprom_part == 1) == 0)
-        {
-            ShowAlert("This part has no etries!");
-            return;
-        }
-        state |= STATE_EEPROM_PLAY;
-        setContentView(R.layout.play);
-        if(log == null)
-            log = new LogFile();
-        else
-           log.close();
-        log.init(true);
-        
-        autoScrollThread = new Thread (new Runnable()
-        {
-            public void run()
-            {
-                TextView out = (TextView) findViewById(R.id.PlayLog);
-                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewPlay);
-                while(true)
-                {
-                    if((state & STATE_EEPROM_PLAY) == 0)
-                        break;
-
-                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
-                    {
-                        scrollHandlerPlay.sendEmptyMessage(0);
-                        state &= ~(STATE_SCROLL);
-                    }
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        autoScrollThread.setPriority(1);
-        autoScrollThread.start();
-        
-        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
-            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient play lock");
-        lock.acquire();
-        PlayLog("Screen lock acquired");
-        PlayLog("Playing eeprom data, part " + eeprom_part);
-        if(api.GetAPIType() != controlAPI.API_PACKETS)
-        {
-            api.SetAPIType(controlAPI.API_PACKETS);
-            PlayLog("Setting API type to API_PACKETS");
-        }
-        PlayLog("Passing control to controlAPI...");
-        api.Play(EEPROM);
-    }
-    
-    void PlayLog(String text)
-    {
-        if((state & STATE_EEPROM_PLAY) == 0)
-            return;
-        log.writeString(text);
-        ((TextView) findViewById(R.id.PlayLog)).append(text + "\r\n");
-        state |= STATE_SCROLL;
-    }
     
     private void InitAccelerometer()
     {
@@ -1730,13 +1643,13 @@ public class YuniClient extends Activity {
             switch (msg.what)
             {
                 case MESSAGE_STATE_CHANGE:
-                    switch (msg.arg1) {
-                    case BluetoothChatService.STATE_CONNECTED:
+                    if(msg.arg1 == BluetoothChatService.STATE_CONNECTED)
+                    {
                         dialog.dismiss();
                         InitMain();
                         state |= STATE_CONNECTED;
-                        break;
                     }
+                    break;
                 case MESSAGE_TOAST:
                     final String text = msg.getData().getString(TOAST);
                     if(text == null)
@@ -1757,14 +1670,8 @@ public class YuniClient extends Activity {
                     if(msg.obj != null)
                     {
                         final byte[] buffer = (byte[])msg.obj;
-                        if((state & STATE_EEPROM_PLAY) != 0)
-                        {
-                            protocol.parseData(buffer, (byte) msg.arg1);
-                            break;
-                        }
-                        String seq = "";
-                        for(int y = 0; y < msg.arg1; ++y)
-                            seq += (char)buffer[y];
+                        String seq = String.valueOf(buffer);
+
                         if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
                         {
                             final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
