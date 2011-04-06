@@ -50,7 +50,7 @@ public final class R {
         public static final int byte1_input=0x7f060027;
         public static final int byte2_input=0x7f060028;
         public static final int byte_label=0x7f060026;
-        public static final int clear=0x7f06004d;
+        public static final int clear=0x7f06004c;
         public static final int data_file_save=0x7f06003f;
         public static final int downUp_input=0x7f060023;
         public static final int downUp_label=0x7f060022;
@@ -85,10 +85,9 @@ public final class R {
         public static final int photo=0x7f060030;
         public static final int reload=0x7f060044;
         public static final int save=0x7f060047;
-        public static final int save_log=0x7f06004e;
+        public static final int save_log=0x7f06004d;
         public static final int send_byte=0x7f06004b;
         public static final int send_string=0x7f06004a;
-        public static final int send_uint16=0x7f06004c;
         public static final int switchPart=0x7f060043;
         public static final int title_eeprom_part=0x7f06002e;
         public static final int title_new_devices=0x7f06001c;
