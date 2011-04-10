@@ -75,14 +75,14 @@ public class controlAPI
             case API_PACKETS:
             {
                 byte[] data = {(speed == 0 ? 127 : speed),  (down ? flags : 0)};
-                Packet pkt = new Packet(Protocol.YUNICONTROL_SET_MOVEMENT, data, (byte) 2);
+                Packet pkt = new Packet(ProtocolMgr.YUNICONTROL_SET_MOVEMENT, data, (byte) 2);
                 packet = pkt.getSendData();
                 break;
             }
             case API_QUORRA:
             {
                 byte[] tmp = new byte[4];
-                Packet pkt = new Packet(Protocol.QUORRA_SET_POWER, tmp, (byte) 4);
+                Packet pkt = new Packet(ProtocolMgr.QUORRA_SET_POWER, tmp, (byte) 4);
                 int[] data = null;
                 if(down)
                 {
@@ -299,7 +299,7 @@ public class controlAPI
         return flags;
         
     }
-    
+
     public void SetQuarraSpeed(int speed) { quorraSpeed = speed; }
     
     private float mDefX = 0;

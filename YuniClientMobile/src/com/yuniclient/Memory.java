@@ -29,9 +29,9 @@ class memory
         final byte[] fileBuff = new byte[(int) filePath.length()];
         file.read(fileBuff);
         file.close();
-        
+
         m_buffer = null;
-        System.loadLibrary("load_hex");
+        System.loadLibrary("jni_functions");
         m_buffer = parseHexFile(fileBuff, deviceInfo.mem_size, (int) filePath.length());
         if(m_buffer == null)
             return "Corrupted hex file!";
@@ -56,7 +56,7 @@ class memory
         for(size = deviceInfo.mem_size; m_buffer[size-1] == 0; --size) {};
         return null;
     }
-    public native byte[] parseHexFile(byte[] file, int memsize, int fileLenght);
+    private native byte[] parseHexFile(byte[] file, int memsize, int fileLenght);
     private byte[] m_buffer;
     private int size;
     
