@@ -128,7 +128,6 @@ public class YuniClient extends Activity {
     private short[] EEPROMScrollPos = {0,0};
     
     private controlAPI api = new controlAPI();
-    private Protocol protocol = new Protocol();
     AccelerometerListener accelerometerListener = null;
     
     private LogFile log =  null;
@@ -137,8 +136,7 @@ public class YuniClient extends Activity {
     private SensorManager mSensorManager;
     private byte mMovementFlags = 0;
     private byte mSpeed = 0;
-    
-    
+        
 
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -841,16 +839,7 @@ public class YuniClient extends Activity {
             scroll.scrollTo(0, out.getHeight());
         }
     };
-    public final Handler scrollHandlerPlay = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            final TextView out = (TextView) findViewById(R.id.PlayLog);
-            final ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewPlay);
-            if(scroll == null || out == null)
-                return;
-            scroll.scrollTo(0, out.getHeight());
-        }
-    };
+
     private void ShowAPIDialog()
     {
         final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra"};
@@ -882,7 +871,7 @@ public class YuniClient extends Activity {
                            }
                            catch(NumberFormatException e)
                            {
-                               // TODO
+                        	   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                            }
                            api.SetQuarraSpeed(speed);
                        }
@@ -1243,7 +1232,8 @@ public class YuniClient extends Activity {
             
         }
 
-        public void onSensorChanged(SensorEvent event) {
+        public void onSensorChanged(SensorEvent event)
+        {
             // TODO Auto-generated method stub
             if((state & STATE_ACCELEROMETER) == 0)
             {
@@ -1496,7 +1486,7 @@ public class YuniClient extends Activity {
                        }
                        catch(NumberFormatException e)
                        {
-                           //TODO
+                    	   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                        }
                    }
                 });
@@ -1647,6 +1637,8 @@ public class YuniClient extends Activity {
                     {
                         dialog.dismiss();
                         InitMain();
+                        //TODO
+                        //ProtocolMgr.getInstance().ScanForProtocols();
                         state |= STATE_CONNECTED;
                     }
                     break;
@@ -1670,8 +1662,9 @@ public class YuniClient extends Activity {
                     if(msg.obj != null)
                     {
                         final byte[] buffer = (byte[])msg.obj;
-                        String seq = String.valueOf(buffer);
-
+                        String seq = "";
+                        for(int i = 0; i < msg.arg1; ++i)
+                        	seq += (char)buffer[i];
                         if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
                         {
                             final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
@@ -1773,7 +1766,7 @@ public class YuniClient extends Activity {
                             {
                                 if(skip && itr == 0)
                                     continue;
-                                EEPROM.set_nopart(itr_buff++, buffer[itr]);
+                                EEPROM.set_nopart(itr_buff++, (byte)buffer[itr]);
                             }
                             if(itr_buff >= 512)
                                 readHandler.sendEmptyMessage(0);
