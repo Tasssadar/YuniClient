@@ -136,6 +136,8 @@ public class YuniClient extends Activity {
     private SensorManager mSensorManager;
     private byte mMovementFlags = 0;
     private byte mSpeed = 0;
+    
+    private String terminalText = null;
         
 
     private Animation inFromRightAnimation() {
@@ -795,6 +797,7 @@ public class YuniClient extends Activity {
              public void onClick(View v) {
                 TextView out = (TextView) findViewById(R.id.output);
                 out.setText("");
+                terminalText = null;
              }
            });
         
@@ -827,6 +830,13 @@ public class YuniClient extends Activity {
         });
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
+        
+        if(terminalText != null)
+        {
+            TextView out = (TextView) findViewById(R.id.output);
+            out.setText(terminalText);
+            state |= STATE_SCROLL;
+        }
     }
     public final Handler scrollHandler = new Handler() {
         @Override
@@ -871,7 +881,7 @@ public class YuniClient extends Activity {
                            }
                            catch(NumberFormatException e)
                            {
-                        	   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
+                               Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                            }
                            api.SetQuarraSpeed(speed);
                        }
@@ -1294,7 +1304,7 @@ public class YuniClient extends Activity {
     {
         setContentView(api.new MTView(this));
         state |= STATE_BALL;
-        if(api.GetAPIType() != controlAPI.API_PACKETS)
+        if(api.GetAPIType() != controlAPI.API_PACKETS && api.GetAPIType() != controlAPI.API_QUORRA)
         {
             api.SetAPIType(controlAPI.API_PACKETS);
             Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
@@ -1363,6 +1373,29 @@ public class YuniClient extends Activity {
         });
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
+        
+        if(terminalText != null)
+        {
+            TextView out = (TextView) findViewById(R.id.output_terminal);
+            out.setText(terminalText);
+            state |= STATE_SCROLL;
+        }
+    }
+    
+    private void WriteTerminalText(String text)
+    {
+        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+        {
+            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
+            if(out != null)
+            {
+                out.append(text);
+                state |= STATE_SCROLL;
+            }
+        }
+        if(terminalText == null)
+            terminalText = "";
+        terminalText += text;
     }
     
     @Override
@@ -1438,6 +1471,7 @@ public class YuniClient extends Activity {
                 return true;
             case R.id.clear:
                 ((TextView)findViewById(R.id.output_terminal)).setText("");
+                terminalText = null;
                 return true;
             case R.id.send_string:
             {
@@ -1486,7 +1520,7 @@ public class YuniClient extends Activity {
                        }
                        catch(NumberFormatException e)
                        {
-                    	   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
+                           Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                        }
                    }
                 });
@@ -1664,16 +1698,9 @@ public class YuniClient extends Activity {
                         final byte[] buffer = (byte[])msg.obj;
                         String seq = "";
                         for(int i = 0; i < msg.arg1; ++i)
-                        	seq += (char)buffer[i];
-                        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
-                        {
-                            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-                            if(seq != "")
-                            {
-                                out.setText(out.getText() + seq);
-                                state |= STATE_SCROLL;
-                            }
-                        }
+                            seq += (char)buffer[i];
+                        if(((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0) && seq != "")
+                            WriteTerminalText(seq);
                         else if((state & STATE_STOPPING) != 0)
                         {
                             state &= ~(STATE_STOPPING);
@@ -1818,6 +1845,8 @@ public class YuniClient extends Activity {
                             dialog.incrementProgressBy(1);
                             itr_buff += 5;
                         }
+                        else if(seq != "")
+                            WriteTerminalText(seq);
                     }
                     break;
             }
