@@ -8,6 +8,7 @@ public class Packet
             set(opcode, data, lenght);
         m_writePos = 0;
         m_readPos = 0;
+        m_countOpcode = false;
     }
     
     public short readByte()
@@ -72,7 +73,10 @@ public class Packet
         byte res[] = new byte[m_lenght+4];
         res[0] = (byte) 0xFF; // start
         res[1] = 0x01;        // address
-        res[2] = m_lenght;    // data lenght;
+        if(m_countOpcode)
+            res[2] = (byte) (m_lenght+1);
+        else
+            res[2] = m_lenght;    // data lenght;
         res[3] = m_opcode;    // opcode
         if(m_data != null)
             for(byte i = 0; i < m_lenght; ++i)
@@ -84,10 +88,13 @@ public class Packet
     public byte getLenght() { return m_lenght; }
     public void setPos(byte pos) { m_readPos = pos; } 
     public void setWritePos(byte pos) { m_writePos = pos; }
-    
+
+    public void CountOpcode(boolean count) { m_countOpcode = count; }
+
     private byte m_opcode;
     private byte[] m_data;
     private byte m_lenght;
     private byte m_readPos;
     private byte m_writePos;
+    private boolean m_countOpcode;
 }

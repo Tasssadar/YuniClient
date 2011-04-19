@@ -108,6 +108,7 @@ public class controlAPI
                     pkt.writeUInt16(0);
                     pkt.writeUInt16(0);
                 }
+                pkt.CountOpcode(true);
                 packet = pkt.getSendData();
                 break;
             }
