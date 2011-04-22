@@ -4,6 +4,39 @@ YuniClientMobile 2.0 "Miranda" (?? ?? ????)
 
     * In development
 
+YuniClientMobile 1.2 "Ice-planet" (22 april 2011)
+
+    YuniClientMobile 1.1 - Implements features expected from mobile client
+    with just basic UI.
+
+    ==== Features ====
+    * Add support for Quorra packet protocol
+    * Handle landscape screen orientation in most parts (EEPROM and ball ui still TODO)
+    * Allow to scale ui by display resolution (hi, wildfire)
+    * New opcodes to protocol and some more helpers for packet class
+    * Whole new terminal UI - full screen output from device
+        * Allows to send string and byte
+        * Allows to save log into file
+        * Allows to parse output in hex
+    * Remove must-be-in-circle limitation for Ball UI
+    * Remove eeprom play part from client
+    * Basic scratch of protocol file api
+    * Bug & crash fixes
+
+    ==== Supported microcontrollers ====
+
+    * ATmega16
+    * ATmega32
+    * ATmega48
+    * ATmega88
+    * ATmega128 (only 16-bit addresses available)
+    * ATmega162
+    * ATmega168
+
+    ==== Statistics ====
+
+    * 9 revision total
+
 YuniClientMobile 1.1 "Ice-planet" (19 march 2011)
 
     YuniClientMobile 1.1 - Implements features expected from mobile client
