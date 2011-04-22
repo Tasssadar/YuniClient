@@ -137,8 +137,7 @@ public class YuniClient extends Activity {
     private byte mMovementFlags = 0;
     private byte mSpeed = 0;
     
-    private String terminalText = null;
-        
+    private Terminal terminal = new Terminal();
 
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
@@ -797,7 +796,7 @@ public class YuniClient extends Activity {
              public void onClick(View v) {
                 TextView out = (TextView) findViewById(R.id.output);
                 out.setText("");
-                terminalText = null;
+                terminal.SetText(null);
              }
            });
         
@@ -831,10 +830,10 @@ public class YuniClient extends Activity {
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
         
-        if(terminalText != null)
+        if(terminal.GetText() != null)
         {
             TextView out = (TextView) findViewById(R.id.output);
-            out.setText(terminalText);
+            out.setText(terminal.GetText());
             state |= STATE_SCROLL;
         }
     }
@@ -1374,10 +1373,10 @@ public class YuniClient extends Activity {
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
         
-        if(terminalText != null)
+        if(terminal.GetText() != null)
         {
             TextView out = (TextView) findViewById(R.id.output_terminal);
-            out.setText(terminalText);
+            out.setText(terminal.GetText());
             state |= STATE_SCROLL;
         }
     }
@@ -1389,13 +1388,25 @@ public class YuniClient extends Activity {
             final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
             if(out != null)
             {
-                out.append(text);
+                out.append(Terminal.Parse(text));
                 state |= STATE_SCROLL;
             }
         }
-        if(terminalText == null)
-            terminalText = "";
-        terminalText += text;
+        terminal.Append(text);
+    }
+    private void SetTerminalText(String text, boolean toClass)
+    {
+        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+        {
+            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
+            if(out != null)
+            {
+                out.setText(text);
+                state |= STATE_SCROLL;
+            }
+        }
+        if(toClass)
+            terminal.SetText(text);
     }
     
     @Override
@@ -1471,7 +1482,7 @@ public class YuniClient extends Activity {
                 return true;
             case R.id.clear:
                 ((TextView)findViewById(R.id.output_terminal)).setText("");
-                terminalText = null;
+                terminal.SetText(null);
                 return true;
             case R.id.send_string:
             {
@@ -1530,6 +1541,21 @@ public class YuniClient extends Activity {
                 alertDialog.show();
                 return true;
             }
+            case R.id.terminal_parse:
+                final CharSequence[] items = {"Text", "Hex", "Byte", "Packets"};
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setTitle("Choose parser");
+                builder.setSingleChoiceItems(items, terminal.GetCurrentParser(), new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int item) {
+                        terminal.SetCurrentParser((byte) item);
+                        SetTerminalText(terminal.GetText(), false);
+                        dialog.dismiss();
+                    }
+                });
+                AlertDialog alert = builder.create();
+                alert.show();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
