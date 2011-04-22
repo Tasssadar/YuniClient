@@ -1,5 +1,13 @@
 package com.yuniclient;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+
 class Terminal
 {
     public final static byte SMSG_PING                = 0x01;
@@ -119,6 +127,25 @@ class Terminal
         }
         terminalText += text;
         parsedText += Parse(text);
+    }
+    
+    public void toFile(String name, Handler handler) throws IOException
+    {
+        if(!name.contains("."))
+            name += ".txt";
+        File file = new File("/mnt/sdcard/YuniData/"+name);
+        if(!file.exists())
+            file.createNewFile();
+        FileOutputStream out = new FileOutputStream(file);
+        out.write(parsedText.getBytes());
+        out.close();
+        Message msg = new Message();
+        msg.what = YuniClient.MESSAGE_TOAST;
+        Bundle bundle = new Bundle();
+        bundle.putString(YuniClient.TOAST, "File " + file.getName() + " saved");
+        msg.arg1 = 0;
+        msg.setData(bundle);
+        handler.sendMessage(msg); 
     }
     
     public static String opcodeToString(byte opcode)

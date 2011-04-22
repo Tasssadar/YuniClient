@@ -1542,6 +1542,7 @@ public class YuniClient extends Activity {
                 return true;
             }
             case R.id.terminal_parse:
+            {
                 final CharSequence[] items = {"Text", "Hex", "Byte", "Packets"};
 
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -1556,6 +1557,27 @@ public class YuniClient extends Activity {
                 AlertDialog alert = builder.create();
                 alert.show();
                 return true;
+            }
+            case R.id.save_log:
+            {
+                if(terminal.GetText() == null || terminal.GetText() == "")
+                {
+                    Toast.makeText(context, "Terminal is empty!", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                AlertDialog.Builder builder;
+                alertDialog = null;
+                LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+                View layout = inflater.inflate(R.layout.save_data,
+                                               (ViewGroup) findViewById(R.id.layout_root));
+                builder = new AlertDialog.Builder(context);
+                builder.setView(layout);
+                builder.setNeutralButton("Save", saveLogFile);
+                builder.setTitle("Chose filename");
+                alertDialog = builder.create();
+                alertDialog.show();
+                return true;
+            }
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -1565,12 +1587,39 @@ public class YuniClient extends Activity {
         public void onClick(DialogInterface dialog, int id) {
             EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
             String filename = text.getText().toString();
+            if(filename == null || filename == "")
+            {
+                Toast.makeText(context, "Filename is empty!", Toast.LENGTH_SHORT).show();
+                return;
+            }
             dialog.dismiss();
             File folder = new File("/mnt/sdcard/YuniData/");
             if(!folder.exists())
                 folder.mkdirs();
             try {
                 EEPROM.toFile(filename, mHandler);
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+       }
+    };
+    
+    private final OnClickListener saveLogFile = new OnClickListener() {
+        public void onClick(DialogInterface dialog, int id) {
+            EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+            String filename = text.getText().toString();
+            if(filename == null || filename == "")
+            {
+                Toast.makeText(context, "Filename is empty!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            dialog.dismiss();
+            File folder = new File("/mnt/sdcard/YuniData/");
+            if(!folder.exists())
+                folder.mkdirs();
+            try {
+                terminal.toFile(filename, mHandler);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
