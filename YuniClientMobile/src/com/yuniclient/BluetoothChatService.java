@@ -328,7 +328,7 @@ public class BluetoothChatService {
                     Log.e(TAG, "unable to close() socket during connection failure", e2);
                 }
                 // Start the service over to restart listening mode
-                BluetoothChatService.this.start();
+                //BluetoothChatService.this.start();
                 return;
             }
 
