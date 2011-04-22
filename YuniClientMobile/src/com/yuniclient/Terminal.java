@@ -120,6 +120,8 @@ class Terminal
     }
     public void Append(String text)
     {
+    	if(text == null)
+    		return;
         if(terminalText == null)
         {
             terminalText = "";

@@ -171,7 +171,7 @@ public class YuniClient extends Activity {
                 mArrayAdapter.add(device.getName() + "\n" + device.getAddress());
             }
         }
-    };
+    }; 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -213,7 +213,6 @@ public class YuniClient extends Activity {
             switch(btTurnOn)
             {
                 case 1:
-                    
                     FindDevices();
                     break;
                 case 2:
@@ -263,7 +262,7 @@ public class YuniClient extends Activity {
         if(mChatService != null)
             mChatService.stop();
         mChatService = null;
-        mArrayAdapter = null;
+        //mArrayAdapter = null;
         mPairedDevices = null;
         curFolder = null;
         keyTouch = null;
@@ -321,9 +320,7 @@ public class YuniClient extends Activity {
             dialog.dismiss();
         Button button = (Button) findViewById(R.id.button_scan);
         button.setEnabled(enable);
-        ListView listView = (ListView) findViewById(R.id.new_devices);
-        listView.setEnabled(enable);
-        listView = (ListView) findViewById(R.id.paired_devices);
+        ListView listView = (ListView) findViewById(R.id.paired_devices);
         listView.setEnabled(enable);
     }
     
@@ -343,17 +340,9 @@ public class YuniClient extends Activity {
         }
         if (mBluetoothAdapter.isDiscovering())
             mBluetoothAdapter.cancelDiscovery();
-        
-        mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
-        mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
 
-        ListView newDevicesListView = (ListView) findViewById(R.id.new_devices);
-        newDevicesListView.setAdapter(mArrayAdapter);
-        newDevicesListView.setOnItemClickListener(mDeviceClickListener);
-        
-        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
-        pairedListView.setAdapter(mPairedDevices);
-        pairedListView.setOnItemClickListener(mDeviceClickListener);
+        mArrayAdapter.clear();
+        mPairedDevices.clear();
         
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
         if (pairedDevices.size() > 0) {
@@ -362,10 +351,8 @@ public class YuniClient extends Activity {
                 mPairedDevices.add(device.getName() + "\n" + device.getAddress());
             }
         }
-        
-        findViewById(R.id.title_new_devices).setVisibility(View.VISIBLE);
         mBluetoothAdapter.startDiscovery();
-    }
+    } 
     private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
             if(!mBluetoothAdapter.isEnabled())
@@ -510,6 +497,7 @@ public class YuniClient extends Activity {
     public void init()
     {
         mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
+        mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
         ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
         pairedListView.setAdapter(mPairedDevices);
         pairedListView.setOnItemClickListener(mDeviceClickListener);
@@ -529,6 +517,49 @@ public class YuniClient extends Activity {
                 if (mBluetoothAdapter != null) {
                     FindDevices();
                 } 
+            }
+        });
+        if(EEPROMTouchLastX == null)
+        {
+            EEPROMTouchLastX = new int[50];
+            EEPROMTouchLastY = new int[50];
+        }
+        pairedListView.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_MOVE)
+                {
+                    if(EEPROMTouchItr >= 50)
+                        EEPROMTouchItr = 0;
+                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
+                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
+                    ++EEPROMTouchItr;
+                }
+                else if(event.getAction() == MotionEvent.ACTION_DOWN)
+                    EEPROMTouchItr = 0;
+                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
+                {
+                    boolean right = false;
+                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
+                      // and x movement must be bigger than Y movement
+                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
+                    
+                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
+                    {
+                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
+                            right = true;
+                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
+                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
+                            correct = false;
+                    }
+                    if(correct)
+                        ChangeDevicesPart(true, right);
+                }
+                return false;
+            }
+
+            private int fabs(int i) {
+                if(i >= 0) return i;
+                return -i;
             }
         });
         keyTouch = new View.OnTouchListener() {
@@ -574,6 +605,30 @@ public class YuniClient extends Activity {
         };
     }
     
+    void ChangeDevicesPart(boolean animation, boolean right)
+    {
+        final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper_devices);
+        flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
+        flipper.showNext(); 
+        final ListView list = (ListView) findViewById(R.id.paired_devices); 
+        TextView header = (TextView)findViewById(R.id.title_paired_devices);
+        Button button = (Button) findViewById(R.id.button_scan);
+        
+        if(eeprom_part == 1)
+        {
+            eeprom_part = 2;
+            button.setVisibility(Button.VISIBLE);
+            header.setText("New devices");
+            list.setAdapter(mArrayAdapter);
+        }
+        else
+        {
+            eeprom_part = 1;
+            button.setVisibility(Button.GONE);
+            header.setText("Paired devices");
+            list.setAdapter(mPairedDevices);
+        }
+    }
     public void SendMovementKey(byte button, boolean down)
     {
         byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
@@ -1383,6 +1438,8 @@ public class YuniClient extends Activity {
     
     private void WriteTerminalText(String text)
     {
+        if(text == null)
+            return;
         if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
         {
             final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
@@ -1614,6 +1671,7 @@ public class YuniClient extends Activity {
                 Toast.makeText(context, "Filename is empty!", Toast.LENGTH_SHORT).show();
                 return;
             }
+       
             dialog.dismiss();
             File folder = new File("/mnt/sdcard/YuniData/");
             if(!folder.exists())

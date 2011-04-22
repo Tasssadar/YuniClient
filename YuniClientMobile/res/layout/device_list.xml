@@ -13,15 +13,26 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
+<ViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
+android:id="@+id/flipper_devices"
+android:layout_width="fill_parent"
+android:layout_height="fill_parent"
+>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
+     <Button android:id="@+id/button_scan"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="scan"
+        android:visibility="gone"
+    /> 
     <TextView android:id="@+id/title_paired_devices"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="paired"
+        android:text="Paired devices:"
         android:visibility="gone"
         android:background="#666"
         android:textColor="#fff"
@@ -32,7 +43,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
     />
-    <TextView android:id="@+id/title_new_devices"
+   <!--  <TextView android:id="@+id/title_new_devices"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:text="other"
@@ -44,11 +55,8 @@
     <ListView android:id="@+id/new_devices"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="2"
-    />
-    <Button android:id="@+id/button_scan"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="scan"
-    />
+        android:layout_weight="1"
+    />-->
+    
 </LinearLayout>
+</ViewFlipper> 
