@@ -164,7 +164,8 @@ public class YuniClient extends Activity {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             // When discovery finds a device
-            if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null) {
+            if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null &&
+                intent.getParcelableExtra(BluetoothDevice.EXTRA_NAME) == null) {
                 // Get the BluetoothDevice object from the Intent
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // Add the name and address to an array adapter to show in a ListView
@@ -262,8 +263,6 @@ public class YuniClient extends Activity {
         if(mChatService != null)
             mChatService.stop();
         mChatService = null;
-        //mArrayAdapter = null;
-        mPairedDevices = null;
         curFolder = null;
         keyTouch = null;
         fileSelect = null;
@@ -496,6 +495,7 @@ public class YuniClient extends Activity {
     // INITS
     public void init()
     {
+    	eeprom_part = 1;
         mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
         mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
         ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
