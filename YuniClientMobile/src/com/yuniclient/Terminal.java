@@ -90,7 +90,10 @@ class Terminal
                 byte packetLen = 0;
                 for(int i = 0; i < lenght; ++i)
                 {
-                    if(((byte)text.charAt(i) & 0xFF) == 0xFF && (byte)text.charAt(i+1) == 0x01)
+                    if(text.length() <= i+3)
+                        break;
+                    if(((byte)text.charAt(i) & 0xFF) == 0xFF && ((byte)text.charAt(i+1) & 0xFF) == 0xEF && 
+                        text.length() > i+3+(byte)text.charAt(i+2))
                     {
                         packetLen = (byte)text.charAt(i+2);
                         res += "Packet: " + opcodeToString((byte) text.charAt(i+3)) + "\r\n";
@@ -120,8 +123,8 @@ class Terminal
     }
     public void Append(String text)
     {
-    	if(text == null)
-    		return;
+        if(text == null)
+            return;
         if(terminalText == null)
         {
             terminalText = "";

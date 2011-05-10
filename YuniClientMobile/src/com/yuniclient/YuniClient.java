@@ -177,11 +177,6 @@ public class YuniClient extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if(savedInstanceState != null)
-        {
-            finish();
-            return;
-        }
         context = this;
         state = 0;
         btTurnOn = 0;
@@ -906,7 +901,7 @@ public class YuniClient extends Activity {
 
     private void ShowAPIDialog()
     {
-        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra"};
+        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra", "Quorra final"};
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose control API");
@@ -916,7 +911,7 @@ public class YuniClient extends Activity {
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 
-                if(item == controlAPI.API_QUORRA)
+                if(item == controlAPI.API_QUORRA || item == controlAPI.API_QUORRA_FINAL)
                 {
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle("Set speed");
@@ -1345,7 +1340,7 @@ public class YuniClient extends Activity {
             }
             
             mMovementFlags = moveFlags[0];
-            if(moveFlags[0] != 0 || api.GetAPIType() == controlAPI.API_PACKETS || api.GetAPIType() == controlAPI.API_QUORRA)
+            if(moveFlags[0] != 0 || api.GetAPIType() == controlAPI.API_PACKETS || api.GetAPIType() == controlAPI.API_QUORRA || api.GetAPIType() == controlAPI.API_QUORRA_FINAL)
             {
                 byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
                 if(data != null)
@@ -1358,7 +1353,7 @@ public class YuniClient extends Activity {
     {
         setContentView(api.new MTView(this));
         state |= STATE_BALL;
-        if(api.GetAPIType() != controlAPI.API_PACKETS && api.GetAPIType() != controlAPI.API_QUORRA)
+        if(api.GetAPIType() != controlAPI.API_PACKETS && api.GetAPIType() != controlAPI.API_QUORRA && api.GetAPIType() != controlAPI.API_QUORRA_FINAL)
         {
             api.SetAPIType(controlAPI.API_PACKETS);
             Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
@@ -2065,7 +2060,7 @@ public class YuniClient extends Activity {
     {
         if (patch_pos == 0)
             return true;
-        
+
         if (page.address == 0)
         {
             int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;

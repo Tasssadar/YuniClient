@@ -16,6 +16,7 @@ public class controlAPI
     public static final byte API_YUNIRC   = 1;       // keyboard with d or u for press and release
     public static final byte API_PACKETS  = 2;       // YuniControl packets
     public static final byte API_QUORRA   = 3;       // Packets for robot Quorra  
+    public static final byte API_QUORRA_FINAL= 4;       // Packets for robot Quorra  
     
     
     // For API_PACKETS
@@ -110,6 +111,45 @@ public class controlAPI
                 }
                 pkt.CountOpcode(true);
                 packet = pkt.getSendData();
+                break;
+            }
+            case API_QUORRA_FINAL:
+            {
+                byte quorraPkt[] = new byte[8];
+                quorraPkt[0] = (byte)0xFF;
+                quorraPkt[1] = (byte)0x00;
+                quorraPkt[2] = (byte)5;
+                quorraPkt[3] = (byte)5;
+                int[] data = null;
+                if(down)
+                {
+                    int targetSpeed = quorraSpeed;
+                    switch(speed)
+                    {
+                        case 50: targetSpeed = quorraSpeed/3; break;
+                        case 100: targetSpeed = quorraSpeed/2;break;
+                        case 127:
+                        default:
+                            break;
+                    }
+                    data = MoveFlagsToQuorra(targetSpeed, flags);
+                    if(data != null)
+                    {
+                        quorraPkt[4] = (byte) (data[0] >> 8);
+                        quorraPkt[5] = (byte) (data[0]);
+                        quorraPkt[6] = (byte) (data[1] >> 8);
+                        quorraPkt[7] = (byte) (data[1]);
+                    }
+                }
+                
+                if(data == null)
+                {
+                    quorraPkt[4] = (byte) 0;
+                    quorraPkt[5] = (byte) 0;
+                    quorraPkt[6] = (byte) 0;
+                    quorraPkt[7] = (byte) 0;
+                }
+                packet = quorraPkt;
                 break;
             }
         }
