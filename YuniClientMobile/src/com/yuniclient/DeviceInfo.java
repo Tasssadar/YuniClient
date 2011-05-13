@@ -1,6 +1,6 @@
 package com.yuniclient;
 
-class DeviceInfo
+public class DeviceInfo
 {
     DeviceInfo(String id)
     {
