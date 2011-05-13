@@ -1,15 +1,5 @@
 package com.yuniclient;
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Paint.Style;
-import android.os.Message;
-import android.view.MotionEvent;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-
 public class controlAPI
 {
     public static final byte API_KEYBOARD = 0;       // just keyboard characters
@@ -26,8 +16,8 @@ public class controlAPI
     public static final byte MOVE_LEFT     = 0x04; 
     public static final byte MOVE_RIGHT    = 0x08; 
     
+    private static final double PI = 3.141592;
     
-
     public controlAPI()
     {
         apiType = API_YUNIRC;
@@ -223,6 +213,10 @@ public class controlAPI
         return result;
     }
     
+    public static boolean IsTargetSpeedDefined(byte apiType) { return !(apiType == API_QUORRA || apiType == API_QUORRA_FINAL); }
+    public static boolean HasSeparatedSpeed(byte apiType) { return (apiType == API_YUNIRC || apiType == API_KEYBOARD); }
+    public static boolean HasPacketStructure(byte apiType) { return (apiType == API_PACKETS || apiType == API_QUORRA || apiType == API_QUORRA_FINAL); }
+    
     private float fabs(float val)
     {
         if(val < 0)
@@ -233,82 +227,9 @@ public class controlAPI
     public float GetDefX() { return mDefX; }
     public float GetDefY() { return mDefY; }
 
-    public class MTView extends SurfaceView implements SurfaceHolder.Callback
-    {
-        private int width, height;
-        Paint mLine = new Paint(Paint.ANTI_ALIAS_FLAG);
-        Paint mCircle = new Paint(Paint.ANTI_ALIAS_FLAG);
-        Context context = null;
-
-        public MTView(Context context) {
-            super(context);
-            this.context = context;
-            SurfaceHolder holder = getHolder();
-            holder.addCallback(this);
-            setFocusable(true); // make sure we get key events
-            setFocusableInTouchMode(true); // make sure we get touch events
-            mLine.setColor(0xFFFF0000);
-            mLine.setStyle(Style.STROKE);
-            mLine.setStrokeWidth(3);
-            mCircle.setColor(0xFFFFFF00);
-            mCircle.setStyle(Style.FILL);
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event)
-        {
-            Canvas c = getHolder().lockCanvas();
-            if (c == null)
-                return true;
-            
-            c.drawColor(Color.BLACK);
-            c.drawCircle(width/2, height/2, width/2, mLine);
-            c.drawCircle(width/2, height/2, (float) ((width/2)*0.66), mLine);
-            c.drawCircle(width/2, height/2, (float) ((width/2)*0.33), mLine);
-            c.drawLine((width/2)-20, height/2, (width/2)+20, height/2, mLine);
-            c.drawLine(width/2, (height/2)-20, width/2, (height/2)+20, mLine);
-            
-            if (event.getAction() != MotionEvent.ACTION_UP)
-            {
-                c.drawCircle(event.getX(), event.getY(), 40, mCircle);
-                c.drawLine(0, event.getY(), width, event.getY(), mLine);
-                c.drawLine(event.getX(), 0, event.getX(), height, mLine);    
-            }
-            Message msg = new Message();
-            msg.obj = event;
-            msg.arg1 = width;
-            msg.arg2 = height;
-            ((YuniClient)context).ballHandler.sendMessage(msg);
-            
-            getHolder().unlockCanvasAndPost(c);
-            return true;
-        }
-
-
-        public void surfaceCreated(SurfaceHolder holder) {
-        }
-
-        public void surfaceDestroyed(SurfaceHolder holder) {
-        }
-
-        public void surfaceChanged(SurfaceHolder holder, int arg1, int width,
-                int height) {
-            this.width = width;
-            this.height = height;
-            
-            Canvas c = holder.lockCanvas();
-            
-            c.drawColor(Color.BLACK);
-            c.drawCircle(width/2, height/2, width/2, mLine);
-            c.drawCircle(width/2, height/2, (float) ((width/2)*0.66), mLine);
-            c.drawCircle(width/2, height/2, (float) ((width/2)*0.33), mLine);
-            c.drawLine((width/2)-20, height/2, (width/2)+20, height/2, mLine);
-            c.drawLine(width/2, (height/2)-20, width/2, (height/2)+20, mLine);
-            holder.unlockCanvasAndPost(c);
-        }
-    }
     
-    public byte[] BallXYToFlags(float x, float y, int width, int height)
+    
+    public byte[] BallXYToFlags(float x, float y, int width, int height, boolean spinAtPlace)
     {
         float dx = x - width/2;
         float dy = y - height/2;
@@ -327,16 +248,15 @@ public class controlAPI
         float ang = (float) Math.atan2(dy, dx);                                                                                                 
         ang = (float) ((ang >= 0) ? ang : 2 * 3.141592 + ang);  
         
-        if(ang > 5.18362 || ang <  1.09956) // 0.7 PI range
+        if(ang > 5.18362 || ang <  1.09956 || (!spinAtPlace && (ang >= PI*1.5 || ang <= PI*0.5))) // 0.7 PI range
             flags[0] |= MOVE_FORWARD;
-        else if(ang > 2.04203 && ang < 4.24115) 
+        else if(ang > 2.04203 && ang < 4.24115 || (!spinAtPlace && (ang > PI*0.5 && ang < PI*1.5))) 
             flags[0] |= MOVE_BACKWARD;
         
         if(ang > 0.471236 && ang < 2.67036)
             flags[0] |= MOVE_RIGHT;
         else if(ang > 3.61283 && ang <  5.81195)
             flags[0] |= MOVE_LEFT;
-        
         return flags;
         
     }

@@ -137,6 +137,8 @@ public class YuniClient extends Activity {
     private byte mMovementFlags = 0;
     private byte mSpeed = 0;
     
+    private Joystick joystick = null;
+    
     private Terminal terminal = new Terminal();
 
     private Animation inFromRightAnimation() {
@@ -276,6 +278,7 @@ public class YuniClient extends Activity {
         accelerometerListener = null;
         api.SetDefXY(0, 0);
         mSensorManager = null;
+        joystick = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -490,7 +493,7 @@ public class YuniClient extends Activity {
     // INITS
     public void init()
     {
-    	eeprom_part = 1;
+    eeprom_part = 1;
         mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
         mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
         ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
@@ -634,6 +637,7 @@ public class YuniClient extends Activity {
     void InitMain()
     {
         autoScrollThread = null;
+        joystick = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_EEPROM);
         state &= ~(STATE_BALL);
@@ -911,7 +915,7 @@ public class YuniClient extends Activity {
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 
-                if(item == controlAPI.API_QUORRA || item == controlAPI.API_QUORRA_FINAL)
+                if(!controlAPI.IsTargetSpeedDefined((byte) item))
                 {
                     AlertDialog.Builder builder = new AlertDialog.Builder(context);
                     builder.setTitle("Set speed");
@@ -959,10 +963,7 @@ public class YuniClient extends Activity {
             eeprom_part = 1;
             EEPROM = new eeprom();
             mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
-            //if((state & STATE_CONNECTED) != 0)
-            //    LoadEEPROM();
-            //else
-                OpenLoadDialog();
+            OpenLoadDialog();
         }
         mEEPROMEntries.clear();
         final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
@@ -1228,7 +1229,7 @@ public class YuniClient extends Activity {
                 break;
             case Configuration.ORIENTATION_LANDSCAPE:
                 this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-            break;
+                break;
         }
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -1314,7 +1315,7 @@ public class YuniClient extends Activity {
                 return;
             
             mSpeed = moveFlags[1];
-            if(api.GetAPIType() != controlAPI.API_PACKETS)
+            if(controlAPI.HasSeparatedSpeed(api.GetAPIType()))
             {
                 byte[] speedData = null;
                 if(api.GetAPIType() == controlAPI.API_KEYBOARD)
@@ -1340,7 +1341,7 @@ public class YuniClient extends Activity {
             }
             
             mMovementFlags = moveFlags[0];
-            if(moveFlags[0] != 0 || api.GetAPIType() == controlAPI.API_PACKETS || api.GetAPIType() == controlAPI.API_QUORRA || api.GetAPIType() == controlAPI.API_QUORRA_FINAL)
+            if(moveFlags[0] != 0 || controlAPI.HasPacketStructure(api.GetAPIType()))
             {
                 byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
                 if(data != null)
@@ -1351,14 +1352,16 @@ public class YuniClient extends Activity {
     
     private void InitBall()
     {
-        setContentView(api.new MTView(this));
+    joystick = new Joystick();
+        setContentView(joystick.new MTView(this));
         state |= STATE_BALL;
-        if(api.GetAPIType() != controlAPI.API_PACKETS && api.GetAPIType() != controlAPI.API_QUORRA && api.GetAPIType() != controlAPI.API_QUORRA_FINAL)
+        if(!controlAPI.HasPacketStructure(api.GetAPIType()))
         {
             api.SetAPIType(controlAPI.API_PACKETS);
             Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
         }
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        
     }
     
     public final Handler ballHandler = new Handler() {
@@ -1366,27 +1369,15 @@ public class YuniClient extends Activity {
         public void handleMessage(Message msg)
         {
             MotionEvent event = (MotionEvent)msg.obj;
-            float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2);
+            float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
             
-            if(event.getAction() != MotionEvent.ACTION_UP)
-            {
-                byte[] flags = api.BallXYToFlags(event.getX(), y, msg.arg1, msg.arg2);
-                if(flags[0] == mMovementFlags && flags[1] == mSpeed)
-                    return;
-                byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
-                if(data != null)
-                    mChatService.write(data.clone());
-                mMovementFlags = flags[0];
-                mSpeed = flags[1];
-            }
-            else if(mMovementFlags != 0)
-            {
-                byte[] data = api.BuildMovementPacket((byte)0, false, (byte)127);
-                if(data != null)
-                    mChatService.write(data.clone());
-                mMovementFlags = 0;
-                mSpeed = 0;
-            }
+            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+            
+            if(flags == null)
+                return;
+            byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
+            if(data != null)
+                mChatService.write(data.clone());
         }
     };
     
