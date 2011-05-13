@@ -59,7 +59,6 @@ class memory
     private native byte[] parseHexFile(byte[] file, int memsize, int fileLenght);
     private byte[] m_buffer;
     private int size;
-    
 };
 
 class Page
