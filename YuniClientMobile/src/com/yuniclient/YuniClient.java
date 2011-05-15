@@ -188,9 +188,6 @@ public class YuniClient extends Activity {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
             ShowAlert("This device does not have bluetooth adapter");
-        else if (!mBluetoothAdapter.isEnabled())
-                EnableBT();
-        
         init();
     }
     public void onDestroy() 

@@ -3,19 +3,20 @@
               android:orientation="vertical"
               android:layout_width="fill_parent" 
               android:layout_height="fill_parent">
-       <ScrollView    
-        android:id="@+id/ScrollView01"   
+    <ScrollView    
+      android:id="@+id/ScrollView01"   
       android:layout_height="150dp"    
       android:layout_width="fill_parent"
       android:fadingEdge="none"
-      android:fillViewport="true">         
+      android:fillViewport="true"
+      android:scrollbarAlwaysDrawVerticalTrack="true">         
     <TextView android:id="@+id/output"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="wrap_content"
         android:text=""
         android:padding="3dp"
         android:textColor="#fff"
-        android:maxLines="500"
+        android:maxLines="50000"
     /> 
     </ScrollView>   
     
