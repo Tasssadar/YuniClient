@@ -1352,7 +1352,7 @@ public class YuniClient extends Activity {
     
     private void InitBall()
     {
-    joystick = new Joystick();
+        joystick = new Joystick();
         setContentView(joystick.new MTView(this));
         state |= STATE_BALL;
         if(!controlAPI.HasPacketStructure(api.GetAPIType()))
@@ -1361,7 +1361,7 @@ public class YuniClient extends Activity {
             Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
         }
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        
+        System.loadLibrary("jni_functions");
     }
     
     public final Handler ballHandler = new Handler() {

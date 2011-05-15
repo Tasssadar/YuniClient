@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 enum errors
 {
@@ -140,4 +141,19 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
     free(file);
 
     return m_buffer;
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_yuniclient_Joystick_calculateFloats(JNIEnv * env, jobject this, jfloat x, jfloat y, jfloat width, jfloat height)
+{
+    jfloatArray result = (*env)->NewFloatArray(env, 2);
+    jfloat buf[2];
+    float dx = x - width;
+    float dy = y - height;
+    float dist = sqrt((dx*dx) + (dy*dy));
+    buf[0] = (float) (dist/(((float)width)/100.0));
+
+    buf[1] = atan2(dy, dx);
+    buf[1] = (float) ((buf[1] >= 0) ? buf[1] : 2 * 3.141592f + buf[1]);
+    (*env)->SetFloatArrayRegion(env, result, 0, 2, buf );
+    return result;
 }

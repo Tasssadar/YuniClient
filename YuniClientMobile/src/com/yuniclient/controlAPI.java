@@ -7,17 +7,14 @@ public class controlAPI
     public static final byte API_PACKETS  = 2;       // YuniControl packets
     public static final byte API_QUORRA   = 3;       // Packets for robot Quorra  
     public static final byte API_QUORRA_FINAL= 4;       // Packets for robot Quorra  
-    
-    
+
     // For API_PACKETS
     public static final byte MOVE_NONE     = 0x00;
     public static final byte MOVE_FORWARD  = 0x01; 
     public static final byte MOVE_BACKWARD = 0x02; 
     public static final byte MOVE_LEFT     = 0x04; 
     public static final byte MOVE_RIGHT    = 0x08; 
-    
-    private static final double PI = 3.141592;
-    
+        
     public controlAPI()
     {
         apiType = API_YUNIRC;
@@ -226,40 +223,6 @@ public class controlAPI
     public void SetDefXY(float x, float y) { mDefX = x; mDefY = y; }
     public float GetDefX() { return mDefX; }
     public float GetDefY() { return mDefY; }
-
-    
-    
-    public byte[] BallXYToFlags(float x, float y, int width, int height, boolean spinAtPlace)
-    {
-        float dx = x - width/2;
-        float dy = y - height/2;
-        float dist = (float) Math.sqrt((dx*dx) + (dy*dy));
-        float distPct = (float) (dist/(((float)(width/2))/100.0));
-        
-        byte speed = 127;
-        if(distPct < 33)
-            speed = 50;
-        else if(distPct < 66)
-            speed = 100;
-        
-        byte[] flags = {0, speed };
-        
-                    
-        float ang = (float) Math.atan2(dy, dx);                                                                                                 
-        ang = (float) ((ang >= 0) ? ang : 2 * 3.141592 + ang);  
-        
-        if(ang > 5.18362 || ang <  1.09956 || (!spinAtPlace && (ang >= PI*1.5 || ang <= PI*0.5))) // 0.7 PI range
-            flags[0] |= MOVE_FORWARD;
-        else if(ang > 2.04203 && ang < 4.24115 || (!spinAtPlace && (ang > PI*0.5 && ang < PI*1.5))) 
-            flags[0] |= MOVE_BACKWARD;
-        
-        if(ang > 0.471236 && ang < 2.67036)
-            flags[0] |= MOVE_RIGHT;
-        else if(ang > 3.61283 && ang <  5.81195)
-            flags[0] |= MOVE_LEFT;
-        return flags;
-        
-    }
 
     public void SetQuarraSpeed(int speed) { quorraSpeed = speed; }
     
