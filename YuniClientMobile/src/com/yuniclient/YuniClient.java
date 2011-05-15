@@ -1963,6 +1963,7 @@ public class YuniClient extends Activity {
             }
         }
     };
+
     private void SendPage(Page page)
     {    
         final byte[] out = { 0x10 };
