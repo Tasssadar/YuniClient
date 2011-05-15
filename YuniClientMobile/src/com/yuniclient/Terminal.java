@@ -36,6 +36,16 @@ class Terminal
     public final static byte SMSG_UNLOCK              = 0x24;
     public final static byte SMSG_CONNECT_REQ         = 0x25;                                                                                                          
     public final static byte CMSG_CONNECT_RES         = 0x26; 
+    public final static byte SMSG_TEST                = 0x27;
+    public final static byte CMSG_TEST_RESULT         = 0x28;
+    public final static byte SMSG_ENCODER_RM_EVENT    = 0x29;
+    public final static byte CMSG_RANGE_VALUE         = 0x30;
+    public final static byte SMSG_SHUTDOWN_RANGE      = 0x31;
+    public final static byte CMSG_DEADEND_DETECTED    = 0x32;
+    public final static byte CMSG_SET_POWER_REQ       = 0x33;
+    public final static byte CMSG_RANGE_ADDR_EMPTY    = 0x34;
+    public final static byte SMSG_SET_RANGE_ADDR      = 0x35;
+    public final static byte SMSG_TEST_RANGE          = 0x36;
     
     public final static byte PARSER_TEXT = 0;
     public final static byte PARSER_HEX  = 1;
@@ -157,7 +167,7 @@ class Terminal
     {
         switch(opcode)
         {
-            default: return String.valueOf(opcode);
+            default: return "0x"+Integer.toHexString(opcode).toUpperCase();
             case SMSG_PING:                  return "SMSG_PING";
             case CMSG_PONG:                  return "CMSG_PONG";
             case SMSG_SET_MOVEMENT:          return "SMSG_SET_MOVEMENT";
@@ -184,6 +194,16 @@ class Terminal
             case SMSG_UNLOCK:                return "SMSG_UNLOCK";
             case SMSG_CONNECT_REQ:           return "SMSG_CONNECT_REQ";
             case CMSG_CONNECT_RES:           return "CMSG_CONNECT_RES";
+            case SMSG_TEST:                  return "SMSG_TEST";
+            case CMSG_TEST_RESULT:           return "CMSG_TEST_RESULT";
+            case SMSG_ENCODER_RM_EVENT:      return "SMSG_ENCODER_RM_EVENT";
+            case CMSG_RANGE_VALUE:           return "CMSG_RANGE_VALUE";
+            case SMSG_SHUTDOWN_RANGE:        return "SMSG_SHUTDOWN_RANGE";
+            case CMSG_DEADEND_DETECTED:      return "CMSG_DEADEND_DETECTED";
+            case CMSG_SET_POWER_REQ:         return "CMSG_SET_POWER_REQ";
+            case CMSG_RANGE_ADDR_EMPTY:      return "CMSG_RANGE_ADDR_EMPTY";
+            case SMSG_SET_RANGE_ADDR:        return "SMSG_SET_RANGE_ADDR";
+            case SMSG_TEST_RANGE:            return "SMSG_TEST_RANGE";
         }
     }
     
