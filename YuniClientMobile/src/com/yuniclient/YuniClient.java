@@ -3,9 +3,6 @@ package com.yuniclient;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 
 import android.app.Activity;
@@ -72,8 +69,6 @@ public class YuniClient extends Activity {
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
-    
-    public static DeviceInfo deviceInfo = null;
 
     BluetoothAdapter mBluetoothAdapter = null;
     private ArrayAdapter<String> mArrayAdapter = null;
@@ -108,13 +103,14 @@ public class YuniClient extends Activity {
     public int state;
     public byte btTurnOn;
     private View connectView = null;
-    public List<Page> pages;
     public int pagesItr = 0;
     
     private int itr_buff;
     private eeprom EEPROM = null;
     private int curEditId = 0;
     private AlertDialog alertDialog;
+    
+    private memory mem = null;
     
     public ProgressDialog dialog;
     public File curFolder = null; 
@@ -261,12 +257,10 @@ public class YuniClient extends Activity {
         keyTouch = null;
         fileSelect = null;
         dialog = null;
-        deviceInfo = null;
         autoScrollThread = null;
         mEEPROMEntries = null;
         EEPROM = null;
         alertDialog = null;
-        deviceInfo = null;
         if(log != null)
             log.close();
         log = null;
@@ -276,6 +270,7 @@ public class YuniClient extends Activity {
         api.SetDefXY(0, 0);
         mSensorManager = null;
         joystick = null;
+        mem = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -283,7 +278,6 @@ public class YuniClient extends Activity {
         }
         else
         {
-            pages = null;
             context = null;
             mBluetoothAdapter = null;
         }
@@ -1698,9 +1692,9 @@ public class YuniClient extends Activity {
     
     private final Handler flashHandler = new Handler() {
         public void handleMessage(Message msg) {
-            dialog.setMax(pages.size());
+            dialog.setMax(mem.pagesCount());
             pagesItr = 0;
-            SendPage(pages.get(pagesItr));
+            SendPage(mem.getPage(pagesItr));
             ++pagesItr;
             state |= STATE_FLASHING;
         }
@@ -1827,9 +1821,10 @@ public class YuniClient extends Activity {
                         else if((state & STATE_WAITING_ID) != 0)
                         {
                             state &= ~(STATE_WAITING_ID);
-                            deviceInfo = new DeviceInfo(seq);
+                            DeviceInfo deviceInfo = new DeviceInfo(seq);
                             if(deviceInfo.isSet())
                             {
+                                mem = new memory(deviceInfo);
                                 dialog.dismiss();
                                 dialog= new ProgressDialog(context);
                                 dialog.setCancelable(false);
@@ -1845,13 +1840,13 @@ public class YuniClient extends Activity {
                                     {
                                         final TextView file = (TextView)findViewById(R.id.hex_file);
                                         final File hex = new File(file.getText().toString());
-                                        memory mem = new memory();
+                                        
                                         try
                                         {
-                                            String result = mem.Load(hex, progressHandler2, deviceInfo);
+                                            String result = mem.Load(hex, progressHandler2);
                                             if(result == null)
                                             {
-                                                result = CreatePages(mem);
+                                                result = mem.CreatePages();
                                                 if(result == null)
                                                     flashHandler.sendMessage(flashHandler.obtainMessage());
                                                 else
@@ -1861,23 +1856,23 @@ public class YuniClient extends Activity {
                                                     bundle.putString("text", "Failed to create pages (" + result + ")");
                                                     msg.setData(bundle);
                                                     failedHandler.sendMessage(msg);
-                                                    pages = null;
+                                                    mem = null;
                                                 }
-                                                deviceInfo = null;
                                             }
                                             else
                                             {
-                                                deviceInfo = null;
                                                 Message msg = new Message();
                                                 Bundle bundle = new Bundle();
                                                 bundle.putString("text", "Failed to load hex file (" + result + ")");
                                                 msg.setData(bundle);
                                                 failedHandler.sendMessage(msg);
+                                                mem = null;
                                             }
                                             
                                         } catch (IOException e) {
                                             // TODO Auto-generated catch block
                                             e.printStackTrace();
+                                            mem = null;
                                         }
                                     }
                                 });
@@ -1886,15 +1881,15 @@ public class YuniClient extends Activity {
                         }
                         else if((state & STATE_FLASHING) != 0)
                         {
-                            SendPage(pages.get(pagesItr));
+                            SendPage(mem.getPage(pagesItr));
                             ++pagesItr;
-                            if(pagesItr >= pages.size())
+                            if(pagesItr >= mem.pagesCount())
                             {
                                 state &= ~(STATE_FLASHING);
                                 TextView error = (TextView)findViewById(R.id.error);
                                 error.setText("Flashing done");
                                 dialog.dismiss();
-                                pages = null;
+                                mem = null;
                             }
                         }
                         else if((state & STATE_EEPROM_READING) != 0)
@@ -1968,8 +1963,6 @@ public class YuniClient extends Activity {
             }
         }
     };
-    // HANDLERS END
-    // FLASH FUNCTIONS
     private void SendPage(Page page)
     {    
         final byte[] out = { 0x10 };
@@ -1980,101 +1973,5 @@ public class YuniClient extends Activity {
         mChatService.write(page.data);
         if(dialog.isShowing())
             dialog.setProgress(pagesItr+1);
-    }
-    
-    private String CreatePages(memory mem)
-    {
-        
-        int mem_size = mem.size();
-        pages = Collections.checkedList(new ArrayList<Page>(), Page.class);
-        if (mem_size > deviceInfo.mem_size)
-            for (int a = deviceInfo.mem_size; a < mem_size; ++a)
-                if (mem.Get(a) != 0xff)
-                    return "Program is too big!";
-        int alt_entry_page = deviceInfo.patch_pos / deviceInfo.page_size;
-        boolean add_alt_page = deviceInfo.patch_pos != 0;
-
-        int i = 0;
-        short pageItr = 0;
-        Page cur_page = new Page();
-        int page_size = deviceInfo.page_size;
-        int stopGenerate = deviceInfo.mem_size / deviceInfo.page_size;
-            
-        for (boolean generate = true; generate && i < stopGenerate; ++i)
-        {
-            cur_page = new Page();
-            cur_page.data = new byte[page_size];
-            cur_page.address = i * page_size;
-            pageItr = 0;
-            if (mem.size() <= (i + 1) * page_size)
-            {
-                for (int y = 0; y < page_size; ++y)
-                {
-                    if (i * page_size + y < mem.size())
-                        cur_page.data[pageItr] = mem.Get(i * page_size + y);
-                    else
-                        cur_page.data[pageItr] = (byte) 0xff;
-                    ++pageItr;
-                }
-                generate = false;
-            }
-            else
-            {
-                for (int y = i * page_size; y < (i + 1) * page_size; ++y)
-                {
-                    cur_page.data[pageItr] = mem.Get(y);
-                    ++pageItr;
-                }
-            }
-
-            if (!patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr))
-                return "Failed patching page"; 
-            pages.add(cur_page);
-
-            if (i == alt_entry_page)
-                add_alt_page = false;
-        }
-        if (add_alt_page)
-        {
-            for (int y = 0; y < page_size; ++y)
-                cur_page.data[y] = (byte)0xff;
-            cur_page.address = alt_entry_page * page_size;
-            patch_page(mem, cur_page, deviceInfo.patch_pos, deviceInfo.mem_size, pageItr);
-            pages.add(cur_page);
-        }
-        return null;
-    }
-    private boolean patch_page(memory mem, Page page, int patch_pos, int boot_reset, short page_pos)
-    {
-        if (patch_pos == 0)
-            return true;
-
-        if (page.address == 0)
-        {
-            int entrypt_jmp = (boot_reset / 2 - 1) | 0xc000;
-            if((entrypt_jmp & 0xf000) != 0xc000)
-                return false;
-            page.data[0] = (byte) entrypt_jmp;
-            page.data[1] = (byte) (entrypt_jmp >> 8);
-            return true;
-        }
-
-        if (page.address > patch_pos || page.address + page_pos <= patch_pos)
-            return true;
-
-        int new_patch_pos = patch_pos - page.address;
-
-        if (page.data[new_patch_pos] != (byte)0xff || page.data[new_patch_pos + 1] != (byte)0xff)
-            return false;
-
-        int entrypt_jmp2 = mem.Get(0) | (mem.Get(1) << 8);
-        if ((entrypt_jmp2 & 0xf000) != 0xc000)
-            return false;
-
-        int entry_addr = (entrypt_jmp2 & 0x0fff) + 1;
-        entrypt_jmp2 = ((entry_addr - patch_pos / 2 - 1) & 0xfff) | 0xc000;
-        page.data[new_patch_pos] = (byte) entrypt_jmp2;
-        page.data[new_patch_pos + 1] =  (byte) (entrypt_jmp2 >> 8);
-        return true;
     }
 }
