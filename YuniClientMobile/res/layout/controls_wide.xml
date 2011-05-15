@@ -11,14 +11,16 @@
           android:layout_height="fill_parent"    
           android:layout_width="fill_parent"
           android:fadingEdge="none"
-          android:fillViewport="true" android:layout_weight="1">         
+          android:fillViewport="true"
+          android:layout_weight="1"
+          android:scrollbarAlwaysDrawVerticalTrack="true">         
         <TextView android:id="@+id/output"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
+            android:layout_height="wrap_content"
             android:text=""
             android:padding="3px"
             android:textColor="#fff"
-            android:maxLines="500"
+            android:maxLines="50000"
         /> 
         </ScrollView>   
         

@@ -8,14 +8,15 @@
       android:layout_height="fill_parent"    
       android:layout_width="fill_parent"
       android:fadingEdge="none"
-      android:fillViewport="true">         
+      android:fillViewport="true"
+      android:scrollbarAlwaysDrawVerticalTrack="true">         
         <TextView android:id="@+id/output_terminal"
             android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
+            android:layout_height="wrap_content"
             android:text=""
             android:padding="3px"
             android:textColor="#fff"
-            android:maxLines="5000"
+            android:maxLines="50000"
         /> 
     </ScrollView>
 </RelativeLayout>
