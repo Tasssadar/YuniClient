@@ -21,7 +21,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
 
     jbyte rec_nums[50];
     jbyte rec_nums_itr = 0;
-     // + size
+
     jint size = 0;
     int pos = 0;
     jbyte *file = (jbyte *)malloc(fileLenght);
