@@ -56,7 +56,8 @@ import android.widget.ViewFlipper;
 
 import com.yuni.client.R;
 
-public class YuniClient extends Activity {
+public class YuniClient extends Activity
+{
     private static final int REQUEST_ENABLE_BT = 2;
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
@@ -69,15 +70,6 @@ public class YuniClient extends Activity {
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
-
-    BluetoothAdapter mBluetoothAdapter = null;
-    private ArrayAdapter<String> mArrayAdapter = null;
-    private ArrayAdapter<String> mPairedDevices;
-    private ArrayAdapter<String> mEEPROMEntries;
-    
-    private BluetoothChatService mChatService = null;
-    private View.OnTouchListener keyTouch;
-    public DialogInterface.OnClickListener fileSelect;
     
     public static final byte STATE_CONNECTED        = 0x01;
     public static final byte STATE_CONTROLS         = 0x02;
@@ -97,95 +89,30 @@ public class YuniClient extends Activity {
     public static final byte REC_SIZE = 5;
     
     public static final short EEPROM_PART2 = 255;
-    public static byte eeprom_part = 1;
-    public static byte eeprom_write_part = 1;
-    
-    public int state;
-    public byte btTurnOn;
-    private View connectView = null;
-    public int pagesItr = 0;
-    
-    private int itr_buff;
-    private eeprom EEPROM = null;
-    private int curEditId = 0;
-    private AlertDialog alertDialog;
-    
-    private memory mem = null;
-    
-    public ProgressDialog dialog;
-    public File curFolder = null; 
-    public Context context = null;
-    
-    public Thread autoScrollThread = null;
-    
-    private int[] EEPROMTouchLastX = null;
-    private int[] EEPROMTouchLastY = null;
-    private byte EEPROMTouchItr;
-    private short[] EEPROMScrollPos = {0,0};
-    
-    private controlAPI api = new controlAPI();
-    AccelerometerListener accelerometerListener = null;
-    
-    private LogFile log =  null;
-    private WakeLock lock = null;
-    
-    private SensorManager mSensorManager;
-    private byte mMovementFlags = 0;
-    private byte mSpeed = 0;
-    
-    private Joystick joystick = null;
-    
-    private Terminal terminal = new Terminal();
 
-    private Animation inFromRightAnimation() {
-        Animation inFromRight = new TranslateAnimation(
-            Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
-            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
-        );
-        inFromRight.setDuration(100);
-        inFromRight.setInterpolator(new LinearInterpolator());
-        return inFromRight;
-    }
-
-    private Animation inFromLeftAnimation() {
-    
-        Animation inFromLeft = new TranslateAnimation(
-            Animation.RELATIVE_TO_PARENT,  -1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
-            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
-        );
-        inFromLeft.setDuration(100);
-        inFromLeft.setInterpolator(new LinearInterpolator());
-        return inFromLeft;
-    }
-
-    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            // When discovery finds a device
-            if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null &&
-                intent.getParcelableExtra(BluetoothDevice.EXTRA_NAME) == null) {
-                // Get the BluetoothDevice object from the Intent
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                // Add the name and address to an array adapter to show in a ListView
-                mArrayAdapter.add(device.getName() + "\n" + device.getAddress());
-            }
-        }
-    }; 
-    /** Called when the activity is first created. */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
         context = this;
-        state = 0;
-        btTurnOn = 0;
+        eeprom_part = 1;
+        eeprom_write_part = 1;
+        EEPROMScrollPos = new short[2];
+        api = new controlAPI();
+        terminal = new Terminal();
+        
         setContentView(R.layout.device_list);
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter);
+        
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
             ShowAlert("This device does not have bluetooth adapter");
+        
+        System.loadLibrary("jni_functions");
         init();
     }
+
     public void onDestroy() 
     {
         super.onDestroy();
@@ -195,7 +122,9 @@ public class YuniClient extends Activity {
             unregisterReceiver(mReceiver);
         }
     }
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
         if(requestCode != REQUEST_ENABLE_BT)
             return;
 
@@ -246,140 +175,6 @@ public class YuniClient extends Activity {
                state |= STATE_SCROLL;
     }
     
-    public void Disconnect(boolean resetUI)
-    {
-        state = 0;
-        curFolder = null;
-        if(mChatService != null)
-            mChatService.stop();
-        mChatService = null;
-        curFolder = null;
-        keyTouch = null;
-        fileSelect = null;
-        dialog = null;
-        autoScrollThread = null;
-        mEEPROMEntries = null;
-        EEPROM = null;
-        alertDialog = null;
-        if(log != null)
-            log.close();
-        log = null;
-        if(lock != null)
-            lock.release();
-        accelerometerListener = null;
-        api.SetDefXY(0, 0);
-        mSensorManager = null;
-        joystick = null;
-        mem = null;
-        if(resetUI)
-        {
-            setContentView(R.layout.device_list);
-            init();
-        }
-        else
-        {
-            context = null;
-            mBluetoothAdapter = null;
-        }
-    }
-        
-    public void EnableConnect(boolean enable)
-    {
-        if(!enable)
-        {
-            dialog= new ProgressDialog(this);
-            dialog.setCancelable(true);
-            dialog.setMessage("Connecting...");
-            dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
-            dialog.setMax(0);
-            dialog.setProgress(0);
-            dialog.setOnCancelListener(new Dialog.OnCancelListener()
-            {
-                public void onCancel(DialogInterface dia)
-                {
-                    if(mChatService != null)
-                        mChatService.stop();
-                    EnableConnect(true);
-                }
-            });
-            dialog.show();
-        }
-        else
-            dialog.dismiss();
-        Button button = (Button) findViewById(R.id.button_scan);
-        button.setEnabled(enable);
-        ListView listView = (ListView) findViewById(R.id.paired_devices);
-        listView.setEnabled(enable);
-    }
-    
-    void EnableBT()
-    {
-        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-    }
-    
-    public void FindDevices()
-    {
-        if(!mBluetoothAdapter.isEnabled())
-        {
-            btTurnOn = 1;
-            EnableBT();
-            return;
-        }
-        if (mBluetoothAdapter.isDiscovering())
-            mBluetoothAdapter.cancelDiscovery();
-
-        mArrayAdapter.clear();
-        mPairedDevices.clear();
-        
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
-        if (pairedDevices.size() > 0) {
-            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
-            for (BluetoothDevice device : pairedDevices) {
-                mPairedDevices.add(device.getName() + "\n" + device.getAddress());
-            }
-        }
-        mBluetoothAdapter.startDiscovery();
-    } 
-    private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
-        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
-            if(!mBluetoothAdapter.isEnabled())
-            {
-                btTurnOn = 2;
-                connectView = v;
-                EnableBT();
-                return;
-            }
-            Connect(v);
-        }
-    }; 
-
-    void Connect(View v)
-    {
-        EnableConnect(false);
-        // Cancel discovery because it's costly and we're about to connect
-        mBluetoothAdapter.cancelDiscovery();
-        if(mChatService != null)
-            mChatService.stop();
-        mChatService = new BluetoothChatService(mHandler);
-        if(mChatService.getState() == BluetoothChatService.STATE_CONNECTING)
-            return;
-        // Get the device MAC address, which is the last 17 chars in the View
-        String info = ((TextView) v).getText().toString();
-        String address = info.substring(info.length() - 17);
-
-        // Create the result Intent and include the MAC address
-        Intent intent = new Intent();
-        intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
-
-        // Set result and finish this Activity
-        setResult(Activity.RESULT_OK, intent);
-        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-        mChatService.start();
-        if(device != null)
-            mChatService.connect(device);
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
@@ -436,18 +231,21 @@ public class YuniClient extends Activity {
         }
         return super.onKeyDown(keyCode, event);
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         prepareMenu(menu);
         return true;
     }
+
     @Override
     public boolean onPrepareOptionsMenu (Menu menu)
     {
         prepareMenu(menu);
         return true;
     }
-    void prepareMenu(Menu menu)
+
+    private void prepareMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
         if((state & STATE_TERMINAL) != 0 && menu.findItem(R.id.send_byte) == null)
@@ -465,982 +263,6 @@ public class YuniClient extends Activity {
             menu.clear();
             inflater.inflate(R.menu.menu2, menu);
         }     
-    }
-    void ShowAlert(CharSequence text)
-    {
-        if(dialog != null)
-            dialog.dismiss();
-        AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-        builder2.setMessage(text)
-               .setTitle("Error")
-               .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
-                   public void onClick(DialogInterface dialog, int id) {
-                       dialog.dismiss();
-                   }
-               });
-        AlertDialog alert = builder2.create();
-        alert.show();
-    }
-    // INITS
-    public void init()
-    {
-    eeprom_part = 1;
-        mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
-        mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
-        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
-        pairedListView.setAdapter(mPairedDevices);
-        pairedListView.setOnItemClickListener(mDeviceClickListener);
-        
-        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
-        if (pairedDevices.size() > 0) {
-            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
-            for (BluetoothDevice device : pairedDevices) {
-                mPairedDevices.add(device.getName() + "\n" + device.getAddress());
-            }
-        }
-        
-        final Button button = (Button) findViewById(R.id.button_scan);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                if (mBluetoothAdapter != null) {
-                    FindDevices();
-                } 
-            }
-        });
-        if(EEPROMTouchLastX == null)
-        {
-            EEPROMTouchLastX = new int[50];
-            EEPROMTouchLastY = new int[50];
-        }
-        pairedListView.setOnTouchListener(new View.OnTouchListener() {
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_MOVE)
-                {
-                    if(EEPROMTouchItr >= 50)
-                        EEPROMTouchItr = 0;
-                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
-                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
-                    ++EEPROMTouchItr;
-                }
-                else if(event.getAction() == MotionEvent.ACTION_DOWN)
-                    EEPROMTouchItr = 0;
-                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
-                {
-                    boolean right = false;
-                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
-                      // and x movement must be bigger than Y movement
-                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
-                    
-                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
-                    {
-                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
-                            right = true;
-                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
-                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
-                            correct = false;
-                    }
-                    if(correct)
-                        ChangeDevicesPart(true, right);
-                }
-                return false;
-            }
-
-            private int fabs(int i) {
-                if(i >= 0) return i;
-                return -i;
-            }
-        });
-        keyTouch = new View.OnTouchListener() {
-         public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
-                {
-                 boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
-                 if(((Button)v).getId() == R.id.LeftForw_b)
-                 {
-                    if(api.GetAPIType() == controlAPI.API_PACKETS)
-                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
-                    else
-                    {
-                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                        SendMovementKey(controlAPI.MOVE_LEFT, down);
-                    }   
-                 }
-                 else if(((Button)v).getId() == R.id.RightForw_b)
-                 {
-                    if(api.GetAPIType() == controlAPI.API_PACKETS)
-                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
-                    else
-                    {
-                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                        SendMovementKey(controlAPI.MOVE_RIGHT, down);
-                    }
-                 }
-                 else if(((Button)v).getId() == R.id.Forward_b)
-                     SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                 else if(((Button)v).getId() == R.id.Backward_b)
-                     SendMovementKey(controlAPI.MOVE_BACKWARD, down);
-                 else if(((Button)v).getId() == R.id.Left_b)
-                     SendMovementKey(controlAPI.MOVE_LEFT, down);
-                 else if(((Button)v).getId() == R.id.Right_b)
-                     SendMovementKey(controlAPI.MOVE_RIGHT, down);
-                 else if(((Button)v).getId() == R.id.Space_b && api.GetAPIType() != controlAPI.API_PACKETS)
-                        ButtonTouched(" ", down);
-                 else if(api.GetAPIType() != controlAPI.API_PACKETS)
-                     ButtonTouched(((Button)v).getText(), down);
-                }
-                return false;
-         }
-        };
-    }
-    
-    void ChangeDevicesPart(boolean animation, boolean right)
-    {
-        final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper_devices);
-        flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
-        flipper.showNext(); 
-        final ListView list = (ListView) findViewById(R.id.paired_devices); 
-        TextView header = (TextView)findViewById(R.id.title_paired_devices);
-        Button button = (Button) findViewById(R.id.button_scan);
-        
-        if(eeprom_part == 1)
-        {
-            eeprom_part = 2;
-            button.setVisibility(Button.VISIBLE);
-            header.setText("New devices");
-            list.setAdapter(mArrayAdapter);
-        }
-        else
-        {
-            eeprom_part = 1;
-            button.setVisibility(Button.GONE);
-            header.setText("Paired devices");
-            list.setAdapter(mPairedDevices);
-        }
-    }
-    public void SendMovementKey(byte button, boolean down)
-    {
-        byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
-        if(out != null)
-        mChatService.write(out);     
-    }
-    
-    void InitMain()
-    {
-        autoScrollThread = null;
-        joystick = null;
-        state &= ~(STATE_CONTROLS);
-        state &= ~(STATE_EEPROM);
-        state &= ~(STATE_BALL);
-        state &= ~(STATE_TERMINAL);
-
-        context = this;
-        if(lock != null)
-        {
-            lock.release();
-            lock = null;
-        }
-        curFolder = new File("/mnt/sdcard/hex/");
-        fileSelect = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
-                dialog.dismiss();
-                FilenameFilter filter = new HexFilter();
-                final CharSequence[] items = curFolder.list(filter);
-                Toast.makeText(getApplicationContext(), items[item], Toast.LENGTH_SHORT).show();
-                File file = new File(curFolder, items[item].toString());
-                Message msg = new Message();
-                msg.obj = file;
-                fileClick.sendMessage(msg);
-            }
-        };
-        setContentView(R.layout.main);
-        Button button = (Button) findViewById(R.id.Disconnect_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                Disconnect(true);
-             }
-        });
-        button = (Button) findViewById(R.id.eeprom_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                InitEEPROMList();
-             }
-        });
-        button = (Button) findViewById(R.id.ball_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                if((state & STATE_STOPPED) == 0)
-                    InitBall();
-             }
-        });
-        button = (Button) findViewById(R.id.Controls_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                if((state & STATE_STOPPED) == 0)
-                    InitControls();
-             }
-        });
-        button = (Button) findViewById(R.id.Start_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                StartStop((Button)v, ((state & STATE_STOPPED) != 0));
-             }
-        });
-        button = (Button) findViewById(R.id.Terminal_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v)
-             {
-                 InitTerminal();
-             }
-        });
-        button = (Button) findViewById(R.id.Flash_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                TextView error = (TextView)findViewById(R.id.hex_file);
-                File hex = new File(error.getText().toString());
-                error = (TextView)findViewById(R.id.error);
-                if(hex.exists() && hex.canRead())
-                {
-                    error.setText("Hex file exists\n");
-                    final byte[] out = { 0x12 };
-                    mChatService.write(out.clone());
-                    state |= STATE_WAITING_ID;
-                    error.append("Waiting for ID and preparing hex file...");
-                }
-                else
-                    error.setText("Hex file does not exists or can not be read\n");
-             }
-        });
-
-        button = (Button) findViewById(R.id.List_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                    final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-                    curFolder = new File("/mnt/sdcard/hex/");
-                    FilenameFilter filter = new HexFilter();
-                    final CharSequence[] items = curFolder.list(filter);
-                                        
-                    builder.setTitle("Chose file");
-                    builder.setItems(items, fileSelect);
-                    final AlertDialog alert = builder.create();
-                    alert.show();
-             }
-        });
-        
-    }
-    void StartStop(Button v, boolean start)
-    {
-        byte[] out = null;
-        if(start)
-        {
-            state &= ~(STATE_STOPPED);
-            out = new byte[1];
-            out[0] = 0x11;
-            state &= ~(STATE_STOPPED);
-            v.setText("Stop");
-        }
-        else
-        {
-            out = new byte[4];
-            out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
-            mChatService.write(out.clone());
-            try {
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            state |= STATE_STOPPING;
-            TextView error = (TextView)findViewById(R.id.error);
-            error.setText("Stopping...");
-            v.setText("Start");
-        }
-        v = (Button) findViewById(R.id.Controls_b);
-        v.setEnabled(start);
-        v.setClickable(start);
-        v = (Button) findViewById(R.id.ball_b);
-        v.setEnabled(start);
-        v.setClickable(start);
-        v = (Button) findViewById(R.id.Flash_b);
-        v.setEnabled(!start);
-        v.setClickable(!start);
-        v = (Button) findViewById(R.id.eeprom_b);
-        v.setEnabled(start);
-        v.setClickable(start);
-        mChatService.write(out.clone());
-    }
-    private final Handler fileClick = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            File file = (File)msg.obj;
-            if(!file.isDirectory())
-            {
-                TextView error = (TextView)findViewById(R.id.hex_file);
-                error.setText(file.getAbsolutePath());
-            }
-            else
-            {
-                curFolder = file;
-                AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                FilenameFilter filter = new HexFilter();
-                final CharSequence[] items = curFolder.list(filter);              
-                builder.setTitle("Chose file");
-                builder.setItems(items, fileSelect);
-                AlertDialog alert = builder.create();
-                alert.show();
-            }
-        }
-    };
-    
-    public void InitControls()
-    {
-        state |= STATE_CONTROLS;
-        Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-        if(display.getRotation() == Surface.ROTATION_0)
-            setContentView(R.layout.controls);
-        else 
-            setContentView(R.layout.controls_wide);
-        Button button = (Button) findViewById(R.id.Forward_b);
-        button.setOnTouchListener(keyTouch); 
-       
-        button = (Button) findViewById(R.id.Backward_b);
-        button.setOnTouchListener(keyTouch); 
-        button = (Button) findViewById(R.id.Left_b);
-        button.setOnTouchListener(keyTouch); 
-        button = (Button) findViewById(R.id.Right_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.LeftForw_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.RightForw_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Speed1_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Speed2_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Speed3_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Space_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Record_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Play_b);
-        button.setOnTouchListener(keyTouch);
-        button = (Button) findViewById(R.id.Regulator_b);
-        button.setOnTouchListener(keyTouch);
-        
-        button = (Button) findViewById(R.id.Sensors_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                 InitAccelerometer();
-             }
-          });
-
-        button = (Button) findViewById(R.id.Clear_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                TextView out = (TextView) findViewById(R.id.output);
-                out.setText("");
-                terminal.SetText(null);
-             }
-           });
-        
-        if(autoScrollThread != null && autoScrollThread.isAlive())
-            return;
-        autoScrollThread = new Thread (new Runnable()
-        {
-            public void run()
-            {
-                TextView out = (TextView) findViewById(R.id.output);
-                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
-                while(true)
-                {
-                    if((state & STATE_CONTROLS) == 0)
-                        break;
-
-                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
-                    {
-                        scrollHandler.sendEmptyMessage(0);
-                        state &= ~(STATE_SCROLL);
-                    }
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        autoScrollThread.setPriority(1);
-        autoScrollThread.start();
-        
-        if(terminal.GetText() != null)
-        {
-            TextView out = (TextView) findViewById(R.id.output);
-            out.setText(terminal.GetText());
-            state |= STATE_SCROLL;
-        }
-    }
-    public final Handler scrollHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg)
-        {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            final ScrollView scroll = (ScrollView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.ScrollView01 : R.id.ScrollViewTerminal);
-            if(scroll == null || out == null)
-                return;
-            scroll.scrollTo(0, out.getHeight());
-        }
-    };
-
-    private void ShowAPIDialog()
-    {
-        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra", "Quorra final"};
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Choose control API");
-        builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
-                api.SetAPIType((byte) item);
-                Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-                
-                if(!controlAPI.IsTargetSpeedDefined((byte) item))
-                {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                    builder.setTitle("Set speed");
-                    LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-                    View layout = inflater.inflate(R.layout.save_data,
-                                                   (ViewGroup) findViewById(R.id.layout_root));
-                    ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
-                    builder.setView(layout);
-                    builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface arg0, int arg1) {
-                           EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-                           int speed = 300;
-                           try
-                           {
-                               speed = Integer.valueOf(text.getText().toString());
-                           }
-                           catch(NumberFormatException e)
-                           {
-                               Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
-                           }
-                           api.SetQuarraSpeed(speed);
-                       }
-                    });
-                    alertDialog = builder.create();
-                    alertDialog.show();
-                }
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-    }
-    private void InitEEPROMList()
-    {
-        state |= STATE_EEPROM;
-        state &= ~(STATE_EEPROM_EDIT);
-        state &= ~(STATE_EEPROM_NEW_ADD);
-        setContentView(R.layout.eeprom_list);
-        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
-        header.setText("EEPROM part " + eeprom_part);
-
-        if(EEPROM != null && mEEPROMEntries != null)
-            readHandler.sendEmptyMessage(0);
-        else
-        {
-            eeprom_part = 1;
-            EEPROM = new eeprom();
-            mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
-            OpenLoadDialog();
-        }
-        mEEPROMEntries.clear();
-        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-        eepromListView.setAdapter(mEEPROMEntries);
-        eepromListView.setOnItemClickListener(mEditEntryListener);
-        eepromListView.setLongClickable(true);
-        eepromListView.setOnItemLongClickListener(mEditEntryLongListener);
-        if(EEPROMTouchLastX == null)
-        {
-            EEPROMTouchLastX = new int[50];
-            EEPROMTouchLastY = new int[50];
-        }
-        eepromListView.setOnTouchListener(new View.OnTouchListener() {
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_MOVE)
-                {
-                    if(EEPROMTouchItr >= 50)
-                        EEPROMTouchItr = 0;
-                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
-                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
-                    ++EEPROMTouchItr;
-                }
-                else if(event.getAction() == MotionEvent.ACTION_DOWN)
-                    EEPROMTouchItr = 0;
-                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
-                {
-                    boolean right = false;
-                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
-                      // and x movement must be bigger than Y movement
-                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
-                    
-                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
-                    {
-                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
-                            right = true;
-                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
-                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
-                            correct = false;
-                    }
-                    if(correct)
-                        ChangeEEPROMPart(true, right);
-                }
-                return false;
-            }
-
-            private int fabs(int i) {
-                if(i >= 0) return i;
-                return -i;
-            }
-           });
-        scrollEEPROMHandler.sendEmptyMessage(0);
-    }
-    
-    void ChangeEEPROMPart(boolean animation, boolean right)
-    {
-        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-        EEPROMScrollPos[eeprom_part-1] = (short) eepromListView.getFirstVisiblePosition();
-        if(eeprom_part == 1) eeprom_part = 2;
-        else eeprom_part = 1;
-        if(animation)
-        {
-            final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper);
-            flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
-            flipper.showNext();    
-        }
-        else
-            Toast.makeText(context, "Switched to part " + eeprom_part,
-                    Toast.LENGTH_SHORT).show();
-        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
-        header.setText("EEPROM part " + eeprom_part);
-        mEEPROMEntries.clear();
-        readHandler.sendEmptyMessage(0);
-        scrollEEPROMHandler.sendEmptyMessage(0);
-    }
-    
-    private void LoadEEPROM()
-    {
-        mEEPROMEntries.clear();
-        dialog= new ProgressDialog(this);
-        dialog.setMessage("Reading EEPROM...");
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
-        dialog.setMax(0);
-        dialog.setProgress(0);
-        dialog.setCancelable(true);
-        dialog.show();
-        dialog.setOnCancelListener(new Dialog.OnCancelListener()
-        {
-            public void onCancel(DialogInterface dia)
-            {
-                state &= ~(STATE_EEPROM_READING);
-            }
-        });
-        
-        state |= STATE_EEPROM_READING;
-        itr_buff = 0;
-        byte[] out = {0x16};
-        mChatService.write(out);
-    }
-    private final OnItemClickListener mEditEntryListener = new OnItemClickListener() {
-        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
-        {
-            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)v.getTop()/(float)v.getHeight()));
-            state |= STATE_EEPROM_EDIT;
-            state &= ~(STATE_EEPROM);
-            setContentView(R.layout.eeprom_edit);
-            String info = ((TextView) v).getText().toString();
-            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
-            
-            EditText edit = (EditText)findViewById(R.id.key_input);
-            edit.setText(Character.toString((char)EEPROM.get(curEditId)));
-            edit = (EditText)findViewById(R.id.downUp_input);
-            edit.setText(Character.toString((char)EEPROM.get(curEditId+1)));
-            
-            edit = (EditText)findViewById(R.id.event_input);
-            edit.setText(Integer.valueOf(EEPROM.get(curEditId+2)).toString());
-            
-            edit = (EditText)findViewById(R.id.byte1_input);
-            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+3)).toString());
-            edit = (EditText)findViewById(R.id.byte2_input);
-            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+4)).toString());
-            
-            edit = (EditText)findViewById(R.id.big_input);
-            int bigNum = ((EEPROM.get(curEditId+3) << 8) | (EEPROM.get(curEditId+4)) & 0xFF);
-            edit.setText(Integer.valueOf(bigNum).toString());
-            
-            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
-            button.setOnClickListener(new View.OnClickListener() {
-                 public void onClick(View v) {
-                    SaveEntry();
-                    state &= ~(STATE_EEPROM_EDIT);
-                 }
-              });
-        }
-    };
-    
-    private final OnItemLongClickListener mEditEntryLongListener = new OnItemLongClickListener() {
-        public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
-                int arg2, long arg3)
-        {
-            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight()));
-            final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
-            String info = ((TextView) arg1).getText().toString();
-            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
-            builder.setItems(items, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int item) {
-                    switch(item)
-                    {
-                        case 0:
-                            curEditId+=REC_SIZE;
-                            state |= STATE_EEPROM_NEW_ADD;
-                            state &= ~(STATE_EEPROM);
-                            setContentView(R.layout.eeprom_edit);
-                            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
-                            button.setOnClickListener(new View.OnClickListener() {
-                                 public void onClick(View v) {
-                                    SaveEntry();
-                                    state &= ~(STATE_EEPROM_NEW_ADD);
-                                 }
-                              });
-                            break;
-                        case 1:
-                            EEPROM.erase(curEditId);
-                            mEEPROMEntries.clear();
-                            readHandler.sendEmptyMessage(0);
-                            break;
-                        case 2:
-                            AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-                            builder2.setMessage("Do you really want to erase all entries?")
-                                   .setCancelable(false)
-                                   .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                                       public void onClick(DialogInterface dialog, int id) {
-                                           mEEPROMEntries.clear();
-                                           EEPROM.clear();
-                                           dialog.dismiss();
-                                       }
-                                   })
-                                   .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                       public void onClick(DialogInterface dialog, int id) {
-                                            dialog.dismiss();
-                                       }
-                                   });
-                            AlertDialog alert = builder2.create();
-                            alert.show();
-                            break;
-                    }
-                }
-            });
-            builder.create().show();
-            return true;
-        }
-    }; 
-    private void SaveEntry()
-    {
-        if((state & STATE_EEPROM_NEW_ADD) != 0)
-            EEPROM.insert(curEditId);
-        EditText edit = (EditText)findViewById(R.id.key_input);
-        EEPROM.set(curEditId, (byte)edit.getText().charAt(0));    
-        edit = (EditText)findViewById(R.id.downUp_input);
-        EEPROM.set(curEditId+1, (byte)edit.getText().charAt(0));
-        
-        edit = (EditText)findViewById(R.id.event_input);
-        EEPROM.set(curEditId+2, Integer.valueOf(edit.getText().toString()).byteValue());
-        switch(EEPROM.get(curEditId+2))
-        {
-            case 0: // EVENT_NONE
-               EEPROM.set(curEditId+3, (byte) 0);
-               EEPROM.set(curEditId+4, (byte) 0);
-               break;
-            case 2: // EVENT_SENSOR_LEVEL_HIGHER
-            case 3: // EVENT_SENSOR_LEVEL_LOWER
-            case 4: // EVENT_RANGE_HIGHER
-            case 5: // EVENT_RANGE_LOWER
-                edit = (EditText)findViewById(R.id.byte1_input);
-                EEPROM.set(curEditId+3, Integer.valueOf(edit.getText().toString()).byteValue());
-                edit = (EditText)findViewById(R.id.byte2_input);
-                EEPROM.set(curEditId+4, Integer.valueOf(edit.getText().toString()).byteValue());
-                break;
-            case 1: // EVENT_TIME
-            case 6: // EVENT_DISTANCE 
-            case 7: // EVENT_DISTANCE_LEFT
-            case 8: // EVENT_DISTANCE_RIGHT
-            default:
-                edit = (EditText)findViewById(R.id.big_input);
-                EEPROM.set(curEditId+3, (byte)(Integer.valueOf(edit.getText().toString()).intValue() >> 8));
-                EEPROM.set(curEditId+4, (byte)(Integer.valueOf(edit.getText().toString()).intValue() & 0xFF));
-                break;
-        }
-        InitEEPROMList();
-    }
-    void OpenLoadDialog()
-    {
-        final AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-        curFolder = new File("/mnt/sdcard/YuniData/");
-        final CharSequence[] items = curFolder.list();
-        builder2.setTitle("Chose file");
-        builder2.setItems(items, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
-                final CharSequence[] items = curFolder.list();
-                File file = new File(curFolder, items[item].toString());
-                if(!file.isFile())
-                    return;
-                dialog.dismiss();
-                try {
-                    EEPROM.fromFile(file, mHandler);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        });
-        final AlertDialog alert = builder2.create();
-        alert.show();
-    }
-    
-    private void InitAccelerometer()
-    {
-        // lock orientation
-        switch (this.getResources().getConfiguration().orientation)
-        {
-            case Configuration.ORIENTATION_PORTRAIT:
-                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-                break;
-            case Configuration.ORIENTATION_LANDSCAPE:
-                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                break;
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Accelerometer control");
-        builder.setMessage("Controlling device via accelerometer. Press back or dismiss to stop.");
-        builder.setCancelable(true);
-        builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                StopAccelerometer();
-                dialog.dismiss();
-            }
-        });
-        builder.setOnCancelListener(new Dialog.OnCancelListener()
-        {
-            public void onCancel(DialogInterface dia)
-            {
-                StopAccelerometer();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-        state |= STATE_ACCELEROMETER;
-         // Get an instance of the SensorManager
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-        accelerometerListener = new AccelerometerListener();
-        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
-        
-        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
-            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
-        lock.acquire();
-        mMovementFlags = 0;
-        mSpeed = 0;
-    }
-    private void StopAccelerometer()
-    {
-        if(lock != null)
-            lock.release();
-        lock = null;
-        byte[] data = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
-        if(data != null)
-            mChatService.write(data);
-        
-        mSensorManager.unregisterListener(accelerometerListener);
-        accelerometerListener = null;
-        api.SetDefXY(0, 0);
-        state &= ~(STATE_ACCELEROMETER);
-        mSensorManager = null;
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-    }
-    
-    private class AccelerometerListener implements SensorEventListener {
-        
-        public AccelerometerListener()
-        {
-        }
-
-        public void onAccuracyChanged(Sensor arg0, int arg1) {
-            // TODO Auto-generated method stub
-            
-        }
-
-        public void onSensorChanged(SensorEvent event)
-        {
-            // TODO Auto-generated method stub
-            if((state & STATE_ACCELEROMETER) == 0)
-            {
-                ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
-                return;
-            }
-            if (event.sensor.getType() != Sensor.TYPE_ORIENTATION)
-                return;
-            
-            
-            if(api.GetDefX() == 0 && api.GetDefX() == 0)
-            {
-                api.SetDefXY(event.values[1], event.values[2]);
-                return;
-            }
-            byte[] moveFlags = api.XYToMoveFlags(event.values[1], event.values[2]);
-
-            if(moveFlags == null || (mMovementFlags == moveFlags[0] && mSpeed == moveFlags[1]))
-                return;
-            
-            mSpeed = moveFlags[1];
-            if(controlAPI.HasSeparatedSpeed(api.GetAPIType()))
-            {
-                byte[] speedData = null;
-                if(api.GetAPIType() == controlAPI.API_KEYBOARD)
-                    speedData = new byte[1];
-                else
-                {
-                    speedData = new byte[2];
-                    speedData[1] = (byte)'d';
-                }
-                if(mSpeed == 50)
-                    speedData[0] = (byte)'a';
-                else if(mSpeed == 100)
-                    speedData[0] = (byte)'b';
-                else 
-                    speedData[0] = (byte)'c';
-                mChatService.write(speedData.clone());
-                if(api.GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
-                {
-                    speedData = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
-                    if(speedData != null)
-                        mChatService.write(speedData.clone());
-                }
-            }
-            
-            mMovementFlags = moveFlags[0];
-            if(moveFlags[0] != 0 || controlAPI.HasPacketStructure(api.GetAPIType()))
-            {
-                byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
-                if(data != null)
-                    mChatService.write(data.clone());
-            }
-        }
-    }
-    
-    private void InitBall()
-    {
-        joystick = new Joystick();
-        setContentView(joystick.new MTView(this));
-        state |= STATE_BALL;
-        if(!controlAPI.HasPacketStructure(api.GetAPIType()))
-        {
-            api.SetAPIType(controlAPI.API_PACKETS);
-            Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
-        }
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        System.loadLibrary("jni_functions");
-    }
-    
-    public final Handler ballHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg)
-        {
-            MotionEvent event = (MotionEvent)msg.obj;
-            float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
-            
-            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
-            
-            if(flags == null)
-                return;
-            byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
-            if(data != null)
-                mChatService.write(data.clone());
-        }
-    };
-    
-    private void InitTerminal()
-    {
-        state |= STATE_TERMINAL;
-        setContentView(R.layout.terminal);
-        
-        autoScrollThread = new Thread (new Runnable()
-        {
-            public void run()
-            {
-                TextView out = (TextView) findViewById(R.id.output_terminal);
-                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewTerminal);
-                while(true)
-                {
-                    if((state & STATE_TERMINAL) == 0)
-                        break;
-
-                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
-                    {
-                        scrollHandler.sendEmptyMessage(0);
-                        state &= ~(STATE_SCROLL);
-                    }
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-        autoScrollThread.setPriority(1);
-        autoScrollThread.start();
-        
-        if(terminal.GetText() != null)
-        {
-            TextView out = (TextView) findViewById(R.id.output_terminal);
-            out.setText(terminal.GetText());
-            state |= STATE_SCROLL;
-        }
-    }
-    
-    private void WriteTerminalText(String text)
-    {
-        if(text == null)
-            return;
-        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
-        {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            if(out != null)
-            {
-                out.append(Terminal.Parse(text));
-                state |= STATE_SCROLL;
-            }
-        }
-        terminal.Append(text);
-    }
-    private void SetTerminalText(String text, boolean toClass)
-    {
-        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
-        {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            if(out != null)
-            {
-                out.setText(text);
-                state |= STATE_SCROLL;
-            }
-        }
-        if(toClass)
-            terminal.SetText(text);
     }
     
     @Override
@@ -1617,6 +439,1027 @@ public class YuniClient extends Activity {
         }
     }
     
+    public void Disconnect(boolean resetUI)
+    {
+        state = 0;
+        curFolder = null;
+        if(mChatService != null)
+            mChatService.stop();
+        mChatService = null;
+        curFolder = null;
+        keyTouch = null;
+        fileSelect = null;
+        dialog = null;
+        autoScrollThread = null;
+        mEEPROMEntries = null;
+        EEPROM = null;
+        alertDialog = null;
+        if(log != null)
+            log.close();
+        log = null;
+        if(lock != null)
+            lock.release();
+        accelerometerListener = null;
+        api.SetDefXY(0, 0);
+        mSensorManager = null;
+        joystick = null;
+        mem = null;
+        if(resetUI)
+        {
+            setContentView(R.layout.device_list);
+            init();
+        }
+        else
+        {
+            context = null;
+            mBluetoothAdapter = null;
+        }
+    }
+        
+    public void EnableConnect(boolean enable)
+    {
+        if(!enable)
+        {
+            dialog= new ProgressDialog(this);
+            dialog.setCancelable(true);
+            dialog.setMessage("Connecting...");
+            dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
+            dialog.setMax(0);
+            dialog.setProgress(0);
+            dialog.setOnCancelListener(new Dialog.OnCancelListener()
+            {
+                public void onCancel(DialogInterface dia)
+                {
+                    if(mChatService != null)
+                        mChatService.stop();
+                    EnableConnect(true);
+                }
+            });
+            dialog.show();
+        }
+        else
+            dialog.dismiss();
+        Button button = (Button) findViewById(R.id.button_scan);
+        button.setEnabled(enable);
+        ListView listView = (ListView) findViewById(R.id.paired_devices);
+        listView.setEnabled(enable);
+    }
+    
+    void EnableBT()
+    {
+        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    }
+    
+    public void FindDevices()
+    {
+        if(!mBluetoothAdapter.isEnabled())
+        {
+            btTurnOn = 1;
+            EnableBT();
+            return;
+        }
+        if (mBluetoothAdapter.isDiscovering())
+            mBluetoothAdapter.cancelDiscovery();
+
+        mArrayAdapter.clear();
+        mPairedDevices.clear();
+        
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+        if (pairedDevices.size() > 0) {
+            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
+            for (BluetoothDevice device : pairedDevices) {
+                mPairedDevices.add(device.getName() + "\n" + device.getAddress());
+            }
+        }
+        mBluetoothAdapter.startDiscovery();
+    } 
+    
+    void Connect(View v)
+    {
+        EnableConnect(false);
+        // Cancel discovery because it's costly and we're about to connect
+        mBluetoothAdapter.cancelDiscovery();
+        if(mChatService != null)
+            mChatService.stop();
+        mChatService = new BluetoothChatService(mHandler);
+        if(mChatService.getState() == BluetoothChatService.STATE_CONNECTING)
+            return;
+        // Get the device MAC address, which is the last 17 chars in the View
+        String info = ((TextView) v).getText().toString();
+        String address = info.substring(info.length() - 17);
+
+        // Create the result Intent and include the MAC address
+        Intent intent = new Intent();
+        intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
+
+        // Set result and finish this Activity
+        setResult(Activity.RESULT_OK, intent);
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+        mChatService.start();
+        if(device != null)
+            mChatService.connect(device);
+    }
+
+    void ShowAlert(CharSequence text)
+    {
+        if(dialog != null)
+            dialog.dismiss();
+        AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+        builder2.setMessage(text)
+               .setTitle("Error")
+               .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       dialog.dismiss();
+                   }
+               });
+        AlertDialog alert = builder2.create();
+        alert.show();
+    }
+    // INITS
+    public void init()
+    {
+        eeprom_part = 1;
+        mPairedDevices = new ArrayAdapter<String>(this, R.layout.device_name);
+        mArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
+        ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
+        pairedListView.setAdapter(mPairedDevices);
+        pairedListView.setOnItemClickListener(mDeviceClickListener);
+        
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+        if (pairedDevices.size() > 0) {
+            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
+            for (BluetoothDevice device : pairedDevices) {
+                mPairedDevices.add(device.getName() + "\n" + device.getAddress());
+            }
+        }
+        
+        final Button button = (Button) findViewById(R.id.button_scan);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+                if (mBluetoothAdapter != null) {
+                    FindDevices();
+                } 
+            }
+        });
+        if(EEPROMTouchLastX == null)
+        {
+            EEPROMTouchLastX = new int[50];
+            EEPROMTouchLastY = new int[50];
+        }
+        pairedListView.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_MOVE)
+                {
+                    if(EEPROMTouchItr >= 50)
+                        EEPROMTouchItr = 0;
+                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
+                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
+                    ++EEPROMTouchItr;
+                }
+                else if(event.getAction() == MotionEvent.ACTION_DOWN)
+                    EEPROMTouchItr = 0;
+                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
+                {
+                    boolean right = false;
+                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
+                      // and x movement must be bigger than Y movement
+                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
+                    
+                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
+                    {
+                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
+                            right = true;
+                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
+                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
+                            correct = false;
+                    }
+                    if(correct)
+                        ChangeDevicesPart(true, right);
+                }
+                return false;
+            }
+
+            private int fabs(int i) {
+                if(i >= 0) return i;
+                return -i;
+            }
+        });
+        keyTouch = new View.OnTouchListener() {
+         public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
+                {
+                 boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
+                 if(((Button)v).getId() == R.id.LeftForw_b)
+                 {
+                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
+                    else
+                    {
+                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                        SendMovementKey(controlAPI.MOVE_LEFT, down);
+                    }   
+                 }
+                 else if(((Button)v).getId() == R.id.RightForw_b)
+                 {
+                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
+                    else
+                    {
+                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                        SendMovementKey(controlAPI.MOVE_RIGHT, down);
+                    }
+                 }
+                 else if(((Button)v).getId() == R.id.Forward_b)
+                     SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                 else if(((Button)v).getId() == R.id.Backward_b)
+                     SendMovementKey(controlAPI.MOVE_BACKWARD, down);
+                 else if(((Button)v).getId() == R.id.Left_b)
+                     SendMovementKey(controlAPI.MOVE_LEFT, down);
+                 else if(((Button)v).getId() == R.id.Right_b)
+                     SendMovementKey(controlAPI.MOVE_RIGHT, down);
+                 else if(((Button)v).getId() == R.id.Space_b && api.GetAPIType() != controlAPI.API_PACKETS)
+                        ButtonTouched(" ", down);
+                 else if(api.GetAPIType() != controlAPI.API_PACKETS)
+                     ButtonTouched(((Button)v).getText(), down);
+                }
+                return false;
+         }
+        };
+    }
+    
+    private void ButtonTouched(CharSequence button, boolean down)
+    {
+        byte[] out = new byte[2];
+        out[0] = (byte)button.charAt(0);
+
+        if(down)
+            out[1] = (byte)'d';
+        else
+            out[1] = (byte)'u';
+        mChatService.write(out);
+    }
+    
+    void ChangeDevicesPart(boolean animation, boolean right)
+    {
+        final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper_devices);
+        flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
+        flipper.showNext(); 
+        final ListView list = (ListView) findViewById(R.id.paired_devices); 
+        TextView header = (TextView)findViewById(R.id.title_paired_devices);
+        Button button = (Button) findViewById(R.id.button_scan);
+        
+        if(eeprom_part == 1)
+        {
+            eeprom_part = 2;
+            button.setVisibility(Button.VISIBLE);
+            header.setText("New devices");
+            list.setAdapter(mArrayAdapter);
+        }
+        else
+        {
+            eeprom_part = 1;
+            button.setVisibility(Button.GONE);
+            header.setText("Paired devices");
+            list.setAdapter(mPairedDevices);
+        }
+    }
+    public void SendMovementKey(byte button, boolean down)
+    {
+        byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
+        if(out != null)
+        mChatService.write(out);     
+    }
+    
+    void InitMain()
+    {
+        autoScrollThread = null;
+        joystick = null;
+        state &= ~(STATE_CONTROLS);
+        state &= ~(STATE_EEPROM);
+        state &= ~(STATE_BALL);
+        state &= ~(STATE_TERMINAL);
+
+        context = this;
+        if(lock != null)
+        {
+            lock.release();
+            lock = null;
+        }
+        curFolder = new File("/mnt/sdcard/hex/");
+        fileSelect = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int item) {
+                dialog.dismiss();
+                FilenameFilter filter = new HexFilter();
+                final CharSequence[] items = curFolder.list(filter);
+                Toast.makeText(getApplicationContext(), items[item], Toast.LENGTH_SHORT).show();
+                File file = new File(curFolder, items[item].toString());
+                Message msg = new Message();
+                msg.obj = file;
+                fileClick.sendMessage(msg);
+            }
+        };
+        setContentView(R.layout.main);
+        Button button = (Button) findViewById(R.id.Disconnect_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                Disconnect(true);
+             }
+        });
+        button = (Button) findViewById(R.id.eeprom_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                InitEEPROMList();
+             }
+        });
+        button = (Button) findViewById(R.id.ball_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                if((state & STATE_STOPPED) == 0)
+                    InitBall();
+             }
+        });
+        button = (Button) findViewById(R.id.Controls_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                if((state & STATE_STOPPED) == 0)
+                    InitControls();
+             }
+        });
+        button = (Button) findViewById(R.id.Start_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                StartStop((Button)v, ((state & STATE_STOPPED) != 0));
+             }
+        });
+        button = (Button) findViewById(R.id.Terminal_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v)
+             {
+                 InitTerminal();
+             }
+        });
+        button = (Button) findViewById(R.id.Flash_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                TextView error = (TextView)findViewById(R.id.hex_file);
+                File hex = new File(error.getText().toString());
+                error = (TextView)findViewById(R.id.error);
+                if(hex.exists() && hex.canRead())
+                {
+                    error.setText("Hex file exists\n");
+                    final byte[] out = { 0x12 };
+                    mChatService.write(out.clone());
+                    state |= STATE_WAITING_ID;
+                    error.append("Waiting for ID and preparing hex file...");
+                }
+                else
+                    error.setText("Hex file does not exists or can not be read\n");
+             }
+        });
+
+        button = (Button) findViewById(R.id.List_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+                    curFolder = new File("/mnt/sdcard/hex/");
+                    FilenameFilter filter = new HexFilter();
+                    final CharSequence[] items = curFolder.list(filter);
+                                        
+                    builder.setTitle("Chose file");
+                    builder.setItems(items, fileSelect);
+                    final AlertDialog alert = builder.create();
+                    alert.show();
+             }
+        });
+        
+    }
+    
+    private void SendPage(Page page)
+    {    
+        final byte[] out = { 0x10 };
+        mChatService.write(out);
+
+        final byte[] adress = { (byte)(page.address >> 8), (byte)(page.address) };
+        mChatService.write(adress);
+        mChatService.write(page.data);
+        if(dialog.isShowing())
+            dialog.setProgress(pagesItr+1);
+    }
+    
+    private void StartStop(Button v, boolean start)
+    {
+        byte[] out = null;
+        if(start)
+        {
+            state &= ~(STATE_STOPPED);
+            out = new byte[1];
+            out[0] = 0x11;
+            state &= ~(STATE_STOPPED);
+            v.setText("Stop");
+        }
+        else
+        {
+            out = new byte[4];
+            out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
+            mChatService.write(out.clone());
+            try {
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            state |= STATE_STOPPING;
+            TextView error = (TextView)findViewById(R.id.error);
+            error.setText("Stopping...");
+            v.setText("Start");
+        }
+        v = (Button) findViewById(R.id.Controls_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        v = (Button) findViewById(R.id.ball_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        v = (Button) findViewById(R.id.Flash_b);
+        v.setEnabled(!start);
+        v.setClickable(!start);
+        v = (Button) findViewById(R.id.eeprom_b);
+        v.setEnabled(start);
+        v.setClickable(start);
+        mChatService.write(out.clone());
+    }
+    
+    
+    public void InitControls()
+    {
+        state |= STATE_CONTROLS;
+        Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+        if(display.getRotation() == Surface.ROTATION_0)
+            setContentView(R.layout.controls);
+        else 
+            setContentView(R.layout.controls_wide);
+        Button button = (Button) findViewById(R.id.Forward_b);
+        button.setOnTouchListener(keyTouch); 
+       
+        button = (Button) findViewById(R.id.Backward_b);
+        button.setOnTouchListener(keyTouch); 
+        button = (Button) findViewById(R.id.Left_b);
+        button.setOnTouchListener(keyTouch); 
+        button = (Button) findViewById(R.id.Right_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.LeftForw_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.RightForw_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Speed1_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Speed2_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Speed3_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Space_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Record_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Play_b);
+        button.setOnTouchListener(keyTouch);
+        button = (Button) findViewById(R.id.Regulator_b);
+        button.setOnTouchListener(keyTouch);
+        
+        button = (Button) findViewById(R.id.Sensors_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                 InitAccelerometer();
+             }
+          });
+
+        button = (Button) findViewById(R.id.Clear_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                TextView out = (TextView) findViewById(R.id.output);
+                out.setText("");
+                terminal.SetText(null);
+             }
+           });
+        
+        if(autoScrollThread != null && autoScrollThread.isAlive())
+            return;
+        autoScrollThread = new Thread (new Runnable()
+        {
+            public void run()
+            {
+                TextView out = (TextView) findViewById(R.id.output);
+                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
+                while(true)
+                {
+                    if((state & STATE_CONTROLS) == 0)
+                        break;
+
+                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
+                    {
+                        scrollHandler.sendEmptyMessage(0);
+                        state &= ~(STATE_SCROLL);
+                    }
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        autoScrollThread.setPriority(1);
+        autoScrollThread.start();
+        
+        if(terminal.GetText() != null)
+        {
+            TextView out = (TextView) findViewById(R.id.output);
+            out.setText(terminal.GetText());
+            state |= STATE_SCROLL;
+        }
+    }
+
+    private void ShowAPIDialog()
+    {
+        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra", "Quorra final"};
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose control API");
+        builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int item) {
+                api.SetAPIType((byte) item);
+                Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+                
+                if(!controlAPI.IsTargetSpeedDefined((byte) item))
+                {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                    builder.setTitle("Set speed");
+                    LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+                    View layout = inflater.inflate(R.layout.save_data,
+                                                   (ViewGroup) findViewById(R.id.layout_root));
+                    ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
+                    builder.setView(layout);
+                    builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface arg0, int arg1) {
+                           EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+                           int speed = 300;
+                           try
+                           {
+                               speed = Integer.valueOf(text.getText().toString());
+                           }
+                           catch(NumberFormatException e)
+                           {
+                               Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
+                           }
+                           api.SetQuarraSpeed(speed);
+                       }
+                    });
+                    alertDialog = builder.create();
+                    alertDialog.show();
+                }
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.show();
+    }
+
+    private void InitEEPROMList()
+    {
+        state |= STATE_EEPROM;
+        state &= ~(STATE_EEPROM_EDIT);
+        state &= ~(STATE_EEPROM_NEW_ADD);
+        setContentView(R.layout.eeprom_list);
+        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
+        header.setText("EEPROM part " + eeprom_part);
+
+        if(EEPROM != null && mEEPROMEntries != null)
+            readHandler.sendEmptyMessage(0);
+        else
+        {
+            eeprom_part = 1;
+            EEPROM = new eeprom();
+            mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
+            OpenLoadDialog();
+        }
+        mEEPROMEntries.clear();
+        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+        eepromListView.setAdapter(mEEPROMEntries);
+        eepromListView.setOnItemClickListener(mEditEntryListener);
+        eepromListView.setLongClickable(true);
+        eepromListView.setOnItemLongClickListener(mEditEntryLongListener);
+        if(EEPROMTouchLastX == null)
+        {
+            EEPROMTouchLastX = new int[50];
+            EEPROMTouchLastY = new int[50];
+        }
+        eepromListView.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                if(event.getAction() == MotionEvent.ACTION_MOVE)
+                {
+                    if(EEPROMTouchItr >= 50)
+                        EEPROMTouchItr = 0;
+                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
+                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
+                    ++EEPROMTouchItr;
+                }
+                else if(event.getAction() == MotionEvent.ACTION_DOWN)
+                    EEPROMTouchItr = 0;
+                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
+                {
+                    boolean right = false;
+                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
+                      // and x movement must be bigger than Y movement
+                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
+                    
+                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
+                    {
+                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
+                            right = true;
+                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
+                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
+                            correct = false;
+                    }
+                    if(correct)
+                        ChangeEEPROMPart(true, right);
+                }
+                return false;
+            }
+
+            private int fabs(int i) {
+                if(i >= 0) return i;
+                return -i;
+            }
+           });
+        scrollEEPROMHandler.sendEmptyMessage(0);
+    }
+    
+    private void ChangeEEPROMPart(boolean animation, boolean right)
+    {
+        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+        EEPROMScrollPos[eeprom_part-1] = (short) eepromListView.getFirstVisiblePosition();
+        if(eeprom_part == 1) eeprom_part = 2;
+        else eeprom_part = 1;
+        if(animation)
+        {
+            final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper);
+            flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
+            flipper.showNext();    
+        }
+        else
+            Toast.makeText(context, "Switched to part " + eeprom_part,
+                    Toast.LENGTH_SHORT).show();
+        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
+        header.setText("EEPROM part " + eeprom_part);
+        mEEPROMEntries.clear();
+        readHandler.sendEmptyMessage(0);
+        scrollEEPROMHandler.sendEmptyMessage(0);
+    }
+    
+    private void LoadEEPROM()
+    {
+        mEEPROMEntries.clear();
+        dialog= new ProgressDialog(this);
+        dialog.setMessage("Reading EEPROM...");
+        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
+        dialog.setMax(0);
+        dialog.setProgress(0);
+        dialog.setCancelable(true);
+        dialog.show();
+        dialog.setOnCancelListener(new Dialog.OnCancelListener()
+        {
+            public void onCancel(DialogInterface dia)
+            {
+                state &= ~(STATE_EEPROM_READING);
+            }
+        });
+        
+        state |= STATE_EEPROM_READING;
+        itr_buff = 0;
+        byte[] out = {0x16};
+        mChatService.write(out);
+    }
+    
+    private void SaveEntry()
+    {
+        if((state & STATE_EEPROM_NEW_ADD) != 0)
+            EEPROM.insert(curEditId);
+        EditText edit = (EditText)findViewById(R.id.key_input);
+        EEPROM.set(curEditId, (byte)edit.getText().charAt(0));    
+        edit = (EditText)findViewById(R.id.downUp_input);
+        EEPROM.set(curEditId+1, (byte)edit.getText().charAt(0));
+        
+        edit = (EditText)findViewById(R.id.event_input);
+        EEPROM.set(curEditId+2, Integer.valueOf(edit.getText().toString()).byteValue());
+        switch(EEPROM.get(curEditId+2))
+        {
+            case 0: // EVENT_NONE
+               EEPROM.set(curEditId+3, (byte) 0);
+               EEPROM.set(curEditId+4, (byte) 0);
+               break;
+            case 2: // EVENT_SENSOR_LEVEL_HIGHER
+            case 3: // EVENT_SENSOR_LEVEL_LOWER
+            case 4: // EVENT_RANGE_HIGHER
+            case 5: // EVENT_RANGE_LOWER
+                edit = (EditText)findViewById(R.id.byte1_input);
+                EEPROM.set(curEditId+3, Integer.valueOf(edit.getText().toString()).byteValue());
+                edit = (EditText)findViewById(R.id.byte2_input);
+                EEPROM.set(curEditId+4, Integer.valueOf(edit.getText().toString()).byteValue());
+                break;
+            case 1: // EVENT_TIME
+            case 6: // EVENT_DISTANCE 
+            case 7: // EVENT_DISTANCE_LEFT
+            case 8: // EVENT_DISTANCE_RIGHT
+            default:
+                edit = (EditText)findViewById(R.id.big_input);
+                EEPROM.set(curEditId+3, (byte)(Integer.valueOf(edit.getText().toString()).intValue() >> 8));
+                EEPROM.set(curEditId+4, (byte)(Integer.valueOf(edit.getText().toString()).intValue() & 0xFF));
+                break;
+        }
+        InitEEPROMList();
+    }
+    
+    private void OpenLoadDialog()
+    {
+        final AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+        curFolder = new File("/mnt/sdcard/YuniData/");
+        final CharSequence[] items = curFolder.list();
+        builder2.setTitle("Chose file");
+        builder2.setItems(items, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int item) {
+                final CharSequence[] items = curFolder.list();
+                File file = new File(curFolder, items[item].toString());
+                if(!file.isFile())
+                    return;
+                dialog.dismiss();
+                try {
+                    EEPROM.fromFile(file, mHandler);
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        });
+        final AlertDialog alert = builder2.create();
+        alert.show();
+    }
+
+    private void InitAccelerometer()
+    {
+        // lock orientation
+        switch (this.getResources().getConfiguration().orientation)
+        {
+            case Configuration.ORIENTATION_PORTRAIT:
+                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                break;
+            case Configuration.ORIENTATION_LANDSCAPE:
+                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                break;
+        }
+        
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Accelerometer control");
+        builder.setMessage("Controlling device via accelerometer. Press back or dismiss to stop.");
+        builder.setCancelable(true);
+        builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                StopAccelerometer();
+                dialog.dismiss();
+            }
+        });
+        builder.setOnCancelListener(new Dialog.OnCancelListener()
+        {
+            public void onCancel(DialogInterface dia)
+            {
+                StopAccelerometer();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.show();
+        state |= STATE_ACCELEROMETER;
+         // Get an instance of the SensorManager
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+
+        accelerometerListener = new AccelerometerListener();
+        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
+        
+        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
+            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
+        lock.acquire();
+        mMovementFlags = 0;
+        mSpeed = 0;
+    }
+
+    private void StopAccelerometer()
+    {
+        if(lock != null)
+            lock.release();
+        lock = null;
+        byte[] data = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
+        if(data != null)
+            mChatService.write(data);
+        
+        mSensorManager.unregisterListener(accelerometerListener);
+        accelerometerListener = null;
+        api.SetDefXY(0, 0);
+        state &= ~(STATE_ACCELEROMETER);
+        mSensorManager = null;
+        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
+    
+    private class AccelerometerListener implements SensorEventListener {
+        
+        public AccelerometerListener()
+        {
+        }
+
+        public void onAccuracyChanged(Sensor arg0, int arg1) {
+            // TODO Auto-generated method stub
+            
+        }
+
+        public void onSensorChanged(SensorEvent event)
+        {
+            // TODO Auto-generated method stub
+            if((state & STATE_ACCELEROMETER) == 0)
+            {
+                ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
+                return;
+            }
+            if (event.sensor.getType() != Sensor.TYPE_ORIENTATION)
+                return;
+            
+            
+            if(api.GetDefX() == 0 && api.GetDefX() == 0)
+            {
+                api.SetDefXY(event.values[1], event.values[2]);
+                return;
+            }
+            byte[] moveFlags = api.XYToMoveFlags(event.values[1], event.values[2]);
+
+            if(moveFlags == null || (mMovementFlags == moveFlags[0] && mSpeed == moveFlags[1]))
+                return;
+            
+            mSpeed = moveFlags[1];
+            if(controlAPI.HasSeparatedSpeed(api.GetAPIType()))
+            {
+                byte[] speedData = null;
+                if(api.GetAPIType() == controlAPI.API_KEYBOARD)
+                    speedData = new byte[1];
+                else
+                {
+                    speedData = new byte[2];
+                    speedData[1] = (byte)'d';
+                }
+                if(mSpeed == 50)
+                    speedData[0] = (byte)'a';
+                else if(mSpeed == 100)
+                    speedData[0] = (byte)'b';
+                else 
+                    speedData[0] = (byte)'c';
+                mChatService.write(speedData.clone());
+                if(api.GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
+                {
+                    speedData = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
+                    if(speedData != null)
+                        mChatService.write(speedData.clone());
+                }
+            }
+            
+            mMovementFlags = moveFlags[0];
+            if(moveFlags[0] != 0 || controlAPI.HasPacketStructure(api.GetAPIType()))
+            {
+                byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
+                if(data != null)
+                    mChatService.write(data.clone());
+            }
+        }
+    }
+    
+    private void InitBall()
+    {
+        joystick = new Joystick();
+        setContentView(joystick.new MTView(this));
+        state |= STATE_BALL;
+        if(!controlAPI.HasPacketStructure(api.GetAPIType()))
+        {
+            api.SetAPIType(controlAPI.API_PACKETS);
+            Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
+        }
+        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
+
+    private void InitTerminal()
+    {
+        state |= STATE_TERMINAL;
+        setContentView(R.layout.terminal);
+        
+        autoScrollThread = new Thread (new Runnable()
+        {
+            public void run()
+            {
+                TextView out = (TextView) findViewById(R.id.output_terminal);
+                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewTerminal);
+                while(true)
+                {
+                    if((state & STATE_TERMINAL) == 0)
+                        break;
+
+                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
+                    {
+                        scrollHandler.sendEmptyMessage(0);
+                        state &= ~(STATE_SCROLL);
+                    }
+                    try {
+                        Thread.sleep(300);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        autoScrollThread.setPriority(1);
+        autoScrollThread.start();
+        
+        if(terminal.GetText() != null)
+        {
+            TextView out = (TextView) findViewById(R.id.output_terminal);
+            out.setText(terminal.GetText());
+            state |= STATE_SCROLL;
+        }
+    }
+    
+    private void WriteTerminalText(String text)
+    {
+        if(text == null)
+            return;
+        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+        {
+            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
+            if(out != null)
+            {
+                out.append(Terminal.Parse(text));
+                state |= STATE_SCROLL;
+            }
+        }
+        terminal.Append(text);
+    }
+
+    private void SetTerminalText(String text, boolean toClass)
+    {
+        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+        {
+            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
+            if(out != null)
+            {
+                out.setText(text);
+                state |= STATE_SCROLL;
+            }
+        }
+        if(toClass)
+            terminal.SetText(text);
+    }
+ 
+    // ============================================ HANDLERS ============================================
+    private final Handler progressHandler2 = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if(msg.arg1 != 0)
+                dialog.setProgress(msg.arg1);
+        }
+    };
+
+    private final Handler scrollEEPROMHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
+            eepromListView.setSelection(EEPROMScrollPos[eeprom_part-1]);
+        }
+    };
+    
+    private final Handler flashHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            dialog.setMax(mem.pagesCount());
+            pagesItr = 0;
+            SendPage(mem.getPage(pagesItr));
+            ++pagesItr;
+            state |= STATE_FLASHING;
+        }
+    };
+
+    private final Handler failedHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            final String text = msg.getData().getString("text");
+            ShowAlert(text);
+            dialog.dismiss();
+        }
+    };
+    
+
     private final OnClickListener saveDataFile = new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int id) {
             EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
@@ -1660,51 +1503,6 @@ public class YuniClient extends Activity {
                 e.printStackTrace();
             }
        }
-    };
-
-    // INITS END
-    // HANDLERS
-    private void ButtonTouched(CharSequence button, boolean down)
-    {
-        byte[] out = new byte[2];
-        out[0] = (byte)button.charAt(0);
-
-        if(down)
-            out[1] = (byte)'d';
-        else
-            out[1] = (byte)'u';
-        mChatService.write(out);
-    }
-    private final Handler progressHandler2 = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            if(msg.arg1 != 0)
-                dialog.setProgress(msg.arg1);
-        }
-    };
-    private final Handler scrollEEPROMHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-            eepromListView.setSelection(EEPROMScrollPos[eeprom_part-1]);
-        }
-    };
-    
-    private final Handler flashHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            dialog.setMax(mem.pagesCount());
-            pagesItr = 0;
-            SendPage(mem.getPage(pagesItr));
-            ++pagesItr;
-            state |= STATE_FLASHING;
-        }
-    };
-    private final Handler failedHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            final String text = msg.getData().getString("text");
-            ShowAlert(text);
-            dialog.dismiss();
-        }
     };
     
     private final Handler readHandler = new Handler() {
@@ -1759,13 +1557,13 @@ public class YuniClient extends Activity {
             }
         }
     };
+
     private final Handler writeCompleteHandler = new Handler() {
         public void handleMessage(Message msg) {
             dialog.dismiss();
             state &= ~(STATE_EEPROM_WRITE);
         }
     };
-    
 
     private final Handler mHandler = new Handler() {
         @Override
@@ -1964,15 +1762,237 @@ public class YuniClient extends Activity {
         }
     };
 
-    private void SendPage(Page page)
-    {    
-        final byte[] out = { 0x10 };
-        mChatService.write(out);
+    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            // When discovery finds a device
+            if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null &&
+                intent.getParcelableExtra(BluetoothDevice.EXTRA_NAME) == null) {
+                // Get the BluetoothDevice object from the Intent
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                // Add the name and address to an array adapter to show in a ListView
+                mArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+            }
+        }
+    }; 
+    
+    private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
+            if(!mBluetoothAdapter.isEnabled())
+            {
+                btTurnOn = 2;
+                connectView = v;
+                EnableBT();
+                return;
+            }
+            Connect(v);
+        }
+    }; 
+    
+    private final Handler fileClick = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            File file = (File)msg.obj;
+            if(!file.isDirectory())
+            {
+                TextView error = (TextView)findViewById(R.id.hex_file);
+                error.setText(file.getAbsolutePath());
+            }
+            else
+            {
+                curFolder = file;
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                FilenameFilter filter = new HexFilter();
+                final CharSequence[] items = curFolder.list(filter);              
+                builder.setTitle("Chose file");
+                builder.setItems(items, fileSelect);
+                AlertDialog alert = builder.create();
+                alert.show();
+            }
+        }
+    };
+    
+    private final Handler scrollHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg)
+        {
+            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
+            final ScrollView scroll = (ScrollView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.ScrollView01 : R.id.ScrollViewTerminal);
+            if(scroll == null || out == null)
+                return;
+            scroll.scrollTo(0, out.getHeight());
+        }
+    };
+    
+    private final OnItemClickListener mEditEntryListener = new OnItemClickListener() {
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
+        {
+            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)v.getTop()/(float)v.getHeight()));
+            state |= STATE_EEPROM_EDIT;
+            state &= ~(STATE_EEPROM);
+            setContentView(R.layout.eeprom_edit);
+            String info = ((TextView) v).getText().toString();
+            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
+            
+            EditText edit = (EditText)findViewById(R.id.key_input);
+            edit.setText(Character.toString((char)EEPROM.get(curEditId)));
+            edit = (EditText)findViewById(R.id.downUp_input);
+            edit.setText(Character.toString((char)EEPROM.get(curEditId+1)));
+            
+            edit = (EditText)findViewById(R.id.event_input);
+            edit.setText(Integer.valueOf(EEPROM.get(curEditId+2)).toString());
+            
+            edit = (EditText)findViewById(R.id.byte1_input);
+            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+3)).toString());
+            edit = (EditText)findViewById(R.id.byte2_input);
+            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+4)).toString());
+            
+            edit = (EditText)findViewById(R.id.big_input);
+            int bigNum = ((EEPROM.get(curEditId+3) << 8) | (EEPROM.get(curEditId+4)) & 0xFF);
+            edit.setText(Integer.valueOf(bigNum).toString());
+            
+            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
+            button.setOnClickListener(new View.OnClickListener() {
+                 public void onClick(View v) {
+                    SaveEntry();
+                    state &= ~(STATE_EEPROM_EDIT);
+                 }
+              });
+        }
+    };
+    
+    private final OnItemLongClickListener mEditEntryLongListener = new OnItemLongClickListener() {
+        public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
+                int arg2, long arg3)
+        {
+            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight()));
+            final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
+            String info = ((TextView) arg1).getText().toString();
+            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
+            builder.setItems(items, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int item) {
+                    switch(item)
+                    {
+                        case 0:
+                            curEditId+=REC_SIZE;
+                            state |= STATE_EEPROM_NEW_ADD;
+                            state &= ~(STATE_EEPROM);
+                            setContentView(R.layout.eeprom_edit);
+                            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
+                            button.setOnClickListener(new View.OnClickListener() {
+                                 public void onClick(View v) {
+                                    SaveEntry();
+                                    state &= ~(STATE_EEPROM_NEW_ADD);
+                                 }
+                              });
+                            break;
+                        case 1:
+                            EEPROM.erase(curEditId);
+                            mEEPROMEntries.clear();
+                            readHandler.sendEmptyMessage(0);
+                            break;
+                        case 2:
+                            AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
+                            builder2.setMessage("Do you really want to erase all entries?")
+                                   .setCancelable(false)
+                                   .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                       public void onClick(DialogInterface dialog, int id) {
+                                           mEEPROMEntries.clear();
+                                           EEPROM.clear();
+                                           dialog.dismiss();
+                                       }
+                                   })
+                                   .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                       public void onClick(DialogInterface dialog, int id) {
+                                            dialog.dismiss();
+                                       }
+                                   });
+                            AlertDialog alert = builder2.create();
+                            alert.show();
+                            break;
+                    }
+                }
+            });
+            builder.create().show();
+            return true;
+        }
+    };
+    
+    public final Handler ballHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg)
+        {
+            MotionEvent event = (MotionEvent)msg.obj;
+            float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
+            
+            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+            
+            if(flags == null)
+                return;
+            byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
+            if(data != null)
+                mChatService.write(data.clone());
+        }
+    };
+    
+    private Joystick joystick;
+    private Terminal terminal;
+    private memory mem;
+    private controlAPI api;
+    private LogFile log;
+    private eeprom EEPROM;
+    
+    private AccelerometerListener accelerometerListener;
+    private WakeLock lock;
+    private SensorManager mSensorManager;
+    private View connectView;
+    private BluetoothAdapter mBluetoothAdapter;
+    private ArrayAdapter<String> mArrayAdapter;
+    private ArrayAdapter<String> mPairedDevices;
+    private ArrayAdapter<String> mEEPROMEntries;
+    private BluetoothChatService mChatService;
+    private View.OnTouchListener keyTouch;
+    private DialogInterface.OnClickListener fileSelect;
+    private AlertDialog alertDialog;
+    private ProgressDialog dialog;
+    private File curFolder; 
+    private Context context;
+    private Thread autoScrollThread;
+    
+    public static byte eeprom_part;
+    public static byte eeprom_write_part;
+    public int state;
+    
+    private byte btTurnOn;
+    private short pagesItr;
+    private int itr_buff;
+    private int curEditId;
+    private int[] EEPROMTouchLastX;
+    private int[] EEPROMTouchLastY;
+    private byte EEPROMTouchItr;
+    private short[] EEPROMScrollPos;
+    private byte mMovementFlags;
+    private byte mSpeed;
 
-        final byte[] adress = { (byte)(page.address >> 8), (byte)(page.address) };
-        mChatService.write(adress);
-        mChatService.write(page.data);
-        if(dialog.isShowing())
-            dialog.setProgress(pagesItr+1);
+    private Animation inFromRightAnimation() {
+        Animation inFromRight = new TranslateAnimation(
+            Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
+            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
+        );
+        inFromRight.setDuration(100);
+        inFromRight.setInterpolator(new LinearInterpolator());
+        return inFromRight;
+    }
+
+    private Animation inFromLeftAnimation() {
+    
+        Animation inFromLeft = new TranslateAnimation(
+            Animation.RELATIVE_TO_PARENT,  -1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
+            Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
+        );
+        inFromLeft.setDuration(100);
+        inFromLeft.setInterpolator(new LinearInterpolator());
+        return inFromLeft;
     }
 }

@@ -6,7 +6,7 @@ public class controlAPI
     public static final byte API_YUNIRC   = 1;       // keyboard with d or u for press and release
     public static final byte API_PACKETS  = 2;       // YuniControl packets
     public static final byte API_QUORRA   = 3;       // Packets for robot Quorra  
-    public static final byte API_QUORRA_FINAL= 4;       // Packets for robot Quorra  
+    public static final byte API_QUORRA_FINAL= 4;    // Packets for robot Quorra  
 
     // For API_PACKETS
     public static final byte MOVE_NONE     = 0x00;
