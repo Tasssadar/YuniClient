@@ -35,21 +35,17 @@ class Joystick
         }
         else
         {
-            float dx = x - width;
-            float dy = y - height;
-            float dist = (float) Math.sqrt((dx*dx) + (dy*dy));
-            float distPct = (float) (dist/(((float)width)/100.0));
-            
+            float dta[] = calculateFloats(x, y, width, height);
+
             byte speed = 127;
-            if(distPct < 33)
+            if(dta[0] < 33)
                 speed = 50;
-            else if(distPct < 66)
+            else if(dta[0] < 66)
                 speed = 100;
             
             byte[] flags = {0, speed };
-             
-            float ang = (float) Math.atan2(dy, dx);                                                                                                 
-            ang = (float) ((ang >= 0) ? ang : 2 * PI + ang);  
+            
+            float ang = dta[1];
             
             if(ang > 5.18362 || ang <  1.09956) // 0.7 PI range
                 flags[0] |= controlAPI.MOVE_FORWARD;
@@ -88,6 +84,7 @@ class Joystick
         Paint mLine = new Paint(Paint.ANTI_ALIAS_FLAG);
         Paint mCircle = new Paint(Paint.ANTI_ALIAS_FLAG);
         Context context = null;
+        Message msg = null; 
 
         public MTView(Context context) {
             super(context);
@@ -118,13 +115,13 @@ class Joystick
                 c.drawLine(0, event.getY(), width*2, event.getY(), mLine);
                 c.drawLine(event.getX(), 0, event.getX(), height*2, mLine);    
             }
-            Message msg = new Message();
+            getHolder().unlockCanvasAndPost(c);
+            
+            msg = new Message();
             msg.obj = event;
             msg.arg1 = width;
             msg.arg2 = height;
             ((YuniClient)context).ballHandler.sendMessage(msg);
-            
-            getHolder().unlockCanvasAndPost(c);
             return true;
         }
 
@@ -135,8 +132,8 @@ class Joystick
         public void surfaceDestroyed(SurfaceHolder holder) {
         }
 
-        public void surfaceChanged(SurfaceHolder holder, int arg1, int width,
-                int height) {
+        public void surfaceChanged(SurfaceHolder holder, int arg1, int width, int height)
+        {
             this.width = width/2;
             this.height = height/2;
             
@@ -154,8 +151,9 @@ class Joystick
             c.drawLine(width-20, height, width+20, height, mLine);
             c.drawLine(width, height-20, width, height+20, mLine);
         }
-        
     }
+    
+    private native float[] calculateFloats(float x, float y, float width, float height);
     
     private byte mMovementFlags;
     private byte mSpeed;
