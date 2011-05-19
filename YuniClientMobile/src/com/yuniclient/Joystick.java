@@ -23,6 +23,7 @@ class Joystick
         mMovementFlags = 0;
         mSpeed = 0;
         mSpinAtPlace = false;
+        mFingerDown = false;
     }
     
     public byte[] touchEvent(int action, float x, float y, int width, int height)
@@ -59,7 +60,7 @@ class Joystick
             
             if((flags[0] & controlAPI.MOVE_RIGHT) != 0 || (flags[0] & controlAPI.MOVE_LEFT) != 0)
             {
-                if(action == MotionEvent.ACTION_DOWN)
+                if(!mFingerDown)
                     mSpinAtPlace = true;
                 
                 if(!mSpinAtPlace)
@@ -70,8 +71,12 @@ class Joystick
                         flags[0] |= controlAPI.MOVE_BACKWARD;
                 }
             }
+            if(!mFingerDown)
+            	mFingerDown = true;
+            
             if(flags[0] == mMovementFlags && flags[1] == mSpeed)
                 return null;
+            
             mMovementFlags = flags[0];
             mSpeed = flags[1];
             return flags;
@@ -158,4 +163,5 @@ class Joystick
     private byte mMovementFlags;
     private byte mSpeed;
     private boolean mSpinAtPlace;
+    private boolean mFingerDown;
 }
