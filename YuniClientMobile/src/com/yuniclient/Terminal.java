@@ -155,7 +155,7 @@ class Terminal
         out.write(parsedText.getBytes());
         out.close();
         Message msg = new Message();
-        msg.what = YuniClient.MESSAGE_TOAST;
+        msg.what = Connection.MESSAGE_TOAST;
         Bundle bundle = new Bundle();
         bundle.putString(YuniClient.TOAST, "File " + file.getName() + " saved");
         msg.arg1 = 0;

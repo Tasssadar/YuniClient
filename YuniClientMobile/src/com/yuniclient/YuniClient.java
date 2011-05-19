@@ -44,7 +44,6 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -59,18 +58,12 @@ import com.yuni.client.R;
 public class YuniClient extends Activity
 {
     private static final int REQUEST_ENABLE_BT = 2;
-    public static final int MESSAGE_STATE_CHANGE = 1;
-    public static final int MESSAGE_READ = 2;
-    public static final int MESSAGE_WRITE = 3; 
-    public static final int MESSAGE_DEVICE_NAME = 4;
-    public static final int MESSAGE_TOAST = 5; 
-    public static final int CONNECTION_FAILED = 1;
-    public static final int CONNECTION_LOST = 2;
+
     public static final int FILE_LOADED = 3;
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
-    
+
     public static final byte STATE_CONNECTED        = 0x01;
     public static final byte STATE_CONTROLS         = 0x02;
     public static final byte STATE_STOPPING         = 0x04;
@@ -78,17 +71,9 @@ public class YuniClient extends Activity
     public static final byte STATE_WAITING_ID       = 0x10;
     public static final byte STATE_FLASHING         = 0x20;
     public static final byte STATE_SCROLL           = 0x40;
-    public static final short STATE_EEPROM          = 0x80;
-    public static final short STATE_EEPROM_READING  = 0x100;
-    public static final short STATE_EEPROM_EDIT     = 0x200;
-    public static final short STATE_EEPROM_WRITE    = 0x400;
-    public static final short STATE_EEPROM_NEW_ADD  = 0x800;
-    public static final short STATE_ACCELEROMETER   = 0x1000;
-    public static final short STATE_BALL            = 0x2000;
-    public static final short STATE_TERMINAL        = 0x4000;
-    public static final byte REC_SIZE = 5;
-    
-    public static final short EEPROM_PART2 = 255;
+    public static final short STATE_ACCELEROMETER   = 0x80;
+    public static final short STATE_BALL            = 0x100;
+    public static final short STATE_TERMINAL        = 0x200;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -97,7 +82,6 @@ public class YuniClient extends Activity
         context = this;
         eeprom_part = 1;
         eeprom_write_part = 1;
-        EEPROMScrollPos = new short[2];
         api = new controlAPI();
         terminal = new Terminal();
         
@@ -109,7 +93,7 @@ public class YuniClient extends Activity
         if (mBluetoothAdapter == null)
             ShowAlert("This device does not have bluetooth adapter");
         else if(!mBluetoothAdapter.isEnabled())
-        	EnableBT();
+            EnableBT();
         
         System.loadLibrary("jni_functions");
         init();
@@ -182,28 +166,7 @@ public class YuniClient extends Activity
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {
-              if((state & STATE_EEPROM) != 0)
-              {
-                  AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-                  builder2.setMessage("Do you really want to leave EEPROM interface?")
-                         .setCancelable(false)
-                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                             public void onClick(DialogInterface dialog, int id) {
-                                 if((state & STATE_CONNECTED) != 0)
-                                     InitMain();
-                                 else
-                                     Disconnect(true); 
-                             }
-                         })
-                         .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                             public void onClick(DialogInterface dialog, int id) {
-                                  dialog.dismiss();
-                             }
-                         });
-                  AlertDialog alert = builder2.create();
-                  alert.show();
-              }
-              else if((state & STATE_ACCELEROMETER) != 0)
+              if((state & STATE_ACCELEROMETER) != 0)
                   StopAccelerometer();
               else if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0 || (state & STATE_TERMINAL) != 0)
               {
@@ -211,8 +174,6 @@ public class YuniClient extends Activity
                       this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
                   InitMain();
               }
-              else if((state & STATE_EEPROM_EDIT) != 0 || (state & STATE_EEPROM_NEW_ADD) != 0)
-                  InitEEPROMList();
               else if((state & STATE_CONNECTED) != 0)
                   Disconnect(true);
               else
@@ -221,9 +182,7 @@ public class YuniClient extends Activity
         }
         else if(keyCode == KeyEvent.KEYCODE_MENU)
         {
-            if((((state & STATE_EEPROM) != 0  || (state & STATE_CONNECTED) == 0) &&
-               (state & STATE_EEPROM_EDIT) == 0 && (state & STATE_EEPROM_NEW_ADD) == 0) ||
-               (state & STATE_TERMINAL) != 0)
+            if((state & STATE_TERMINAL) != 0 || state == 0)
                 return super.onKeyDown(keyCode, event);
             else if((state & STATE_CONTROLS) != 0)
                 ShowAPIDialog();
@@ -255,12 +214,7 @@ public class YuniClient extends Activity
             menu.clear();
             inflater.inflate(R.menu.menu_terminal, menu);
         }
-        else if((state & STATE_EEPROM) != 0 && menu.findItem(R.id.write) == null)
-        {
-            menu.clear();
-            inflater.inflate(R.menu.menu, menu);
-        }
-        else if(state == 0 && menu.findItem(R.id.offline) == null)
+        else if(state == 0 && menu.findItem(R.id.exit) == null)
         {
             menu.clear();
             inflater.inflate(R.menu.menu2, menu);
@@ -271,70 +225,6 @@ public class YuniClient extends Activity
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
-            case R.id.New_entry:
-                curEditId = mEEPROMEntries.getCount()*REC_SIZE;
-                state |= STATE_EEPROM_NEW_ADD;
-                state &= ~(STATE_EEPROM);
-                setContentView(R.layout.eeprom_edit);
-                Button button = (Button) findViewById(R.id.button_save_eeprom_item);
-                button.setOnClickListener(new View.OnClickListener() {
-                     public void onClick(View v) {
-                        SaveEntry();
-                        state &= ~(STATE_EEPROM_NEW_ADD);
-                     }
-                  });
-                return true;
-            case R.id.switchPart:
-                ChangeEEPROMPart(false, false);
-                return true;
-            case R.id.reload:
-                if((state & STATE_CONNECTED) != 0)
-                    LoadEEPROM();
-                else
-                    ShowAlert("You are in offline mode!");
-                return true;
-            case R.id.write:
-                if((state & STATE_CONNECTED) == 0)
-                {
-                    ShowAlert("You are in offline mode!");
-                    return true;
-                }
-                state |= STATE_EEPROM_WRITE;
-                eeprom_write_part = eeprom_part;
-                eeprom_part = 1;
-                dialog= new ProgressDialog(this);
-                dialog.setMessage("Erasing EEPROM...");
-                dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
-                dialog.setMax(0);
-                dialog.setProgress(0);
-                dialog.setCancelable(false);
-                dialog.show();
-                itr_buff = 0;
-                byte[] out = {0x1C};
-                mChatService.write(out);
-                curEditId = EEPROM.getTotalRecCount();
-                return true;
-            case R.id.save:
-            {
-                AlertDialog.Builder builder;
-                alertDialog = null;
-                LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-                View layout = inflater.inflate(R.layout.save_data,
-                                               (ViewGroup) findViewById(R.id.layout_root));
-                builder = new AlertDialog.Builder(context);
-                builder.setView(layout);
-                builder.setNeutralButton("Save", saveDataFile);
-                builder.setTitle("Chose filename");
-                alertDialog = builder.create();
-                alertDialog.show();
-                return true;
-            }
-            case R.id.load:
-                OpenLoadDialog();
-                return true;
-            case R.id.offline:
-                InitEEPROMList();
-                return true;
             case R.id.exit:
                 finish();
                 return true;
@@ -357,7 +247,7 @@ public class YuniClient extends Activity
                        byte[] out = new byte[text.getText().length()];
                        for(short i = 0; i < text.getText().length(); ++i)
                            out[i] = (byte) text.getText().charAt(i);
-                       mChatService.write(out.clone());
+                       connection.write(out.clone());
                        Toast.makeText(context, "Text \"" + text.getText().toString() + "\" sent",
                                Toast.LENGTH_SHORT).show();
                    }
@@ -383,7 +273,7 @@ public class YuniClient extends Activity
                        try
                        {
                            byte[] out = { Integer.valueOf(text.getText().toString()).byteValue() };
-                           mChatService.write(out.clone());
+                           connection.write(out.clone());
                            Toast.makeText(context, "Byte number \"" + text.getText().toString() + "\" sent",
                                    Toast.LENGTH_SHORT).show();
                        }
@@ -445,16 +335,11 @@ public class YuniClient extends Activity
     {
         state = 0;
         curFolder = null;
-        if(mChatService != null)
-            mChatService.stop();
-        mChatService = null;
         curFolder = null;
         keyTouch = null;
         fileSelect = null;
         dialog = null;
         autoScrollThread = null;
-        mEEPROMEntries = null;
-        EEPROM = null;
         alertDialog = null;
         if(log != null)
             log.close();
@@ -465,7 +350,9 @@ public class YuniClient extends Activity
         api.SetDefXY(0, 0);
         mSensorManager = null;
         joystick = null;
-        mem = null;
+        if(connection != null)
+            connection.cancel();
+        connection = null;
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -492,15 +379,19 @@ public class YuniClient extends Activity
             {
                 public void onCancel(DialogInterface dia)
                 {
-                    if(mChatService != null)
-                        mChatService.stop();
+                    if(connection != null)
+                        connection.cancel();
+                    connection = null;
                     EnableConnect(true);
                 }
             });
             dialog.show();
         }
         else
+        {
+            connection = null;
             dialog.dismiss();
+        }
         Button button = (Button) findViewById(R.id.button_scan);
         button.setEnabled(enable);
         ListView listView = (ListView) findViewById(R.id.paired_devices);
@@ -539,14 +430,14 @@ public class YuniClient extends Activity
     
     private void Connect(View v)
     {
+        if(connection != null)
+            return;
+        
         EnableConnect(false);
+        
         // Cancel discovery because it's costly and we're about to connect
         mBluetoothAdapter.cancelDiscovery();
-        if(mChatService != null)
-            mChatService.stop();
-        mChatService = new BluetoothChatService(mHandler);
-        if(mChatService.getState() == BluetoothChatService.STATE_CONNECTING)
-            return;
+        
         // Get the device MAC address, which is the last 17 chars in the View
         String info = ((TextView) v).getText().toString();
         String address = info.substring(info.length() - 17);
@@ -558,9 +449,9 @@ public class YuniClient extends Activity
         // Set result and finish this Activity
         setResult(Activity.RESULT_OK, intent);
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-        mChatService.start();
         if(device != null)
-            mChatService.connect(device);
+            connection = new Connection(connectionHandler, device);
+        
     }
 
     private void ShowAlert(CharSequence text)
@@ -700,7 +591,7 @@ public class YuniClient extends Activity
             out[1] = (byte)'d';
         else
             out[1] = (byte)'u';
-        mChatService.write(out);
+        connection.write(out);
     }
     
     private void ChangeDevicesPart(boolean animation, boolean right)
@@ -732,7 +623,7 @@ public class YuniClient extends Activity
     {
         byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
         if(out != null)
-        mChatService.write(out);     
+            connection.write(out);     
     }
     
     private void InitMain()
@@ -740,7 +631,6 @@ public class YuniClient extends Activity
         autoScrollThread = null;
         joystick = null;
         state &= ~(STATE_CONTROLS);
-        state &= ~(STATE_EEPROM);
         state &= ~(STATE_BALL);
         state &= ~(STATE_TERMINAL);
 
@@ -770,12 +660,7 @@ public class YuniClient extends Activity
                 Disconnect(true);
              }
         });
-        button = (Button) findViewById(R.id.eeprom_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                InitEEPROMList();
-             }
-        });
+
         button = (Button) findViewById(R.id.ball_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
@@ -812,8 +697,9 @@ public class YuniClient extends Activity
                 if(hex.exists() && hex.canRead())
                 {
                     error.setText("Hex file exists\n");
+                    connection.setHexFile(hex);
                     final byte[] out = { 0x12 };
-                    mChatService.write(out.clone());
+                    connection.write(out.clone());
                     state |= STATE_WAITING_ID;
                     error.append("Waiting for ID and preparing hex file...");
                 }
@@ -838,19 +724,7 @@ public class YuniClient extends Activity
         });
         
     }
-    
-    private void SendPage(Page page)
-    {    
-        final byte[] out = { 0x10 };
-        mChatService.write(out);
-
-        final byte[] adress = { (byte)(page.address >> 8), (byte)(page.address) };
-        mChatService.write(adress);
-        mChatService.write(page.data);
-        if(dialog.isShowing())
-            dialog.setProgress(pagesItr+1);
-    }
-    
+        
     private void StartStop(Button v, boolean start)
     {
         byte[] out = null;
@@ -866,7 +740,7 @@ public class YuniClient extends Activity
         {
             out = new byte[4];
             out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
-            mChatService.write(out.clone());
+            connection.write(out.clone());
             try {
                 Thread.sleep(300);
             } catch (InterruptedException e) {
@@ -886,10 +760,7 @@ public class YuniClient extends Activity
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
-        v = (Button) findViewById(R.id.eeprom_b);
-        v.setEnabled(start);
-        v.setClickable(start);
-        mChatService.write(out.clone());
+        connection.write(out.clone());
     }
     
     private void InitControls()
@@ -1029,186 +900,6 @@ public class YuniClient extends Activity
         alert.show();
     }
 
-    private void InitEEPROMList()
-    {
-        state |= STATE_EEPROM;
-        state &= ~(STATE_EEPROM_EDIT);
-        state &= ~(STATE_EEPROM_NEW_ADD);
-        setContentView(R.layout.eeprom_list);
-        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
-        header.setText("EEPROM part " + eeprom_part);
-
-        if(EEPROM != null && mEEPROMEntries != null)
-            readHandler.sendEmptyMessage(0);
-        else
-        {
-            eeprom_part = 1;
-            EEPROM = new eeprom();
-            mEEPROMEntries = new ArrayAdapter<String>(this, R.layout.device_name);
-            OpenLoadDialog();
-        }
-        mEEPROMEntries.clear();
-        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-        eepromListView.setAdapter(mEEPROMEntries);
-        eepromListView.setOnItemClickListener(mEditEntryListener);
-        eepromListView.setLongClickable(true);
-        eepromListView.setOnItemLongClickListener(mEditEntryLongListener);
-        if(EEPROMTouchLastX == null)
-        {
-            EEPROMTouchLastX = new int[50];
-            EEPROMTouchLastY = new int[50];
-        }
-        eepromListView.setOnTouchListener(new View.OnTouchListener() {
-            public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_MOVE)
-                {
-                    if(EEPROMTouchItr >= 50)
-                        EEPROMTouchItr = 0;
-                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
-                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
-                    ++EEPROMTouchItr;
-                }
-                else if(event.getAction() == MotionEvent.ACTION_DOWN)
-                    EEPROMTouchItr = 0;
-                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
-                {
-                    boolean right = false;
-                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
-                      // and x movement must be bigger than Y movement
-                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
-                    
-                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
-                    {
-                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
-                            right = true;
-                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
-                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
-                            correct = false;
-                    }
-                    if(correct)
-                        ChangeEEPROMPart(true, right);
-                }
-                return false;
-            }
-
-            private int fabs(int i) {
-                if(i >= 0) return i;
-                return -i;
-            }
-           });
-        scrollEEPROMHandler.sendEmptyMessage(0);
-    }
-    
-    private void ChangeEEPROMPart(boolean animation, boolean right)
-    {
-        final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-        EEPROMScrollPos[eeprom_part-1] = (short) eepromListView.getFirstVisiblePosition();
-        if(eeprom_part == 1) eeprom_part = 2;
-        else eeprom_part = 1;
-        if(animation)
-        {
-            final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper);
-            flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
-            flipper.showNext();    
-        }
-        else
-            Toast.makeText(context, "Switched to part " + eeprom_part,
-                    Toast.LENGTH_SHORT).show();
-        TextView header = (TextView)findViewById(R.id.title_eeprom_part);
-        header.setText("EEPROM part " + eeprom_part);
-        mEEPROMEntries.clear();
-        readHandler.sendEmptyMessage(0);
-        scrollEEPROMHandler.sendEmptyMessage(0);
-    }
-    
-    private void LoadEEPROM()
-    {
-        mEEPROMEntries.clear();
-        dialog= new ProgressDialog(this);
-        dialog.setMessage("Reading EEPROM...");
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);    
-        dialog.setMax(0);
-        dialog.setProgress(0);
-        dialog.setCancelable(true);
-        dialog.show();
-        dialog.setOnCancelListener(new Dialog.OnCancelListener()
-        {
-            public void onCancel(DialogInterface dia)
-            {
-                state &= ~(STATE_EEPROM_READING);
-            }
-        });
-        
-        state |= STATE_EEPROM_READING;
-        itr_buff = 0;
-        byte[] out = {0x16};
-        mChatService.write(out);
-    }
-    
-    private void SaveEntry()
-    {
-        if((state & STATE_EEPROM_NEW_ADD) != 0)
-            EEPROM.insert(curEditId);
-        EditText edit = (EditText)findViewById(R.id.key_input);
-        EEPROM.set(curEditId, (byte)edit.getText().charAt(0));    
-        edit = (EditText)findViewById(R.id.downUp_input);
-        EEPROM.set(curEditId+1, (byte)edit.getText().charAt(0));
-        
-        edit = (EditText)findViewById(R.id.event_input);
-        EEPROM.set(curEditId+2, Integer.valueOf(edit.getText().toString()).byteValue());
-        switch(EEPROM.get(curEditId+2))
-        {
-            case 0: // EVENT_NONE
-               EEPROM.set(curEditId+3, (byte) 0);
-               EEPROM.set(curEditId+4, (byte) 0);
-               break;
-            case 2: // EVENT_SENSOR_LEVEL_HIGHER
-            case 3: // EVENT_SENSOR_LEVEL_LOWER
-            case 4: // EVENT_RANGE_HIGHER
-            case 5: // EVENT_RANGE_LOWER
-                edit = (EditText)findViewById(R.id.byte1_input);
-                EEPROM.set(curEditId+3, Integer.valueOf(edit.getText().toString()).byteValue());
-                edit = (EditText)findViewById(R.id.byte2_input);
-                EEPROM.set(curEditId+4, Integer.valueOf(edit.getText().toString()).byteValue());
-                break;
-            case 1: // EVENT_TIME
-            case 6: // EVENT_DISTANCE 
-            case 7: // EVENT_DISTANCE_LEFT
-            case 8: // EVENT_DISTANCE_RIGHT
-            default:
-                edit = (EditText)findViewById(R.id.big_input);
-                EEPROM.set(curEditId+3, (byte)(Integer.valueOf(edit.getText().toString()).intValue() >> 8));
-                EEPROM.set(curEditId+4, (byte)(Integer.valueOf(edit.getText().toString()).intValue() & 0xFF));
-                break;
-        }
-        InitEEPROMList();
-    }
-    
-    private void OpenLoadDialog()
-    {
-        final AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-        curFolder = new File("/mnt/sdcard/YuniData/");
-        final CharSequence[] items = curFolder.list();
-        builder2.setTitle("Chose file");
-        builder2.setItems(items, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
-                final CharSequence[] items = curFolder.list();
-                File file = new File(curFolder, items[item].toString());
-                if(!file.isFile())
-                    return;
-                dialog.dismiss();
-                try {
-                    EEPROM.fromFile(file, mHandler);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        });
-        final AlertDialog alert = builder2.create();
-        alert.show();
-    }
-
     private void InitAccelerometer()
     {
         // lock orientation
@@ -1262,7 +953,7 @@ public class YuniClient extends Activity
         lock = null;
         byte[] data = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
         if(data != null)
-            mChatService.write(data);
+            connection.write(data);
         
         mSensorManager.unregisterListener(accelerometerListener);
         accelerometerListener = null;
@@ -1322,12 +1013,12 @@ public class YuniClient extends Activity
                     speedData[0] = (byte)'b';
                 else 
                     speedData[0] = (byte)'c';
-                mChatService.write(speedData.clone());
+                connection.write(speedData.clone());
                 if(api.GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
                 {
                     speedData = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
                     if(speedData != null)
-                        mChatService.write(speedData.clone());
+                        connection.write(speedData.clone());
                 }
             }
             
@@ -1336,7 +1027,7 @@ public class YuniClient extends Activity
             {
                 byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
                 if(data != null)
-                    mChatService.write(data.clone());
+                    connection.write(data.clone());
             }
         }
     }
@@ -1426,64 +1117,7 @@ public class YuniClient extends Activity
             terminal.SetText(text);
     }
  
-    // ============================================ HANDLERS ============================================
-    private final Handler progressHandler2 = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            if(msg.arg1 != 0)
-                dialog.setProgress(msg.arg1);
-        }
-    };
-
-    private final Handler scrollEEPROMHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            final ListView eepromListView = (ListView) findViewById(R.id.eeprom_entries);
-            eepromListView.setSelection(EEPROMScrollPos[eeprom_part-1]);
-        }
-    };
-    
-    private final Handler flashHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            dialog.setMax(mem.pagesCount());
-            pagesItr = 0;
-            SendPage(mem.getPage(pagesItr));
-            ++pagesItr;
-            state |= STATE_FLASHING;
-        }
-    };
-
-    private final Handler failedHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            final String text = msg.getData().getString("text");
-            ShowAlert(text);
-            dialog.dismiss();
-        }
-    };
-    
-
-    private final OnClickListener saveDataFile = new DialogInterface.OnClickListener() {
-        public void onClick(DialogInterface dialog, int id) {
-            EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-            String filename = text.getText().toString();
-            if(filename == null || filename == "")
-            {
-                Toast.makeText(context, "Filename is empty!", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            dialog.dismiss();
-            File folder = new File("/mnt/sdcard/YuniData/");
-            if(!folder.exists())
-                folder.mkdirs();
-            try {
-                EEPROM.toFile(filename, mHandler);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-       }
-    };
-    
+    // ============================================ HANDLERS ============================================   
     private final OnClickListener saveLogFile = new OnClickListener() {
         public void onClick(DialogInterface dialog, int id) {
             EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
@@ -1499,269 +1133,12 @@ public class YuniClient extends Activity
             if(!folder.exists())
                 folder.mkdirs();
             try {
-                terminal.toFile(filename, mHandler);
+                terminal.toFile(filename, toastHandler);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
        }
-    };
-    
-    private final Handler readHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            if(dialog != null)
-                dialog.dismiss();
-            state &= ~(STATE_EEPROM_READING);
-            
-            String item = null;
-            for(int itr = 0; itr < 255;)
-            {
-                if(EEPROM.get(itr) == 0 && EEPROM.get(itr+1) == 0)
-                    break;
-                item = "";
-                item = itr + " Key " + (char)EEPROM.get(itr) + " " + (char)EEPROM.get(itr+1) + "\n";
-                switch(EEPROM.get(itr+2))
-                {
-                    case 0:
-                        item += "NONE";
-                        break;
-                    case 1:
-                        item += "TIME, " + (((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF)*10) + "ms";
-                        break;
-                    case 2:
-                        item += "SENSOR_LEVEL_HIGHER, sensor " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4));
-                        break;
-                    case 3:
-                        item += "SENSOR_LEVEL_LOWER, sensor " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4));
-                        break;
-                    case 4: 
-                        item += "RANGE_HIGHER adr " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF & EEPROM.get(itr+4)) + "cm";
-                        break;
-                    case 5: 
-                        item += "RANGE_LOWER adr " + (0xFF & EEPROM.get(itr+3)) + " val " + (0xFF &  EEPROM.get(itr+4)) + "cm";
-                        break;
-                    case 6:
-                        item += "EVENT_DISTANCE " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
-                        break;
-                    case 7:
-                        item += "EVENT_DISTANCE_LEFT " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
-                        break;
-                    case 8:
-                        item += "EVENT_DISTANCE_RIGHT " + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + " mm";
-                        break;
-                    default:
-                       item += "event " + EEPROM.get(itr+2) + " values " + (0xFF & EEPROM.get(itr+3)) + " " + (0xFF & EEPROM.get(itr+4)) + 
-                           " (" + ((EEPROM.get(itr+3) << 8) | (EEPROM.get(itr+4)) & 0xFF) + ")";
-                       break;
-                }
-                itr += 5;
-                mEEPROMEntries.add(item);
-            }
-        }
-    };
-
-    private final Handler writeCompleteHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            dialog.dismiss();
-            state &= ~(STATE_EEPROM_WRITE);
-        }
-    };
-
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg)
-        {
-            if((state & STATE_CONNECTED) == 0 && msg.what != MESSAGE_STATE_CHANGE  && msg.what != MESSAGE_TOAST)
-                return;
-            
-            switch (msg.what)
-            {
-                case MESSAGE_STATE_CHANGE:
-                    if(msg.arg1 == BluetoothChatService.STATE_CONNECTED)
-                    {
-                        dialog.dismiss();
-                        InitMain();
-                        //TODO
-                        //ProtocolMgr.getInstance().ScanForProtocols();
-                        state |= STATE_CONNECTED;
-                    }
-                    break;
-                case MESSAGE_TOAST:
-                    final String text = msg.getData().getString(TOAST);
-                    if(text == null)
-                        break;
-                    Toast.makeText(context, text,
-                            Toast.LENGTH_SHORT).show();
-                    if(msg.arg1 == CONNECTION_LOST)
-                        Disconnect(true);
-                    else if(msg.arg1 == CONNECTION_FAILED)
-                        EnableConnect(true);
-                    else if(msg.arg1 == FILE_LOADED)
-                    {
-                        mEEPROMEntries.clear();
-                        readHandler.sendEmptyMessage(0);
-                    }
-                    break;
-                case MESSAGE_READ:
-                    if(msg.obj != null)
-                    {
-                        final byte[] buffer = (byte[])msg.obj;
-                        String seq = "";
-                        for(int i = 0; i < msg.arg1; ++i)
-                            seq += (char)buffer[i];
-                        if(((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0) && seq != "")
-                            WriteTerminalText(seq);
-                        else if((state & STATE_STOPPING) != 0)
-                        {
-                            state &= ~(STATE_STOPPING);
-                            final TextView error = (TextView)findViewById(R.id.error);
-                            error.setText("");
-                            state |= STATE_STOPPED;
-                        }
-                        else if((state & STATE_WAITING_ID) != 0)
-                        {
-                            state &= ~(STATE_WAITING_ID);
-                            DeviceInfo deviceInfo = new DeviceInfo(seq);
-                            if(deviceInfo.isSet())
-                            {
-                                mem = new memory(deviceInfo);
-                                dialog.dismiss();
-                                dialog= new ProgressDialog(context);
-                                dialog.setCancelable(false);
-                                dialog.setMessage("Flashing into " + deviceInfo.name + "...");
-                                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                dialog.setMax(100);
-                                dialog.setProgress(0);
-                                dialog.show();
-
-                                Thread load = new Thread (new Runnable()
-                                {
-                                    public void run()
-                                    {
-                                        final TextView file = (TextView)findViewById(R.id.hex_file);
-                                        final File hex = new File(file.getText().toString());
-                                        
-                                        try
-                                        {
-                                            String result = mem.Load(hex, progressHandler2);
-                                            if(result == null)
-                                            {
-                                                result = mem.CreatePages();
-                                                if(result == null)
-                                                    flashHandler.sendMessage(flashHandler.obtainMessage());
-                                                else
-                                                {
-                                                    Message msg = new Message();
-                                                    Bundle bundle = new Bundle();
-                                                    bundle.putString("text", "Failed to create pages (" + result + ")");
-                                                    msg.setData(bundle);
-                                                    failedHandler.sendMessage(msg);
-                                                    mem = null;
-                                                }
-                                            }
-                                            else
-                                            {
-                                                Message msg = new Message();
-                                                Bundle bundle = new Bundle();
-                                                bundle.putString("text", "Failed to load hex file (" + result + ")");
-                                                msg.setData(bundle);
-                                                failedHandler.sendMessage(msg);
-                                                mem = null;
-                                            }
-                                            
-                                        } catch (IOException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                            mem = null;
-                                        }
-                                    }
-                                });
-                                load.start();
-                            }
-                        }
-                        else if((state & STATE_FLASHING) != 0)
-                        {
-                            SendPage(mem.getPage(pagesItr));
-                            ++pagesItr;
-                            if(pagesItr >= mem.pagesCount())
-                            {
-                                state &= ~(STATE_FLASHING);
-                                TextView error = (TextView)findViewById(R.id.error);
-                                error.setText("Flashing done");
-                                dialog.dismiss();
-                                mem = null;
-                            }
-                        }
-                        else if((state & STATE_EEPROM_READING) != 0)
-                        {
-                            boolean skip = (buffer[0] == 0x17);
-                            if(skip)
-                            {
-                                itr_buff = 0;
-                                EEPROM.clear();
-                            }
-                            for(int itr = 0; itr_buff < 512 && itr < msg.arg1; ++itr)
-                            {
-                                if(skip && itr == 0)
-                                    continue;
-                                EEPROM.set_nopart(itr_buff++, (byte)buffer[itr]);
-                            }
-                            if(itr_buff >= 512)
-                                readHandler.sendEmptyMessage(0);
-                        }
-                        else if((state & STATE_EEPROM_WRITE) != 0)
-                        {
-                            if(buffer[0] == 0x1D)
-                            {
-                                dialog.dismiss();
-                                dialog= new ProgressDialog(context);
-                                dialog.setMessage("Writing into EEPROM...");
-                                dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                                dialog.setMax(EEPROM.getTotalRecCount());
-                                dialog.setProgress(0);
-                                dialog.setCancelable(false);
-                                dialog.show();
-                            }
-                            else if(buffer[0] == 0x15)
-                            {
-                                dialog.dismiss();
-                                ShowAlert("Cannot write, EEPROM is protected!");
-                                eeprom_part = eeprom_write_part;
-                                state &= ~(STATE_EEPROM_WRITE);
-                            }
-                            else if(buffer[0] != 0x1F)
-                                return;
-                            
-                            if(eeprom_part == 1 && itr_buff >= EEPROM.getPartRecCount(true)*REC_SIZE && curEditId != 0)
-                            {
-                                eeprom_part = 2;
-                                byte[] out = {0x16};
-                                mChatService.write(out);
-                                curEditId -= itr_buff/REC_SIZE;
-                                itr_buff = 0;
-                                break;
-                            }
-                            else if(itr_buff >= 510 || (itr_buff >= curEditId*REC_SIZE && itr_buff%5 == 0) || curEditId == 0)
-                            {
-                                writeCompleteHandler.sendEmptyMessage(0);
-                                dialog.incrementProgressBy(1);
-                                byte[] out = {0x1E};
-                                mChatService.write(out);
-                                eeprom_part = eeprom_write_part;
-                                return;
-                            }
-                            
-                            byte[] out = EEPROM.getRec(itr_buff);
-                            mChatService.write(out);
-                            dialog.incrementProgressBy(1);
-                            itr_buff += 5;
-                        }
-                        else if(seq != "")
-                            WriteTerminalText(seq);
-                    }
-                    break;
-            }
-        }
     };
 
     final BroadcastReceiver mReceiver = new BroadcastReceiver() {
@@ -1825,102 +1202,7 @@ public class YuniClient extends Activity
             scroll.scrollTo(0, out.getHeight());
         }
     };
-    
-    private final OnItemClickListener mEditEntryListener = new OnItemClickListener() {
-        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
-        {
-            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)v.getTop()/(float)v.getHeight()));
-            state |= STATE_EEPROM_EDIT;
-            state &= ~(STATE_EEPROM);
-            setContentView(R.layout.eeprom_edit);
-            String info = ((TextView) v).getText().toString();
-            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
-            
-            EditText edit = (EditText)findViewById(R.id.key_input);
-            edit.setText(Character.toString((char)EEPROM.get(curEditId)));
-            edit = (EditText)findViewById(R.id.downUp_input);
-            edit.setText(Character.toString((char)EEPROM.get(curEditId+1)));
-            
-            edit = (EditText)findViewById(R.id.event_input);
-            edit.setText(Integer.valueOf(EEPROM.get(curEditId+2)).toString());
-            
-            edit = (EditText)findViewById(R.id.byte1_input);
-            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+3)).toString());
-            edit = (EditText)findViewById(R.id.byte2_input);
-            edit.setText(Integer.valueOf(0xFF & EEPROM.get(curEditId+4)).toString());
-            
-            edit = (EditText)findViewById(R.id.big_input);
-            int bigNum = ((EEPROM.get(curEditId+3) << 8) | (EEPROM.get(curEditId+4)) & 0xFF);
-            edit.setText(Integer.valueOf(bigNum).toString());
-            
-            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
-            button.setOnClickListener(new View.OnClickListener() {
-                 public void onClick(View v) {
-                    SaveEntry();
-                    state &= ~(STATE_EEPROM_EDIT);
-                 }
-              });
-        }
-    };
-    
-    private final OnItemLongClickListener mEditEntryLongListener = new OnItemLongClickListener() {
-        public boolean onItemLongClick(AdapterView<?> arg0, View arg1,
-                int arg2, long arg3)
-        {
-            EEPROMScrollPos[eeprom_part-1] = (short) (arg2 - Math.round((float)arg1.getTop()/(float)arg1.getHeight()));
-            final AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            CharSequence[] items = {"Add new behind this one", "Erase", "Erase all"};
-            String info = ((TextView) arg1).getText().toString();
-            curEditId = Integer.valueOf( info.substring(0, info.indexOf(" ")) ).intValue();
-            builder.setItems(items, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int item) {
-                    switch(item)
-                    {
-                        case 0:
-                            curEditId+=REC_SIZE;
-                            state |= STATE_EEPROM_NEW_ADD;
-                            state &= ~(STATE_EEPROM);
-                            setContentView(R.layout.eeprom_edit);
-                            Button button = (Button) findViewById(R.id.button_save_eeprom_item);
-                            button.setOnClickListener(new View.OnClickListener() {
-                                 public void onClick(View v) {
-                                    SaveEntry();
-                                    state &= ~(STATE_EEPROM_NEW_ADD);
-                                 }
-                              });
-                            break;
-                        case 1:
-                            EEPROM.erase(curEditId);
-                            mEEPROMEntries.clear();
-                            readHandler.sendEmptyMessage(0);
-                            break;
-                        case 2:
-                            AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
-                            builder2.setMessage("Do you really want to erase all entries?")
-                                   .setCancelable(false)
-                                   .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                                       public void onClick(DialogInterface dialog, int id) {
-                                           mEEPROMEntries.clear();
-                                           EEPROM.clear();
-                                           dialog.dismiss();
-                                       }
-                                   })
-                                   .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                       public void onClick(DialogInterface dialog, int id) {
-                                            dialog.dismiss();
-                                       }
-                                   });
-                            AlertDialog alert = builder2.create();
-                            alert.show();
-                            break;
-                    }
-                }
-            });
-            builder.create().show();
-            return true;
-        }
-    };
-    
+
     public final Handler ballHandler = new Handler() {
         @Override
         public void handleMessage(Message msg)
@@ -1934,16 +1216,117 @@ public class YuniClient extends Activity
                 return;
             byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
             if(data != null)
-                mChatService.write(data.clone());
+                connection.write(data.clone());
+        }
+    };
+    
+    public final Handler toastHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg)
+        {
+            final String text = msg.getData().getString(TOAST);
+            if(text == null)
+                return;
+            Toast.makeText(context, text,
+                Toast.LENGTH_SHORT).show();
+        }
+    };
+
+    private final Handler connectionHandler = new Handler() {
+        public void handleMessage(Message msg)
+        {
+            switch(msg.what)
+            {
+                case Connection.CONNECTION_STATE:
+                {
+                    switch(msg.arg1)
+                    {
+                        case BluetoothChatService.STATE_CONNECTED:
+                            dialog.dismiss();
+                            InitMain();
+                            state |= STATE_CONNECTED;
+                            return;
+                        case Connection.CONNECTION_FAILED:
+                        {
+                            Toast.makeText(context, "Unable to connect",
+                                Toast.LENGTH_SHORT).show();
+                            EnableConnect(true);
+                            return;
+                        }
+                        case Connection.CONNECTION_LOST:
+                        {
+                            Toast.makeText(context, "Connection lost!",
+                                Toast.LENGTH_SHORT).show();
+                            Disconnect(true);
+                            return;
+                        }
+                    }
+                    return;
+                }
+                case Connection.CONNECTION_DATA:
+                {
+                    switch(msg.arg1)
+                    {
+                        case Connection.DATA_TEXT:
+                            WriteTerminalText((String)msg.obj);
+                            return;
+                        case Connection.DATA_STOPPED:
+                        {
+                            state &= ~(STATE_STOPPING);
+                            final TextView error = (TextView)findViewById(R.id.error);
+                            error.setText("");
+                            state |= STATE_STOPPED;
+                            return;
+                        }
+                        case Connection.DATA_ID_RESPONSE:
+                            dialog.dismiss();
+                            dialog= new ProgressDialog(context);
+                            dialog.setCancelable(false);
+                            dialog.setMessage("Flashing into " + ((DeviceInfo)msg.obj).name + "...");
+                            dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                            dialog.setMax(100);
+                            dialog.setProgress(0);
+                            dialog.show();
+                            state &= ~(STATE_WAITING_ID);
+                            return;
+                        case Connection.DATA_FLASH:
+                            if(msg.arg2 == 1)
+                            {
+                                dialog.setMax(msg.getData().getInt("pagesCount"));
+                                state |= STATE_FLASHING;
+                            }
+                            else
+                            {
+                                final String text = msg.getData().getString("text");
+                                ShowAlert(text);
+                                dialog.dismiss();
+                            }
+                            return;
+                        case Connection.DATA_FLASH_PAGE:
+                        {
+                            if(msg.arg2 == 1)
+                                dialog.incrementProgressBy(1);
+                            else
+                            {
+                                state &= ~(STATE_FLASHING);
+                                TextView error = (TextView)findViewById(R.id.error);
+                                error.setText("Flashing done");
+                                dialog.dismiss();
+                            }
+                            return;
+                        }
+                    }
+                    return;
+                }
+            }
         }
     };
     
     private Joystick joystick;
     private Terminal terminal;
-    private memory mem;
     private controlAPI api;
     private LogFile log;
-    private eeprom EEPROM;
+    private Connection connection;
     
     private AccelerometerListener accelerometerListener;
     private WakeLock lock;
@@ -1952,8 +1335,6 @@ public class YuniClient extends Activity
     private BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<String> mArrayAdapter;
     private ArrayAdapter<String> mPairedDevices;
-    private ArrayAdapter<String> mEEPROMEntries;
-    private BluetoothChatService mChatService;
     private View.OnTouchListener keyTouch;
     private DialogInterface.OnClickListener fileSelect;
     private AlertDialog alertDialog;
@@ -1964,16 +1345,12 @@ public class YuniClient extends Activity
     
     public static byte eeprom_part;
     public static byte eeprom_write_part;
-    public int state;
+    public static int state;
     
     private byte btTurnOn;
-    private short pagesItr;
-    private int itr_buff;
-    private int curEditId;
     private int[] EEPROMTouchLastX;
     private int[] EEPROMTouchLastY;
     private byte EEPROMTouchItr;
-    private short[] EEPROMScrollPos;
     private byte mMovementFlags;
     private byte mSpeed;
 

@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import android.os.Handler;
-
 class memory
 {
     private static final byte ERROR_WRONG_LINE_FORMAT     = 1;
@@ -26,7 +24,7 @@ class memory
         pages = null;
     }
     
-    public String Load(File filePath, Handler handler) throws IOException
+    public String Load(File filePath) throws IOException
     {
         if(filePath.length() >= Integer.MAX_VALUE)
              return "You really should not try to flash files bigger than 2 gigabytes."; 
@@ -59,6 +57,7 @@ class memory
             }
         }
         for(size = deviceInfo.mem_size; m_buffer[size-1] == 0; --size) {};
+        sendItr = 0;
         return null;
     }
     
@@ -158,7 +157,12 @@ class memory
     }
     
     public short pagesCount() { return (short)pages.size(); }
-    public Page getPage(short itr) { return pages.get(itr); }
+    public Page getNextPage()
+    {
+        if(sendItr >= pages.size())
+            return null;
+        return pages.get(sendItr++);
+    }
     
     private native byte[] parseHexFile(byte[] file, int memsize, int fileLenght);
 
@@ -166,6 +170,7 @@ class memory
     private int size;
     private static DeviceInfo deviceInfo;
     private List<Page> pages;
+    private short sendItr;
 };
 
 class Page
