@@ -108,6 +108,8 @@ public class YuniClient extends Activity
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
             ShowAlert("This device does not have bluetooth adapter");
+        else if(!mBluetoothAdapter.isEnabled())
+        	EnableBT();
         
         System.loadLibrary("jni_functions");
         init();
@@ -439,7 +441,7 @@ public class YuniClient extends Activity
         }
     }
     
-    public void Disconnect(boolean resetUI)
+    private void Disconnect(boolean resetUI)
     {
         state = 0;
         curFolder = null;
@@ -476,7 +478,7 @@ public class YuniClient extends Activity
         }
     }
         
-    public void EnableConnect(boolean enable)
+    private void EnableConnect(boolean enable)
     {
         if(!enable)
         {
@@ -505,13 +507,13 @@ public class YuniClient extends Activity
         listView.setEnabled(enable);
     }
     
-    void EnableBT()
+    private void EnableBT()
     {
         Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
         startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
     }
     
-    public void FindDevices()
+    private void FindDevices()
     {
         if(!mBluetoothAdapter.isEnabled())
         {
@@ -535,7 +537,7 @@ public class YuniClient extends Activity
         mBluetoothAdapter.startDiscovery();
     } 
     
-    void Connect(View v)
+    private void Connect(View v)
     {
         EnableConnect(false);
         // Cancel discovery because it's costly and we're about to connect
@@ -561,7 +563,7 @@ public class YuniClient extends Activity
             mChatService.connect(device);
     }
 
-    void ShowAlert(CharSequence text)
+    private void ShowAlert(CharSequence text)
     {
         if(dialog != null)
             dialog.dismiss();
@@ -701,7 +703,7 @@ public class YuniClient extends Activity
         mChatService.write(out);
     }
     
-    void ChangeDevicesPart(boolean animation, boolean right)
+    private void ChangeDevicesPart(boolean animation, boolean right)
     {
         final ViewFlipper flipper = (ViewFlipper) findViewById(R.id.flipper_devices);
         flipper.setInAnimation(right? inFromLeftAnimation() : inFromRightAnimation());
@@ -725,14 +727,15 @@ public class YuniClient extends Activity
             list.setAdapter(mPairedDevices);
         }
     }
-    public void SendMovementKey(byte button, boolean down)
+
+    private void SendMovementKey(byte button, boolean down)
     {
         byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
         if(out != null)
         mChatService.write(out);     
     }
     
-    void InitMain()
+    private void InitMain()
     {
         autoScrollThread = null;
         joystick = null;
@@ -889,8 +892,7 @@ public class YuniClient extends Activity
         mChatService.write(out.clone());
     }
     
-    
-    public void InitControls()
+    private void InitControls()
     {
         state |= STATE_CONTROLS;
         Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
@@ -1270,8 +1272,8 @@ public class YuniClient extends Activity
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
     
-    private class AccelerometerListener implements SensorEventListener {
-        
+    private class AccelerometerListener implements SensorEventListener
+    {    
         public AccelerometerListener()
         {
         }
