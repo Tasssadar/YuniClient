@@ -80,7 +80,7 @@ public class BluetoothChatService {
         mState = state;
 
         // Give the new state to the Handler so the UI Activity can update
-        mHandler.obtainMessage(YuniClient.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
+        mHandler.obtainMessage(Connection.MESSAGE_STATE_CHANGE, state, -1).sendToTarget();
     }
 
     /**
@@ -147,7 +147,7 @@ public class BluetoothChatService {
         mConnectedThread.start();
 
         // Send the name of the connected device back to the UI Activity
-        Message msg = mHandler.obtainMessage(YuniClient.MESSAGE_DEVICE_NAME);
+        Message msg = mHandler.obtainMessage(Connection.MESSAGE_DEVICE_NAME);
         Bundle bundle = new Bundle();
         bundle.putString(YuniClient.DEVICE_NAME, device.getName());
         msg.setData(bundle); 
@@ -190,10 +190,10 @@ public class BluetoothChatService {
         setState(STATE_LISTEN);
 
         // Send a failure message back to the Activity
-        Message msg = mHandler.obtainMessage(YuniClient.MESSAGE_TOAST);
+        Message msg = mHandler.obtainMessage(Connection.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
         bundle.putString(YuniClient.TOAST, "Unable to connect");
-        msg.arg1 = YuniClient.CONNECTION_FAILED;
+        msg.arg1 = Connection.CONNECTION_FAILED;
         msg.setData(bundle);
         mHandler.sendMessage(msg); 
     }
@@ -205,10 +205,10 @@ public class BluetoothChatService {
         setState(STATE_LISTEN);
 
         // Send a failure message back to the Activity
-        Message msg = mHandler.obtainMessage(YuniClient.MESSAGE_TOAST);
+        Message msg = mHandler.obtainMessage(Connection.MESSAGE_TOAST);
         Bundle bundle = new Bundle();
         bundle.putString(YuniClient.TOAST, "Connection lost!");
-        msg.arg1 = YuniClient.CONNECTION_LOST;
+        msg.arg1 = Connection.CONNECTION_LOST;
         msg.setData(bundle);
         mHandler.sendMessage(msg); 
     }
@@ -387,7 +387,7 @@ public class BluetoothChatService {
                     bytes = mmInStream.read(buffer);
 
                     // Send the obtained bytes to the UI Activity
-                    mHandler.obtainMessage(YuniClient.MESSAGE_READ, bytes, -1, buffer.clone())
+                    mHandler.obtainMessage(Connection.MESSAGE_READ, bytes, -1, buffer.clone())
                             .sendToTarget();
                    
                 } catch (IOException e) {
@@ -407,7 +407,7 @@ public class BluetoothChatService {
                 mmOutStream.write(buffer);
 
                 // Share the sent message back to the UI Activity
-                mHandler.obtainMessage(YuniClient.MESSAGE_WRITE, -1, -1, buffer)
+                mHandler.obtainMessage(Connection.MESSAGE_WRITE, -1, -1, buffer)
                        .sendToTarget();
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);

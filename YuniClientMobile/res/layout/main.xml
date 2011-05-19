@@ -27,17 +27,10 @@
         android:id="@+id/linear2" 
         android:layout_below="@id/linear1"
         android:layout_width="fill_parent">
-         <Button android:id="@+id/eeprom_b"
-                android:layout_width="105dp"
-                android:layout_height="wrap_content"
-                android:layout_below="@id/Disconnect_b"
-                android:layout_marginLeft="2px"
-                android:text="EEPROM" android:layout_weight="1"/> 
          <Button android:id="@+id/ball_b"
                 android:layout_width="105dp"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/Disconnect_b"
-                android:layout_toRightOf="@id/eeprom_b"
                 android:text="BallUI" android:layout_weight="1"/> 
          <Button android:id="@+id/Controls_b"
                 android:layout_width="105dp"
