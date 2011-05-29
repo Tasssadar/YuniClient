@@ -1322,6 +1322,8 @@ public class YuniClient extends Activity
         }
     };
     
+    public static int getState() { return state; }
+    
     private Joystick joystick;
     private Terminal terminal;
     private controlAPI api;
@@ -1343,9 +1345,7 @@ public class YuniClient extends Activity
     private Context context;
     private Thread autoScrollThread;
     
-    public static byte eeprom_part;
-    public static byte eeprom_write_part;
-    public static int state;
+    private static int state;
     
     private byte btTurnOn;
     private int[] EEPROMTouchLastX;
@@ -1353,6 +1353,8 @@ public class YuniClient extends Activity
     private byte EEPROMTouchItr;
     private byte mMovementFlags;
     private byte mSpeed;
+    public byte eeprom_part;
+    public byte eeprom_write_part;
 
     private Animation inFromRightAnimation() {
         Animation inFromRight = new TranslateAnimation(
