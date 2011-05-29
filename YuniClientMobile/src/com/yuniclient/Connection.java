@@ -61,7 +61,8 @@ class Connection
         @Override
         public void handleMessage(Message msg)
         {
-            if((YuniClient.state & YuniClient.STATE_CONNECTED) == 0 && msg.what != MESSAGE_STATE_CHANGE  && msg.what != MESSAGE_TOAST)
+            int state = YuniClient.getState();
+            if((state & YuniClient.STATE_CONNECTED) == 0 && msg.what != MESSAGE_STATE_CHANGE  && msg.what != MESSAGE_TOAST)
                 return;
                 
             switch (msg.what)
@@ -88,7 +89,7 @@ class Connection
                         String seq = "";
                         for(int i = 0; i < msg.arg1; ++i)
                             seq += (char)buffer[i];
-                        if(((YuniClient.state & YuniClient.STATE_CONTROLS) != 0 || (YuniClient.state & YuniClient.STATE_TERMINAL) != 0) && seq != "")
+                        if(((state & YuniClient.STATE_CONTROLS) != 0 || (state & YuniClient.STATE_TERMINAL) != 0) && seq != "")
                         {
                             Message resp = new Message();
                             resp.what = CONNECTION_DATA;
@@ -96,14 +97,14 @@ class Connection
                             resp.obj = seq;
                             mHandler.sendMessage(resp);
                         }
-                        else if((YuniClient.state & YuniClient.STATE_STOPPING) != 0)
+                        else if((state & YuniClient.STATE_STOPPING) != 0)
                         {
                             Message resp = new Message();
                             resp.what = CONNECTION_DATA;
                             resp.arg1 = DATA_STOPPED;
                             mHandler.sendMessage(resp);
                         }
-                        else if((YuniClient.state & YuniClient.STATE_WAITING_ID) != 0)
+                        else if((state & YuniClient.STATE_WAITING_ID) != 0)
                         {
                             DeviceInfo deviceInfo = new DeviceInfo(seq);
                             if(deviceInfo.isSet())
@@ -118,7 +119,7 @@ class Connection
                                 load.start();
                             }
                         }
-                        else if((YuniClient.state & YuniClient.STATE_FLASHING) != 0)
+                        else if((state & YuniClient.STATE_FLASHING) != 0)
                         {
                             Page page = mem.getNextPage();
                             if(page != null)  SendPage(page);
