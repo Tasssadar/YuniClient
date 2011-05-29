@@ -109,82 +109,21 @@ class Connection
                             if(deviceInfo.isSet())
                             {
                                 Message resp = new Message();
-                                  resp.what = CONNECTION_DATA;
-                                   resp.arg1 = DATA_ID_RESPONSE;
-                                   resp.obj = deviceInfo;
-                                   mHandler.sendMessage(resp);
-                                   mem = new memory(deviceInfo);
-                                   Thread load = new Thread (new Runnable()
-                                {
-                                    public void run()
-                                    {
-                                        try
-                                        {
-                                            String result = mem.Load(hexFile);
-                                            if(result == null)
-                                            {
-                                                result = mem.CreatePages();
-                                                if(result == null)
-                                                {
-                                                       Message resp = new Message();
-                                                      resp.what = CONNECTION_DATA;
-                                                       resp.arg1 = DATA_FLASH;
-                                                       resp.arg2 = 1; // 1 = ok
-                                                       Bundle bundle = new Bundle();
-                                                    bundle.putInt("pagesCount", mem.pagesCount());
-                                                    resp.setData(bundle);
-                                                       mHandler.sendMessage(resp);
-                                                       SendPage(mem.getNextPage());
-                                                }
-                                                else
-                                                {
-                                                    Message resp = new Message();
-                                                      resp.what = CONNECTION_DATA;
-                                                       resp.arg1 = DATA_FLASH;
-                                                       resp.arg2 = 0; // 0 = fail
-                                                       Bundle bundle = new Bundle();
-                                                    bundle.putString("text", "Failed to create pages (" + result + ")");
-                                                    resp.setData(bundle);
-                                                       mHandler.sendMessage(resp);
-                                                    mem = null;
-                                                }
-                                            }
-                                            else
-                                            {                                               
-                                                Message resp = new Message();
-                                                  resp.what = CONNECTION_DATA;
-                                                   resp.arg1 = DATA_FLASH;
-                                                   resp.arg2 = 0; // 0 = fail
-                                                   Bundle bundle = new Bundle();
-                                                   bundle.putString("text", "Failed to load hex file (" + result + ")");
-                                                resp.setData(bundle);
-                                                   mHandler.sendMessage(resp);
-                                                mem = null;
-                                            }
-                                            
-                                        } catch (IOException e) {
-                                            // TODO Auto-generated catch block
-                                            e.printStackTrace();
-                                            mem = null;
-                                        }
-                                    }
-                                });
+                                resp.what = CONNECTION_DATA;
+                                resp.arg1 = DATA_ID_RESPONSE;
+                                resp.obj = deviceInfo;
+                                mHandler.sendMessage(resp);
+                                mem = new memory(deviceInfo);
+                                HexLoadThread load = new HexLoadThread();
                                 load.start();
                             }
                         }
                         else if((YuniClient.state & YuniClient.STATE_FLASHING) != 0)
                         {
                             Page page = mem.getNextPage();
-                            if(page != null)
-                            {
-                                SendPage(page);
-                                mHandler.obtainMessage(CONNECTION_DATA, DATA_FLASH_PAGE, 1).sendToTarget();
-                            }
-                            else
-                            {
-                                mHandler.obtainMessage(CONNECTION_DATA, DATA_FLASH_PAGE, 0).sendToTarget();
-                                mem = null;
-                            }
+                            if(page != null)  SendPage(page);
+                            else              mem = null;
+                            mHandler.obtainMessage(CONNECTION_DATA, DATA_FLASH_PAGE, page != null ? 1 : 0).sendToTarget();
                         }
                         else if(seq != "")
                         {
@@ -201,6 +140,55 @@ class Connection
         }
     };
     
+    private class HexLoadThread extends Thread
+    {
+        public void run()
+        {
+            try
+            {
+                String result = mem.Load(hexFile);
+                if(result == null)
+                {
+                    result = mem.CreatePages();
+                    if(result == null)
+                    {
+                        Message resp = new Message();
+                        resp.what = CONNECTION_DATA;
+                        resp.arg1 = DATA_FLASH;
+                        resp.arg2 = 1; // 1 = ok
+                        Bundle bundle = new Bundle();
+                        bundle.putInt("pagesCount", mem.pagesCount());
+                        resp.setData(bundle);
+                        mHandler.sendMessage(resp);
+                        SendPage(mem.getNextPage());
+                    }
+                    else
+                        SendFailedMsg("Failed to create pages (" + result + ")");
+                }
+                else
+                    SendFailedMsg("Failed to load hex file (" + result + ")");
+            }
+            catch (IOException e)
+            {
+                SendFailedMsg("Failed to load hex file (" + e.getMessage() + ")");
+            }
+            hexFile = null;
+        }
+    }
+
+    private void SendFailedMsg(String text)
+    {
+        Message resp = new Message();
+        resp.what = CONNECTION_DATA;
+        resp.arg1 = DATA_FLASH;
+        resp.arg2 = 0; // 0 = fail
+        Bundle bundle = new Bundle();
+        bundle.putString("text", text);
+        resp.setData(bundle);
+        mHandler.sendMessage(resp);
+        mem = null;
+    }
+
     private Handler mHandler;
     private BluetoothChatService mChatService;
     private memory mem;
