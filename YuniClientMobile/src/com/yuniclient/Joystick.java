@@ -12,7 +12,7 @@ import android.view.SurfaceView;
 
 class Joystick
 {
-    private static final double PI = 3.141592;
+    private static final float PI = (float)3.141592;
     
     public Joystick()
     {

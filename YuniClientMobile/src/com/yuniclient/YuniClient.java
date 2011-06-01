@@ -17,6 +17,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.hardware.Sensor;
@@ -28,6 +29,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.preference.PreferenceManager;
 import android.view.Display;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -94,7 +96,6 @@ public class YuniClient extends Activity
             ShowAlert("This device does not have bluetooth adapter");
         else if(!mBluetoothAdapter.isEnabled())
             EnableBT();
-        
         System.loadLibrary("jni_functions");
         init();
     }
@@ -182,12 +183,10 @@ public class YuniClient extends Activity
         }
         else if(keyCode == KeyEvent.KEYCODE_MENU)
         {
-            if((state & STATE_TERMINAL) != 0 || state == 0)
+            if((state & STATE_TERMINAL) != 0 || state == 0 || (state & STATE_CONTROLS) != 0)
                 return super.onKeyDown(keyCode, event);
-            else if((state & STATE_CONTROLS) != 0)
-                ShowAPIDialog();
             else
-                moveTaskToBack(true);
+                startActivity(new Intent(this, Settings.class));
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -214,6 +213,11 @@ public class YuniClient extends Activity
             menu.clear();
             inflater.inflate(R.menu.menu_terminal, menu);
         }
+        else if((state & STATE_CONTROLS) != 0 && menu.findItem(R.id.protocol) == null)
+        {
+            menu.clear();
+            inflater.inflate(R.menu.menu_controls, menu);
+        }
         else if(state == 0 && menu.findItem(R.id.exit) == null)
         {
             menu.clear();
@@ -227,6 +231,12 @@ public class YuniClient extends Activity
         switch (item.getItemId()) {
             case R.id.exit:
                 finish();
+                return true;
+            case R.id.settings:
+                startActivity(new Intent(this, Settings.class));
+                return true;
+            case R.id.protocol:
+                ShowAPIDialog();
                 return true;
             case R.id.clear:
                 ((TextView)findViewById(R.id.output_terminal)).setText("");
@@ -640,7 +650,8 @@ public class YuniClient extends Activity
             lock.release();
             lock = null;
         }
-        curFolder = new File("/mnt/sdcard/hex/");
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        curFolder = new File(sp.getString("hex_folder", getString(R.string.hex_folder_def)));
         fileSelect = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
                 dialog.dismiss();
@@ -712,7 +723,8 @@ public class YuniClient extends Activity
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
-                    curFolder = new File("/mnt/sdcard/hex/");
+                    SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+                    curFolder = new File(sp.getString("hex_folder", getString(R.string.hex_folder_def)));
                     FilenameFilter filter = new HexFilter();
                     final CharSequence[] items = curFolder.list(filter);
                                         
@@ -1129,7 +1141,8 @@ public class YuniClient extends Activity
             }
        
             dialog.dismiss();
-            File folder = new File("/mnt/sdcard/YuniData/");
+            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+            File folder = new File(sp.getString("log_folder", getString(R.string.log_folder_def)));
             if(!folder.exists())
                 folder.mkdirs();
             try {

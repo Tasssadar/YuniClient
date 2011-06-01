@@ -6,4 +6,6 @@
     <string name="A">A</string>
     <string name="S">S</string>
     <string name="D">D</string>
+    <string name="hex_folder_def">/mnt/sdcard/hex/</string>
+    <string name="log_folder_def">/mnt/sdcard/YuniData/</string>
 </resources>
