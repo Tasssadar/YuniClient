@@ -20,14 +20,9 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.view.Display;
@@ -84,7 +79,7 @@ public class YuniClient extends Activity
         context = this;
         eeprom_part = 1;
         eeprom_write_part = 1;
-        api = new controlAPI();
+        controlAPI.InitInstance();
         terminal = new Terminal();
         
         setContentView(R.layout.device_list);
@@ -167,9 +162,7 @@ public class YuniClient extends Activity
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {
-              if((state & STATE_ACCELEROMETER) != 0)
-                  StopAccelerometer();
-              else if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0 || (state & STATE_TERMINAL) != 0)
+              if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0)
               {
                   if((state & STATE_BALL) != 0)
                       this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
@@ -257,7 +250,7 @@ public class YuniClient extends Activity
                        byte[] out = new byte[text.getText().length()];
                        for(short i = 0; i < text.getText().length(); ++i)
                            out[i] = (byte) text.getText().charAt(i);
-                       connection.write(out.clone());
+                       Connection.GetInst().write(out.clone());
                        Toast.makeText(context, "Text \"" + text.getText().toString() + "\" sent",
                                Toast.LENGTH_SHORT).show();
                    }
@@ -283,7 +276,7 @@ public class YuniClient extends Activity
                        try
                        {
                            byte[] out = { Integer.valueOf(text.getText().toString()).byteValue() };
-                           connection.write(out.clone());
+                           Connection.GetInst().write(out.clone());
                            Toast.makeText(context, "Byte number \"" + text.getText().toString() + "\" sent",
                                    Toast.LENGTH_SHORT).show();
                        }
@@ -356,13 +349,12 @@ public class YuniClient extends Activity
         log = null;
         if(lock != null)
             lock.release();
-        accelerometerListener = null;
-        api.SetDefXY(0, 0);
-        mSensorManager = null;
+
+        controlAPI.GetInst().SetDefXY(0, 0);
         joystick = null;
-        if(connection != null)
-            connection.cancel();
-        connection = null;
+        if(Connection.GetInst() != null)
+            Connection.GetInst().cancel();
+        Connection.Destroy();
         if(resetUI)
         {
             setContentView(R.layout.device_list);
@@ -389,9 +381,9 @@ public class YuniClient extends Activity
             {
                 public void onCancel(DialogInterface dia)
                 {
-                    if(connection != null)
-                        connection.cancel();
-                    connection = null;
+                    if(Connection.GetInst() != null)
+                        Connection.GetInst().cancel();
+                    Connection.Destroy();
                     EnableConnect(true);
                 }
             });
@@ -399,7 +391,7 @@ public class YuniClient extends Activity
         }
         else
         {
-            connection = null;
+            Connection.Destroy();
             dialog.dismiss();
         }
         Button button = (Button) findViewById(R.id.button_scan);
@@ -440,7 +432,7 @@ public class YuniClient extends Activity
     
     private void Connect(View v)
     {
-        if(connection != null)
+        if(Connection.GetInst() != null)
             return;
         
         EnableConnect(false);
@@ -460,7 +452,7 @@ public class YuniClient extends Activity
         setResult(Activity.RESULT_OK, intent);
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if(device != null)
-            connection = new Connection(connectionHandler, device);
+            Connection.InitInstance(connectionHandler, device);
         
     }
 
@@ -556,7 +548,7 @@ public class YuniClient extends Activity
                  boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
                  if(((Button)v).getId() == R.id.LeftForw_b)
                  {
-                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                    if(controlAPI.GetInst().GetAPIType() == controlAPI.API_PACKETS)
                         SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
                     else
                     {
@@ -566,7 +558,7 @@ public class YuniClient extends Activity
                  }
                  else if(((Button)v).getId() == R.id.RightForw_b)
                  {
-                    if(api.GetAPIType() == controlAPI.API_PACKETS)
+                    if(controlAPI.GetInst().GetAPIType() == controlAPI.API_PACKETS)
                         SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
                     else
                     {
@@ -582,9 +574,9 @@ public class YuniClient extends Activity
                      SendMovementKey(controlAPI.MOVE_LEFT, down);
                  else if(((Button)v).getId() == R.id.Right_b)
                      SendMovementKey(controlAPI.MOVE_RIGHT, down);
-                 else if(((Button)v).getId() == R.id.Space_b && api.GetAPIType() != controlAPI.API_PACKETS)
+                 else if(((Button)v).getId() == R.id.Space_b && controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
                         ButtonTouched(" ", down);
-                 else if(api.GetAPIType() != controlAPI.API_PACKETS)
+                 else if(controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
                      ButtonTouched(((Button)v).getText(), down);
                 }
                 return false;
@@ -601,7 +593,7 @@ public class YuniClient extends Activity
             out[1] = (byte)'d';
         else
             out[1] = (byte)'u';
-        connection.write(out);
+        Connection.GetInst().write(out);
     }
     
     private void ChangeDevicesPart(boolean animation, boolean right)
@@ -631,9 +623,9 @@ public class YuniClient extends Activity
 
     private void SendMovementKey(byte button, boolean down)
     {
-        byte[] out = api.BuildMovementPacket(button, down, (byte) 0);
+        byte[] out = controlAPI.GetInst().BuildMovementPacket(button, down, (byte) 0);
         if(out != null)
-            connection.write(out);     
+            Connection.GetInst().write(out);     
     }
     
     private void InitMain()
@@ -708,9 +700,9 @@ public class YuniClient extends Activity
                 if(hex.exists() && hex.canRead())
                 {
                     error.setText("Hex file exists\n");
-                    connection.setHexFile(hex);
+                    Connection.GetInst().setHexFile(hex);
                     final byte[] out = { 0x12 };
-                    connection.write(out.clone());
+                    Connection.GetInst().write(out.clone());
                     state |= STATE_WAITING_ID;
                     error.append("Waiting for ID and preparing hex file...");
                 }
@@ -735,6 +727,12 @@ public class YuniClient extends Activity
              }
         });
         
+        button = (Button) findViewById(R.id.accelerometer_b);
+        button.setOnClickListener(new View.OnClickListener() {
+             public void onClick(View v) {
+                 startActivity(new Intent(context, Accelerometer.class));
+             }
+        });
     }
         
     private void StartStop(Button v, boolean start)
@@ -752,7 +750,7 @@ public class YuniClient extends Activity
         {
             out = new byte[4];
             out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
-            connection.write(out.clone());
+            Connection.GetInst().write(out.clone());
             try {
                 Thread.sleep(300);
             } catch (InterruptedException e) {
@@ -772,7 +770,7 @@ public class YuniClient extends Activity
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
-        connection.write(out.clone());
+        Connection.GetInst().write(out.clone());
     }
     
     private void InitControls()
@@ -813,13 +811,6 @@ public class YuniClient extends Activity
         button = (Button) findViewById(R.id.Regulator_b);
         button.setOnTouchListener(keyTouch);
         
-        button = (Button) findViewById(R.id.Sensors_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
-                 InitAccelerometer();
-             }
-          });
-
         button = (Button) findViewById(R.id.Clear_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
@@ -873,9 +864,9 @@ public class YuniClient extends Activity
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose control API");
-        builder.setSingleChoiceItems(items, api.GetAPIType(), new DialogInterface.OnClickListener() {
+        builder.setSingleChoiceItems(items, controlAPI.GetInst().GetAPIType(), new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
-                api.SetAPIType((byte) item);
+                controlAPI.GetInst().SetAPIType((byte) item);
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 
@@ -900,7 +891,7 @@ public class YuniClient extends Activity
                            {
                                Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                            }
-                           api.SetQuarraSpeed(speed);
+                           controlAPI.GetInst().SetQuarraSpeed(speed);
                        }
                     });
                     alertDialog = builder.create();
@@ -911,147 +902,15 @@ public class YuniClient extends Activity
         AlertDialog alert = builder.create();
         alert.show();
     }
-
-    private void InitAccelerometer()
-    {
-        // lock orientation
-        switch (this.getResources().getConfiguration().orientation)
-        {
-            case Configuration.ORIENTATION_PORTRAIT:
-                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-                break;
-            case Configuration.ORIENTATION_LANDSCAPE:
-                this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                break;
-        }
-        
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Accelerometer control");
-        builder.setMessage("Controlling device via accelerometer. Press back or dismiss to stop.");
-        builder.setCancelable(true);
-        builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int id) {
-                StopAccelerometer();
-                dialog.dismiss();
-            }
-        });
-        builder.setOnCancelListener(new Dialog.OnCancelListener()
-        {
-            public void onCancel(DialogInterface dia)
-            {
-                StopAccelerometer();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-        state |= STATE_ACCELEROMETER;
-         // Get an instance of the SensorManager
-        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
-        accelerometerListener = new AccelerometerListener();
-        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
-        
-        lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
-            .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
-        lock.acquire();
-        mMovementFlags = 0;
-        mSpeed = 0;
-    }
-
-    private void StopAccelerometer()
-    {
-        if(lock != null)
-            lock.release();
-        lock = null;
-        byte[] data = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
-        if(data != null)
-            connection.write(data);
-        
-        mSensorManager.unregisterListener(accelerometerListener);
-        accelerometerListener = null;
-        api.SetDefXY(0, 0);
-        state &= ~(STATE_ACCELEROMETER);
-        mSensorManager = null;
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-    }
-    
-    private class AccelerometerListener implements SensorEventListener
-    {    
-        public AccelerometerListener()
-        {
-        }
-
-        public void onAccuracyChanged(Sensor arg0, int arg1) {
-            // TODO Auto-generated method stub
-            
-        }
-
-        public void onSensorChanged(SensorEvent event)
-        {
-            // TODO Auto-generated method stub
-            if((state & STATE_ACCELEROMETER) == 0)
-            {
-                ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
-                return;
-            }
-            if (event.sensor.getType() != Sensor.TYPE_ORIENTATION)
-                return;
-            
-            
-            if(api.GetDefX() == 0 && api.GetDefX() == 0)
-            {
-                api.SetDefXY(event.values[1], event.values[2]);
-                return;
-            }
-            byte[] moveFlags = api.XYToMoveFlags(event.values[1], event.values[2]);
-
-            if(moveFlags == null || (mMovementFlags == moveFlags[0] && mSpeed == moveFlags[1]))
-                return;
-            
-            mSpeed = moveFlags[1];
-            if(controlAPI.HasSeparatedSpeed(api.GetAPIType()))
-            {
-                byte[] speedData = null;
-                if(api.GetAPIType() == controlAPI.API_KEYBOARD)
-                    speedData = new byte[1];
-                else
-                {
-                    speedData = new byte[2];
-                    speedData[1] = (byte)'d';
-                }
-                if(mSpeed == 50)
-                    speedData[0] = (byte)'a';
-                else if(mSpeed == 100)
-                    speedData[0] = (byte)'b';
-                else 
-                    speedData[0] = (byte)'c';
-                connection.write(speedData.clone());
-                if(api.GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
-                {
-                    speedData = api.BuildMovementPacket(mMovementFlags, false, mSpeed);
-                    if(speedData != null)
-                        connection.write(speedData.clone());
-                }
-            }
-            
-            mMovementFlags = moveFlags[0];
-            if(moveFlags[0] != 0 || controlAPI.HasPacketStructure(api.GetAPIType()))
-            {
-                byte[] data = api.BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
-                if(data != null)
-                    connection.write(data.clone());
-            }
-        }
-    }
     
     private void InitBall()
     {
         joystick = new Joystick();
         setContentView(joystick.new MTView(this));
         state |= STATE_BALL;
-        if(!controlAPI.HasPacketStructure(api.GetAPIType()))
+        if(!controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
         {
-            api.SetAPIType(controlAPI.API_PACKETS);
+            controlAPI.GetInst().SetAPIType(controlAPI.API_PACKETS);
             Toast.makeText(context, "Packets has been chosen as control API.", Toast.LENGTH_SHORT).show();
         }
         this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -1227,9 +1086,9 @@ public class YuniClient extends Activity
             
             if(flags == null)
                 return;
-            byte[] data = api.BuildMovementPacket(flags[0], true, flags[1]);
+            byte[] data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
             if(data != null)
-                connection.write(data.clone());
+                Connection.GetInst().write(data.clone());
         }
     };
     
@@ -1328,10 +1187,10 @@ public class YuniClient extends Activity
                             }
                             return;
                         }
-                    }
+                    } // switch(msg.arg1)
                     return;
                 }
-            }
+            } // switch(msg.what)
         }
     };
     
@@ -1339,13 +1198,9 @@ public class YuniClient extends Activity
     
     private Joystick joystick;
     private Terminal terminal;
-    private controlAPI api;
     private LogFile log;
-    private Connection connection;
-    
-    private AccelerometerListener accelerometerListener;
+
     private WakeLock lock;
-    private SensorManager mSensorManager;
     private View connectView;
     private BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<String> mArrayAdapter;
@@ -1364,8 +1219,6 @@ public class YuniClient extends Activity
     private int[] EEPROMTouchLastX;
     private int[] EEPROMTouchLastY;
     private byte EEPROMTouchItr;
-    private byte mMovementFlags;
-    private byte mSpeed;
     public byte eeprom_part;
     public byte eeprom_write_part;
 

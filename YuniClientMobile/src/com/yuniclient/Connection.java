@@ -27,12 +27,28 @@ class Connection
     public static final int CONNECTION_FAILED = 1;
     public static final int CONNECTION_LOST = 2;
     
-    public Connection(Handler handler, BluetoothDevice device)
+    private Connection(Handler handler, BluetoothDevice device)
     {
         mHandler = handler;
         mChatService = new BluetoothChatService(mBThandler);
         mChatService.start();
         mChatService.connect(device);
+    }
+    
+    public static Connection InitInstance(Handler handler, BluetoothDevice device)
+    {
+        instance = new Connection(handler, device);
+        return instance;
+    }
+    
+    public static Connection GetInst()
+    {
+        return instance;
+    }
+    
+    public static void Destroy()
+    {
+        instance = null;
     }
     
     public void cancel()
@@ -190,6 +206,8 @@ class Connection
         mem = null;
     }
 
+    public static Connection instance;
+    
     private Handler mHandler;
     private BluetoothChatService mChatService;
     private memory mem;
