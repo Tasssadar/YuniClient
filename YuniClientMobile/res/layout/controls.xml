@@ -64,14 +64,9 @@
         android:id="@+id/linear3" 
         android:layout_below="@id/linear2"
         android:layout_width="fill_parent">      
-          <Button android:id="@+id/Sensors_b"
-                android:layout_width="108dp"
-                android:layout_height="40dp"
-                android:text="Accelerometer" android:layout_weight="1"/> 
           <Button android:id="@+id/Regulator_b"
                 android:layout_width="108dp"
                 android:layout_height="40dp"
-                android:layout_toRightOf="@id/Sensors_b"
                 android:text="Q" android:layout_weight="1"/>
           <Button android:id="@+id/Clear_b"
                 android:layout_width="108dp"

@@ -14,11 +14,27 @@ public class controlAPI
     public static final byte MOVE_BACKWARD = 0x02; 
     public static final byte MOVE_LEFT     = 0x04; 
     public static final byte MOVE_RIGHT    = 0x08; 
-        
-    public controlAPI()
+    
+    private controlAPI()
     {
         apiType = API_YUNIRC;
         quorraSpeed = 300; // base calculation speed of quorra
+    }
+    
+    public static controlAPI InitInstance()
+    {
+        instance = new controlAPI();
+        return instance;
+    }
+    
+    public static controlAPI GetInst()
+    {
+        return instance;
+    }
+    
+    public static void Destroy()
+    {
+        instance = null;
     }
     
     public void SetAPIType(byte type) {    apiType = type; }
@@ -231,5 +247,6 @@ public class controlAPI
 
     private byte apiType;
     private int quorraSpeed;
-        
+    
+    private static controlAPI instance;
 };

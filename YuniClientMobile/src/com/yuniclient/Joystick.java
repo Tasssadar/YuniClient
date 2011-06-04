@@ -72,7 +72,7 @@ class Joystick
                 }
             }
             if(!mFingerDown)
-            	mFingerDown = true;
+                mFingerDown = true;
             
             if(flags[0] == mMovementFlags && flags[1] == mSpeed)
                 return null;

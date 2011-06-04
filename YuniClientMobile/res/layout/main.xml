@@ -32,11 +32,17 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@id/Disconnect_b"
                 android:text="BallUI" android:layout_weight="1"/> 
-         <Button android:id="@+id/Controls_b"
+         <Button android:id="@+id/accelerometer_b"
                 android:layout_width="105dp"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/Disconnect_b"
                 android:layout_toRightOf="@id/ball_b"
+                android:text="Tilt" android:layout_weight="1"/> 
+         <Button android:id="@+id/Controls_b"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/Disconnect_b"
+                android:layout_toRightOf="@id/accelerometer_b"
                 android:text="Controls" android:layout_weight="1"/> 
      </LinearLayout>
      <EditText android:id="@+id/hex_file" 
