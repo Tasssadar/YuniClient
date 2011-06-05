@@ -767,6 +767,9 @@ public class YuniClient extends Activity
         v = (Button) findViewById(R.id.ball_b);
         v.setEnabled(start);
         v.setClickable(start);
+        v = (Button) findViewById(R.id.accelerometer_b);
+        v.setEnabled(start);
+        v.setClickable(start);
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
