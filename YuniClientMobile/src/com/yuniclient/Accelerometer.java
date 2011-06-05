@@ -61,7 +61,10 @@ public class Accelerometer extends Activity
         lock.release();
         lock = null;
         accelerometerListener = null;
-        byte[] data = controlAPI.GetInst().BuildMovementPacket((byte)0, false, (byte)0);
+        if(controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
+            mMovementFlags = controlAPI.MOVE_NONE;
+        byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, (byte)0);
+        
         if(data != null)
             Connection.GetInst().write(data);
         controlAPI.GetInst().SetDefXY(0, 0);
@@ -135,11 +138,12 @@ public class Accelerometer extends Activity
             if (event.sensor.getType() != Sensor.TYPE_ORIENTATION)
                 return;
             
-            if(controlAPI.GetInst().GetDefX() == 0 && controlAPI.GetInst().GetDefX() == 0)
+            if(controlAPI.GetInst().GetDefX() == 0 && controlAPI.GetInst().GetDefY() == 0)
             {
                 controlAPI.GetInst().SetDefXY(event.values[1], event.values[2]);
                 return;
             }
+            
             byte[] moveFlags = controlAPI.GetInst().XYToMoveFlags(event.values[1], event.values[2]);
 
             if(moveFlags == null || (mMovementFlags == moveFlags[0] && mSpeed == moveFlags[1]))
@@ -172,7 +176,7 @@ public class Accelerometer extends Activity
             }
             
             mMovementFlags = moveFlags[0];
-            if(moveFlags[0] != 0 || controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
+            if(moveFlags[0] != controlAPI.MOVE_NONE || controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
             {
                 byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
                 if(data != null)
@@ -181,6 +185,8 @@ public class Accelerometer extends Activity
                     view.drawArrows();
                 }
             }
+            else if(moveFlags[0] == controlAPI.MOVE_NONE)
+                view.drawArrows();
         }
     }
     
