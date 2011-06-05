@@ -10,7 +10,6 @@
          <Button android:id="@+id/Disconnect_b"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10px"
-                android:layout_marginLeft="2px"
                 android:text="Disconnect" android:layout_width="105dp" android:layout_weight="1"/> 
          <Button android:id="@+id/Start_b"
                 android:layout_height="wrap_content"

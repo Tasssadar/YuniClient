@@ -61,7 +61,7 @@ public class Accelerometer extends Activity
         lock.release();
         lock = null;
         accelerometerListener = null;
-        if(controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
+        if(!controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
             mMovementFlags = controlAPI.MOVE_NONE;
         byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, (byte)0);
         
