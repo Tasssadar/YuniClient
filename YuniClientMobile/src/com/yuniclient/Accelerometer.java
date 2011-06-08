@@ -195,6 +195,8 @@ public class Accelerometer extends Activity
     
     public class AccelerometerView extends SurfaceView implements SurfaceHolder.Callback
     {
+        private static final float FONT_SIZE_PER_PX = (float)0.053125;
+        
         private Paint mLine = new Paint(Paint.ANTI_ALIAS_FLAG);
         private Paint mSpeedFrame = new Paint(Paint.ANTI_ALIAS_FLAG);
         private Paint mSpeedPnt = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -204,6 +206,8 @@ public class Accelerometer extends Activity
         private Bitmap arrow_left = null;
         private Bitmap arrow_right = null;
         
+        private float textSize;
+        private float position[];
         private float height;
         private float width;
 
@@ -215,7 +219,7 @@ public class Accelerometer extends Activity
             setFocusable(true); // make sure we get key events
             setFocusableInTouchMode(true); // make sure we get touch events
             mLine.setColor(0xFFFF0000);
-            mLine.setTextSize(17);
+            
             mLine.setTextAlign(Paint.Align.CENTER);   
             
             mSpeedFrame.setStyle(Style.STROKE);
@@ -223,7 +227,6 @@ public class Accelerometer extends Activity
             mSpeedFrame.setColor(0xFFFF0000);
             
             mSpeedPnt.setStyle(Style.STROKE);
-            mSpeedPnt.setStrokeWidth(35);
             mSpeedPnt.setColor(0xFFFFFF00);
             
             arrow_up = BitmapFactory.decodeResource(getResources(), R.drawable.up);
@@ -243,22 +246,44 @@ public class Accelerometer extends Activity
             this.width = width/2;
             this.height = height/2;            
             this.holder = holder;
-
+            
+            textSize = FONT_SIZE_PER_PX*width;
+            position = new float[14];
+            // speed bar
+            position[0] = this.width - (width - arrow_up.getWidth())/2; // left 
+            position[1] = this.width + (width - arrow_up.getWidth())/2; // right
+            position[2] = this.height + textSize; // top
+            position[3] = this.height + textSize*2 + 10; // bottom
+            position[4] = position[0] + (width - arrow_up.getWidth())/3; // first third
+            position[5] = position[0] + ((width - arrow_up.getWidth())/3)*2; // second third
+            position[9] = (position[2] + position[3])/2; // yellow speed bar
+            // text
+            position[6] = this.height-textSize/2; // first line
+            position[7] = this.height+textSize/2; // second line
+            position[8] = this.height+textSize*2; // Speed
+            // arrows
+            position[10] = ((this.width*2)-arrow_up.getWidth())/2; // up/down center
+            position[11] = (this.height*2)-arrow_down.getHeight(); // down bottom pos
+            position[12] = ((this.height*2)-arrow_left.getHeight())/2; // left/right center
+            position[13] = (this.width*2)-arrow_right.getWidth(); // right pos
+            
+            mLine.setTextSize(textSize);
+            mSpeedPnt.setStrokeWidth(position[3] - position[2] - 2);
             drawArrows();
         }
         
         private void drawBase(Canvas c)
         {
             c.drawColor(Color.BLACK);
-            c.drawText("Hold your phone in landscape mode.", width, height-12, mLine);
-            c.drawText("Press back to exit.", width, height+12, mLine);
-            c.drawText("Speed", width, height+50, mLine);
+            c.drawText("Hold your phone in landscape mode.", width, position[6], mLine);
+            c.drawText("Press back to exit.", width, position[7], mLine);
+            c.drawText("Speed", width, position[8], mLine);
             
-            c.drawLine(width-130, height+25, width+130, height+25, mSpeedFrame);
-            c.drawLine(width-130, height+60, width+130, height+60, mSpeedFrame);
+            c.drawLine(position[0], position[2], position[1], position[2], mSpeedFrame);
+            c.drawLine(position[0], position[3], position[1], position[3], mSpeedFrame);
             
-            c.drawLine(width-130, height+25, width-130, height+60, mSpeedFrame);
-            c.drawLine(width+130, height+25, width+130, height+60, mSpeedFrame);
+            c.drawLine(position[0], position[2], position[0], position[3], mSpeedFrame);
+            c.drawLine(position[1], position[2], position[1], position[3], mSpeedFrame);
         }
         
         public void drawArrows()
@@ -275,28 +300,28 @@ public class Accelerometer extends Activity
                     holder.unlockCanvasAndPost(c);
                     return;
                 case controlAPI.MOVE_FORWARD:
-                    c.drawBitmap(arrow_up, ((width*2)-arrow_up.getWidth())/2, 0, null);
+                    c.drawBitmap(arrow_up, position[10], 0, null);
                     break;
                 case controlAPI.MOVE_BACKWARD:
-                    c.drawBitmap(arrow_down, ((width*2)-arrow_down.getWidth())/2, (height*2)-arrow_down.getHeight(), null);
+                    c.drawBitmap(arrow_down, position[10], position[11], null);
                     break;
                 case controlAPI.MOVE_LEFT:
-                    c.drawBitmap(arrow_left, 0, ((height*2)-arrow_left.getHeight())/2, null);
+                    c.drawBitmap(arrow_left, 0, position[12], null);
                     break;
                 case controlAPI.MOVE_RIGHT:
-                    c.drawBitmap(arrow_right, (width*2)-arrow_right.getWidth(), ((height*2)-arrow_right.getHeight())/2, null);
+                    c.drawBitmap(arrow_right, position[13], position[12], null);
                     break;
                 default:
                 {
                     if((mMovementFlags & controlAPI.MOVE_FORWARD) != 0)
-                        c.drawBitmap(arrow_up, ((width*2)-arrow_up.getWidth())/2, 0, null);
+                        c.drawBitmap(arrow_up, position[10], 0, null);
                     else
-                        c.drawBitmap(arrow_down, ((width*2)-arrow_down.getWidth())/2, (height*2)-arrow_down.getHeight(), null);
+                        c.drawBitmap(arrow_down, position[10], position[11], null);
                     
                     if((mMovementFlags & controlAPI.MOVE_LEFT) != 0)
-                        c.drawBitmap(arrow_left, 0, ((height*2)-arrow_left.getHeight())/2, null);
+                        c.drawBitmap(arrow_left, 0, position[12], null);
                     else
-                        c.drawBitmap(arrow_right, (width*2)-arrow_right.getWidth(), ((height*2)-arrow_right.getHeight())/2, null);
+                        c.drawBitmap(arrow_right, position[13], position[12], null);
                     break;
                 }
             }
@@ -306,13 +331,13 @@ public class Accelerometer extends Activity
                 default:
                     break;
                 case 50:
-                    c.drawLine(width-130, height+43, width-34, height+43, mSpeedPnt);
+                    c.drawLine(position[0], position[9], position[4], position[9], mSpeedPnt);
                     break;
                 case 100:
-                    c.drawLine(width-130, height+43, width+52, height+43, mSpeedPnt);
+                    c.drawLine(position[0], position[9], position[5], position[9], mSpeedPnt);
                     break;
                 case 127:
-                    c.drawLine(width-130, height+43, width+130, height+43, mSpeedPnt);
+                    c.drawLine(position[0], position[9], position[1], position[9], mSpeedPnt);
                     break;
             }
             holder.unlockCanvasAndPost(c);
