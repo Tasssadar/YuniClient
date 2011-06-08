@@ -60,6 +60,8 @@ public class YuniClient extends Activity
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
     public static final String EXTRA_DEVICE_ADDRESS = "device_address";
+    
+    private static final byte ACCELEROMETER_REQ_CODE = 1;
 
     public static final byte STATE_CONNECTED        = 0x01;
     public static final byte STATE_CONTROLS         = 0x02;
@@ -336,6 +338,8 @@ public class YuniClient extends Activity
     
     private void Disconnect(boolean resetUI)
     {
+        // finish possible accelerometer activity, it would crash because of access to connection
+        finishActivity(ACCELEROMETER_REQ_CODE);
         state = 0;
         curFolder = null;
         curFolder = null;
@@ -730,7 +734,7 @@ public class YuniClient extends Activity
         button = (Button) findViewById(R.id.accelerometer_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                 startActivity(new Intent(context, Accelerometer.class));
+                 startActivityForResult(new Intent(context, Accelerometer.class), ACCELEROMETER_REQ_CODE);
              }
         });
     }
