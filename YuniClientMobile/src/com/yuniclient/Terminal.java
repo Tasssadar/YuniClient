@@ -64,7 +64,7 @@ class Terminal
     {
         currentParser = parser;
         if(terminalText != null)
-            parsedText = Parse(terminalText);
+            parsedText = Terminal.Parse(terminalText);
     }
     
     public static String Parse(String text)
@@ -129,7 +129,7 @@ class Terminal
     public void SetText(String text)
     {
         terminalText = text;
-        parsedText = Parse(terminalText);
+        parsedText = Terminal.Parse(terminalText);
     }
     public void Append(String text)
     {
@@ -141,7 +141,7 @@ class Terminal
             parsedText = "";
         }
         terminalText += text;
-        parsedText += Parse(text);
+        parsedText += Terminal.Parse(text);
     }
     
     public void toFile(String name, Handler handler) throws IOException

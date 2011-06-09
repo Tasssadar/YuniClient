@@ -441,23 +441,8 @@ public class YuniClient extends Activity
         
         EnableConnect(false);
         
-        // Cancel discovery because it's costly and we're about to connect
-        mBluetoothAdapter.cancelDiscovery();
-        
-        // Get the device MAC address, which is the last 17 chars in the View
-        String info = ((TextView) v).getText().toString();
-        String address = info.substring(info.length() - 17);
-
-        // Create the result Intent and include the MAC address
-        Intent intent = new Intent();
-        intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
-
-        // Set result and finish this Activity
-        setResult(Activity.RESULT_OK, intent);
-        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-        if(device != null)
-            Connection.InitInstance(connectionHandler, device);
-        
+        ConnectThread thread = new ConnectThread(v);
+        thread.run();
     }
 
     private void ShowAlert(CharSequence text)
@@ -579,16 +564,16 @@ public class YuniClient extends Activity
                  else if(((Button)v).getId() == R.id.Right_b)
                      SendMovementKey(controlAPI.MOVE_RIGHT, down);
                  else if(((Button)v).getId() == R.id.Space_b && controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
-                        ButtonTouched(" ", down);
+                        YuniClient.ButtonTouched(" ", down);
                  else if(controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
-                     ButtonTouched(((Button)v).getText(), down);
+                     YuniClient.ButtonTouched(((Button)v).getText(), down);
                 }
                 return false;
          }
         };
     }
     
-    private void ButtonTouched(CharSequence button, boolean down)
+    private static void ButtonTouched(CharSequence button, boolean down)
     {
         byte[] out = new byte[2];
         out[0] = (byte)button.charAt(0);
@@ -625,7 +610,7 @@ public class YuniClient extends Activity
         }
     }
 
-    private void SendMovementKey(byte button, boolean down)
+    private static void SendMovementKey(byte button, boolean down)
     {
         byte[] out = controlAPI.GetInst().BuildMovementPacket(button, down, (byte) 0);
         if(out != null)
@@ -1200,6 +1185,27 @@ public class YuniClient extends Activity
             } // switch(msg.what)
         }
     };
+    
+    private class ConnectThread extends Thread
+    {
+        private View view;
+        
+        public ConnectThread(View targetView)
+        {
+            view = targetView;
+        }
+        
+        public void run()
+        {           
+            // Get the device MAC address, which is the last 17 chars in the View
+            String info = ((TextView) view).getText().toString();
+            String address = info.substring(info.length() - 17);
+
+            BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+            if(device != null)
+                Connection.InitInstance(connectionHandler, device);
+        }
+    }
     
     public static int getState() { return state; }
     
