@@ -441,8 +441,13 @@ public class YuniClient extends Activity
         
         EnableConnect(false);
         
-        ConnectThread thread = new ConnectThread(v);
-        thread.run();
+        // Get the device MAC address, which is the last 17 chars in the View
+        String info = ((TextView) v).getText().toString();
+        String address = info.substring(info.length() - 17);
+
+        BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
+        if(device != null)
+            Connection.InitInstance(connectionHandler, device);
     }
 
     private void ShowAlert(CharSequence text)
@@ -460,6 +465,7 @@ public class YuniClient extends Activity
         AlertDialog alert = builder2.create();
         alert.show();
     }
+
     // INITS
     public void init()
     {
@@ -619,6 +625,8 @@ public class YuniClient extends Activity
     
     private void InitMain()
     {
+        if(autoScrollThread != null)
+            autoScrollThread.cancel();
         autoScrollThread = null;
         joystick = null;
         state &= ~(STATE_CONTROLS);
@@ -812,33 +820,10 @@ public class YuniClient extends Activity
              }
            });
         
-        if(autoScrollThread != null && autoScrollThread.isAlive())
-            return;
-        autoScrollThread = new Thread (new Runnable()
-        {
-            public void run()
-            {
-                TextView out = (TextView) findViewById(R.id.output);
-                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollView01);
-                while(true)
-                {
-                    if((state & STATE_CONTROLS) == 0)
-                        break;
-
-                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
-                    {
-                        scrollHandler.sendEmptyMessage(0);
-                        state &= ~(STATE_SCROLL);
-                    }
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+        
+        if(autoScrollThread != null)
+            autoScrollThread.cancel();
+        autoScrollThread = new ScrollThread((TextView) findViewById(R.id.output), (ScrollView) findViewById(R.id.ScrollView01));
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
         
@@ -913,31 +898,7 @@ public class YuniClient extends Activity
         state |= STATE_TERMINAL;
         setContentView(R.layout.terminal);
         
-        autoScrollThread = new Thread (new Runnable()
-        {
-            public void run()
-            {
-                TextView out = (TextView) findViewById(R.id.output_terminal);
-                ScrollView scroll = (ScrollView) findViewById(R.id.ScrollViewTerminal);
-                while(true)
-                {
-                    if((state & STATE_TERMINAL) == 0)
-                        break;
-
-                    if((state & STATE_SCROLL) != 0 && scroll.getScrollY() != out.getHeight())
-                    {
-                        scrollHandler.sendEmptyMessage(0);
-                        state &= ~(STATE_SCROLL);
-                    }
-                    try {
-                        Thread.sleep(300);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
+        autoScrollThread = new ScrollThread((TextView) findViewById(R.id.output_terminal), (ScrollView) findViewById(R.id.ScrollViewTerminal));
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
         
@@ -1052,18 +1013,6 @@ public class YuniClient extends Activity
                 AlertDialog alert = builder.create();
                 alert.show();
             }
-        }
-    };
-    
-    private final Handler scrollHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg)
-        {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            final ScrollView scroll = (ScrollView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.ScrollView01 : R.id.ScrollViewTerminal);
-            if(scroll == null || out == null)
-                return;
-            scroll.scrollTo(0, out.getHeight());
         }
     };
 
@@ -1186,24 +1135,47 @@ public class YuniClient extends Activity
         }
     };
     
-    private class ConnectThread extends Thread
+    private class ScrollThread extends Thread
     {
-        private View view;
+        private TextView out;
+        private ScrollView scroll;
+        private boolean run;
         
-        public ConnectThread(View targetView)
+        public ScrollThread(TextView outView, ScrollView scrollView)
         {
-            view = targetView;
+            out = outView;
+            scroll = scrollView;
+            run = true;
         }
         
         public void run()
-        {           
-            // Get the device MAC address, which is the last 17 chars in the View
-            String info = ((TextView) view).getText().toString();
-            String address = info.substring(info.length() - 17);
-
-            BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
-            if(device != null)
-                Connection.InitInstance(connectionHandler, device);
+        {
+            setName("AutoScrollThread");
+            while(run)
+            {
+                if((state & STATE_SCROLL) != 0 && scroll != null && out != null && scroll.getScrollY() != out.getHeight())
+                {
+                    out.post(new Runnable() {
+                        public void run()
+                        {
+                            if(scroll != null && out != null)
+                                scroll.scrollTo(0, out.getHeight());
+                        }
+                      });
+                    state &= ~(STATE_SCROLL);
+                }
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        public void cancel()
+        {
+            run = false;
         }
     }
     
@@ -1224,7 +1196,7 @@ public class YuniClient extends Activity
     private ProgressDialog dialog;
     private File curFolder; 
     private Context context;
-    private Thread autoScrollThread;
+    private ScrollThread autoScrollThread;
     
     private static int state;
     
