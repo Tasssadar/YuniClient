@@ -80,17 +80,17 @@ class Terminal
             case PARSER_HEX:
             {
                 res = "";
-                int lenght = text.length();
-                for(int i = 0; i < lenght; ++i)
-                    res += "0x" + Integer.toHexString(((byte)text.charAt(i)) & 0xFF).toUpperCase() + " ";
+                char[] array = text.toCharArray();
+                for(char i : array)
+                    res += "0x" + Integer.toHexString(((byte)i) & 0xFF).toUpperCase() + " ";
                 break;
             }
             case PARSER_BYTE:
             {
                 res = "";
-                int lenght = text.length();
-                for(int i = 0; i < lenght; ++i)
-                    res += String.valueOf(((byte)text.charAt(i)) & 0xFF) + " ";
+                char[] array = text.toCharArray();
+                for(char i : array)
+                    res += String.valueOf(((byte)i) & 0xFF) + " ";
                 break;
             }
             case PARSER_PACKETS:
