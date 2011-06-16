@@ -36,17 +36,20 @@ class Joystick
         }
         else
         {
-            float dta[] = calculateFloats(x, y, width, height);
+            float dx = x - width;
+            float dy = y - height;
+            float dist = (float) (Math.sqrt((dx*dx) + (dy*dy))/(((float)width)/100.0));
+
+            float ang = (float) Math.atan2(dy, dx);
+            ang = (float) ((ang >= 0) ? ang : 2 * PI + ang);
 
             byte speed = 127;
-            if(dta[0] < 33)
+            if(dist < 33)
                 speed = 50;
-            else if(dta[0] < 66)
+            else if(dist < 66)
                 speed = 100;
             
             byte[] flags = {0, speed };
-            
-            float ang = dta[1];
             
             if(ang > 5.18362 || ang <  1.09956) // 0.7 PI range
                 flags[0] |= controlAPI.MOVE_FORWARD;
@@ -157,9 +160,7 @@ class Joystick
             c.drawLine(width, height-20, width, height+20, mLine);
         }
     }
-    
-    private native float[] calculateFloats(float x, float y, float width, float height);
-    
+
     private byte mMovementFlags;
     private byte mSpeed;
     private boolean mSpinAtPlace;

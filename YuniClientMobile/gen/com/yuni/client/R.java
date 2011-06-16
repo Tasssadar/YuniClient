@@ -42,7 +42,6 @@ public final class R {
         public static final int Start_b=0x7f07001e;
         public static final int Terminal_b=0x7f07001f;
         public static final int accelerometer_b=0x7f070021;
-        public static final int ball_b=0x7f070020;
         public static final int button_scan=0x7f070019;
         public static final int clear=0x7f070032;
         public static final int data_file_save=0x7f070029;
@@ -50,6 +49,7 @@ public final class R {
         public static final int exit=0x7f07002d;
         public static final int flipper_devices=0x7f070018;
         public static final int hex_file=0x7f070023;
+        public static final int joystick_b=0x7f070020;
         public static final int layout_root=0x7f070028;
         public static final int lineaMovement=0x7f07000d;
         public static final int linear1=0x7f070002;
