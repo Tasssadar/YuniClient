@@ -68,7 +68,7 @@ public class YuniClient extends Activity
     public static final byte STATE_FLASHING         = 0x20;
     public static final byte STATE_SCROLL           = 0x40;
     public static final short STATE_ACCELEROMETER   = 0x80;
-    public static final short STATE_BALL            = 0x100;
+    public static final short STATE_JOYSTICK        = 0x100;
     public static final short STATE_TERMINAL        = 0x200;
 
     @Override
@@ -159,9 +159,9 @@ public class YuniClient extends Activity
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {
-              if((state & STATE_CONTROLS) != 0 || (state & STATE_BALL) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0)
+              if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0)
               {
-                  if((state & STATE_BALL) != 0)
+                  if((state & STATE_JOYSTICK) != 0)
                       this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
                   InitMain();
               }
@@ -175,6 +175,8 @@ public class YuniClient extends Activity
         {
             if((state & STATE_TERMINAL) != 0 || state == 0 || (state & STATE_CONTROLS) != 0)
                 return super.onKeyDown(keyCode, event);
+            else if((state & STATE_JOYSTICK) != 0)
+                ShowAPIDialog();
             else
                 startActivity(new Intent(this, Settings.class));
             return true;
@@ -625,7 +627,7 @@ public class YuniClient extends Activity
         autoScrollThread = null;
         joystick = null;
         state &= ~(STATE_CONTROLS);
-        state &= ~(STATE_BALL);
+        state &= ~(STATE_JOYSTICK);
         state &= ~(STATE_TERMINAL);
 
         context = this;
@@ -656,11 +658,11 @@ public class YuniClient extends Activity
              }
         });
 
-        button = (Button) findViewById(R.id.ball_b);
+        button = (Button) findViewById(R.id.joystick_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
                 if((state & STATE_STOPPED) == 0)
-                    InitBall();
+                    InitJoystick();
              }
         });
         button = (Button) findViewById(R.id.Controls_b);
@@ -756,7 +758,7 @@ public class YuniClient extends Activity
         v = (Button) findViewById(R.id.Controls_b);
         v.setEnabled(start);
         v.setClickable(start);
-        v = (Button) findViewById(R.id.ball_b);
+        v = (Button) findViewById(R.id.joystick_b);
         v.setEnabled(start);
         v.setClickable(start);
         v = (Button) findViewById(R.id.accelerometer_b);
@@ -872,11 +874,11 @@ public class YuniClient extends Activity
         alert.show();
     }
     
-    private void InitBall()
+    private void InitJoystick()
     {
         joystick = new Joystick();
         setContentView(joystick.new MTView(this));
-        state |= STATE_BALL;
+        state |= STATE_JOYSTICK;
         if(!controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
         {
             controlAPI.GetInst().SetAPIType(controlAPI.API_PACKETS);

@@ -9,7 +9,7 @@ enum errors
     ERROR_INVALID_RECORD_LENGHT = 2,
     ERROR_INVALID_2_RECORD      = 3,
     ERROR_INVALID_RECORD_TYPE   = 4,
-    ERROR_MEMORY_LOCATION     = 5
+    ERROR_MEMORY_LOCATION       = 5
 };
 
 JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * env, jobject this, jbyteArray fileAr, jint memsize, jint fileLenght)
@@ -143,17 +143,3 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
     return m_buffer;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_com_yuniclient_Joystick_calculateFloats(JNIEnv * env, jobject this, jfloat x, jfloat y, jfloat width, jfloat height)
-{
-    jfloatArray result = (*env)->NewFloatArray(env, 2);
-    jfloat buf[2];
-    float dx = x - width;
-    float dy = y - height;
-    float dist = sqrt((dx*dx) + (dy*dy));
-    buf[0] = (float) (dist/(((float)width)/100.0));
-
-    buf[1] = atan2(dy, dx);
-    buf[1] = (float) ((buf[1] >= 0) ? buf[1] : 2 * 3.141592f + buf[1]);
-    (*env)->SetFloatArrayRegion(env, result, 0, 2, buf );
-    return result;
-}
