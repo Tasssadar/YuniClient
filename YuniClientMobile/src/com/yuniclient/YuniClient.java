@@ -145,15 +145,13 @@ public class YuniClient extends Activity
     {
            super.onConfigurationChanged(newConfig);
            
+           // need to reload layout, because it is different
+           // see /res/layout/controls.xml and /res/layout-land/controls.xml
            if((state & STATE_CONTROLS) != 0)
            {
-               String text = ((TextView) findViewById(R.id.output)).getText().toString();
-               if(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT)
-                   setContentView(R.layout.controls);
-               else 
-                   setContentView(R.layout.controls_wide);        
+               setContentView(R.layout.controls);     
                InitControls();
-               ((TextView) findViewById(R.id.output)).setText(text);
+               ((TextView) findViewById(R.id.output)).setText(terminal.GetText());
            }
            if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
                state |= STATE_SCROLL;
