@@ -25,17 +25,14 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
-import android.view.Display;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
-import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
@@ -774,11 +771,8 @@ public class YuniClient extends Activity
     private void InitControls()
     {
         state |= STATE_CONTROLS;
-        Display display = ((WindowManager) getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
-        if(display.getRotation() == Surface.ROTATION_0)
-            setContentView(R.layout.controls);
-        else 
-            setContentView(R.layout.controls_wide);
+        setContentView(R.layout.controls);
+        
         Button button = (Button) findViewById(R.id.Forward_b);
         button.setOnTouchListener(keyTouch); 
        

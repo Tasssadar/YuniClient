@@ -74,13 +74,12 @@ public final class R {
     }
     public static final class layout {
         public static final int controls=0x7f030000;
-        public static final int controls_wide=0x7f030001;
-        public static final int device_list=0x7f030002;
-        public static final int device_name=0x7f030003;
-        public static final int main=0x7f030004;
-        public static final int save_data=0x7f030005;
-        public static final int settings=0x7f030006;
-        public static final int terminal=0x7f030007;
+        public static final int device_list=0x7f030001;
+        public static final int device_name=0x7f030002;
+        public static final int main=0x7f030003;
+        public static final int save_data=0x7f030004;
+        public static final int settings=0x7f030005;
+        public static final int terminal=0x7f030006;
     }
     public static final class menu {
         public static final int menu2=0x7f060000;
