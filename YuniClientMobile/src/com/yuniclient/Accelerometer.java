@@ -44,16 +44,15 @@ public class Accelerometer extends Activity
         view = new AccelerometerView(this);
         setContentView(view);
         
-        SensorManager mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometerListener = new AccelerometerListener();
-        mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
-        
         lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
             .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
         lock.acquire();
         context = this;
+        started = false;
+        ShowStartDialog();
     }
-    
+
     @Override
     protected void onDestroy()
     {
@@ -61,7 +60,7 @@ public class Accelerometer extends Activity
         lock.release();
         lock = null;
         accelerometerListener = null;
-        if(Connection.GetInst() != null)
+        if(Connection.GetInst() != null && started)
         {
             if(!controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
                 mMovementFlags = controlAPI.MOVE_NONE;
@@ -83,6 +82,29 @@ public class Accelerometer extends Activity
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+    
+    private void ShowStartDialog()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Accelerometer");
+        builder.setMessage("Move phone into default position and tap to \"Start\".");
+        builder.setPositiveButton("Start", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id)
+            {
+                SensorManager mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+                mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
+                started = true;
+            }
+        });
+        builder.setOnCancelListener(new DialogInterface.OnCancelListener()
+        {    
+            public void onCancel(DialogInterface dialog)
+            {
+                finish();
+            }
+        });
+        builder.create().show();
     }
     
     private void ShowAPIDialog()
@@ -350,6 +372,7 @@ public class Accelerometer extends Activity
     private Context context;
     private AlertDialog alertDialog;
     
+    private boolean started;
     private byte mMovementFlags;
     private byte mSpeed;
 }
