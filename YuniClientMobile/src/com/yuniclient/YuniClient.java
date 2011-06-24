@@ -140,18 +140,18 @@ public class YuniClient extends Activity
     @Override
     public void onConfigurationChanged(Configuration newConfig)
     {
-           super.onConfigurationChanged(newConfig);
+        super.onConfigurationChanged(newConfig);
            
-           // need to reload layout, because it is different
-           // see /res/layout/controls.xml and /res/layout-land/controls.xml
-           if((state & STATE_CONTROLS) != 0)
-           {
-               setContentView(R.layout.controls);     
-               InitControls();
-               ((TextView) findViewById(R.id.output)).setText(terminal.GetText());
-           }
-           if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
-               state |= STATE_SCROLL;
+        // need to reload layout, because it is different
+        // see /res/layout/controls.xml and /res/layout-land/controls.xml
+        if((state & STATE_CONTROLS) != 0)
+        {
+            setContentView(R.layout.controls);     
+            InitControls();
+            ((TextView) findViewById(R.id.output)).setText(terminal.GetText());
+        }
+        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+            state |= STATE_SCROLL;
     }
     
     @Override
@@ -176,7 +176,7 @@ public class YuniClient extends Activity
             if((state & STATE_TERMINAL) != 0 || state == 0 || (state & STATE_CONTROLS) != 0)
                 return super.onKeyDown(keyCode, event);
             else if((state & STATE_JOYSTICK) != 0)
-                ShowAPIDialog();
+                ShowAPIDialog(true);
             else
                 startActivity(new Intent(this, Settings.class));
             return true;
@@ -185,7 +185,8 @@ public class YuniClient extends Activity
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
         prepareMenu(menu);
         return true;
     }
@@ -200,27 +201,24 @@ public class YuniClient extends Activity
     private void prepareMenu(Menu menu)
     {
         MenuInflater inflater = getMenuInflater();
-        if((state & STATE_TERMINAL) != 0 && menu.findItem(R.id.send_byte) == null)
-        {
-            menu.clear();
-            inflater.inflate(R.menu.menu_terminal, menu);
-        }
+        int id = -1;
+        if((state & STATE_TERMINAL) != 0 && menu.findItem(R.id.send_byte) == null)           
+            id = R.menu.menu_terminal;
         else if((state & STATE_CONTROLS) != 0 && menu.findItem(R.id.protocol) == null)
-        {
-            menu.clear();
-            inflater.inflate(R.menu.menu_controls, menu);
-        }
+            id = R.menu.menu_controls;
         else if(state == 0 && menu.findItem(R.id.exit) == null)
-        {
-            menu.clear();
-            inflater.inflate(R.menu.menu2, menu);
-        }     
+            id = R.menu.menu2;
+        else return;
+        menu.clear();
+        inflater.inflate(id, menu);
     }
     
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
         // Handle item selection
-        switch (item.getItemId()) {
+        switch (item.getItemId())
+        {
             case R.id.exit:
                 finish();
                 return true;
@@ -228,7 +226,7 @@ public class YuniClient extends Activity
                 startActivity(new Intent(this, Settings.class));
                 return true;
             case R.id.protocol:
-                ShowAPIDialog();
+                ShowAPIDialog(false);
                 return true;
             case R.id.clear:
                 ((TextView)findViewById(R.id.output_terminal)).setText("");
@@ -422,11 +420,11 @@ public class YuniClient extends Activity
         mPairedDevices.clear();
         
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
-        if (pairedDevices.size() > 0) {
+        if (pairedDevices.size() > 0)
+        {
             findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
-            for (BluetoothDevice device : pairedDevices) {
+            for (BluetoothDevice device : pairedDevices)
                 mPairedDevices.add(device.getName() + "\n" + device.getAddress());
-            }
         }
         mBluetoothAdapter.startDiscovery();
     } 
@@ -454,8 +452,10 @@ public class YuniClient extends Activity
         AlertDialog.Builder builder2 = new AlertDialog.Builder(context);
         builder2.setMessage(text)
                .setTitle("Error")
-               .setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
-                   public void onClick(DialogInterface dialog, int id) {
+               .setPositiveButton("Dismiss", new DialogInterface.OnClickListener()
+               {
+                   public void onClick(DialogInterface dialog, int id)
+                   {
                        dialog.dismiss();
                    }
                });
@@ -476,18 +476,17 @@ public class YuniClient extends Activity
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
         if (pairedDevices.size() > 0) {
             findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
-            for (BluetoothDevice device : pairedDevices) {
+            for (BluetoothDevice device : pairedDevices)
                 mPairedDevices.add(device.getName() + "\n" + device.getAddress());
-            }
         }
         
         final Button button = (Button) findViewById(R.id.button_scan);
         button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+            public void onClick(View v)
+            {
                 mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-                if (mBluetoothAdapter != null) {
+                if (mBluetoothAdapter != null)
                     FindDevices();
-                } 
             }
         });
         if(EEPROMTouchLastX == null)
@@ -495,8 +494,10 @@ public class YuniClient extends Activity
             EEPROMTouchLastX = new int[50];
             EEPROMTouchLastY = new int[50];
         }
-        pairedListView.setOnTouchListener(new View.OnTouchListener() {
-            public boolean onTouch(View v, MotionEvent event) {
+        pairedListView.setOnTouchListener(new View.OnTouchListener()
+        {
+            public boolean onTouch(View v, MotionEvent event)
+            {
                 if(event.getAction() == MotionEvent.ACTION_MOVE)
                 {
                     if(EEPROMTouchItr >= 50)
@@ -533,47 +534,7 @@ public class YuniClient extends Activity
                 return -i;
             }
         });
-        keyTouch = new View.OnTouchListener() {
-         public boolean onTouch(View v, MotionEvent event) {
-                if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
-                {
-                 boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
-                 if(((Button)v).getId() == R.id.LeftForw_b)
-                 {
-                    if(controlAPI.GetInst().GetAPIType() == controlAPI.API_PACKETS)
-                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
-                    else
-                    {
-                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                        SendMovementKey(controlAPI.MOVE_LEFT, down);
-                    }   
-                 }
-                 else if(((Button)v).getId() == R.id.RightForw_b)
-                 {
-                    if(controlAPI.GetInst().GetAPIType() == controlAPI.API_PACKETS)
-                        SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
-                    else
-                    {
-                        SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                        SendMovementKey(controlAPI.MOVE_RIGHT, down);
-                    }
-                 }
-                 else if(((Button)v).getId() == R.id.Forward_b)
-                     SendMovementKey(controlAPI.MOVE_FORWARD, down);
-                 else if(((Button)v).getId() == R.id.Backward_b)
-                     SendMovementKey(controlAPI.MOVE_BACKWARD, down);
-                 else if(((Button)v).getId() == R.id.Left_b)
-                     SendMovementKey(controlAPI.MOVE_LEFT, down);
-                 else if(((Button)v).getId() == R.id.Right_b)
-                     SendMovementKey(controlAPI.MOVE_RIGHT, down);
-                 else if(((Button)v).getId() == R.id.Space_b && controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
-                        YuniClient.ButtonTouched(" ", down);
-                 else if(controlAPI.GetInst().GetAPIType() != controlAPI.API_PACKETS)
-                     YuniClient.ButtonTouched(((Button)v).getText(), down);
-                }
-                return false;
-         }
-        };
+        
     }
     
     private static void ButtonTouched(CharSequence button, boolean down)
@@ -829,49 +790,64 @@ public class YuniClient extends Activity
         }
     }
 
-    private void ShowAPIDialog()
+    private void ShowAPIDialog(boolean packetOnly)
     {
-        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra", "Quorra final"};
+        final CharSequence[] items;
+        if(packetOnly)
+        {
+            items = new CharSequence[3];
+            items[0] = "Packets"; items[1] = "Chessbot"; items[2] = "Quorra";
+        }
+        else
+        {
+            items = new CharSequence[5];
+            items[0] = "Keyboard"; items[1] = "YuniRC"; items[2] = "Packets"; items[3] = "Chessbot"; items[4] = "Quorra";
+        }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose control API");
-        builder.setSingleChoiceItems(items, controlAPI.GetInst().GetAPIType(), new DialogInterface.OnClickListener() {
+        int selected = packetOnly ? controlAPI.GetInst().GetAPIType()-2 : controlAPI.GetInst().GetAPIType(); 
+        builder.setSingleChoiceItems(items, selected, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int item) {
-                controlAPI.GetInst().SetAPIType((byte) item);
+                controlAPI.GetInst().SetAPIType(controlAPI.GetAPITypeFromString(items[item]));
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 
-                if(!controlAPI.IsTargetSpeedDefined((byte) item))
-                {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                    builder.setTitle("Set speed");
-                    LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-                    View layout = inflater.inflate(R.layout.save_data,
-                                                   (ViewGroup) findViewById(R.id.layout_root));
-                    ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
-                    builder.setView(layout);
-                    builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface arg0, int arg1) {
-                           EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-                           int speed = 300;
-                           try
-                           {
-                               speed = Integer.valueOf(text.getText().toString());
-                           }
-                           catch(NumberFormatException e)
-                           {
-                               Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
-                           }
-                           controlAPI.GetInst().SetQuarraSpeed(speed);
-                       }
-                    });
-                    alertDialog = builder.create();
-                    alertDialog.show();
-                }
+                if(!controlAPI.IsTargetSpeedDefined(controlAPI.GetAPITypeFromString(items[item])))
+                    OpenSpeedDialog();
             }
         });
         AlertDialog alert = builder.create();
         alert.show();
+    }
+    
+    private void OpenSpeedDialog()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Set speed");
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+        View layout = inflater.inflate(R.layout.save_data,
+                                       (ViewGroup) findViewById(R.id.layout_root));
+        ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
+        builder.setView(layout);
+        builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface arg0, int arg1) {
+               EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+               int speed = 300;
+               try
+               {
+                   speed = Integer.valueOf(text.getText().toString());
+               }
+               catch(NumberFormatException e)
+               {
+                   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
+               }
+
+               controlAPI.GetInst().SetQuarraSpeed(speed);
+           }
+        });
+        alertDialog = builder.create();
+        alertDialog.show();
     }
     
     private void InitJoystick()
@@ -935,8 +911,48 @@ public class YuniClient extends Activity
             terminal.SetText(text);
     }
  
-    // ============================================ HANDLERS ============================================   
-    private final OnClickListener saveLogFile = new OnClickListener() {
+    // ============================================ HANDLERS ============================================  
+    private View.OnTouchListener keyTouch = new View.OnTouchListener()
+    {
+        public boolean onTouch(View v, MotionEvent event)
+        {
+            if(event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_UP)
+            {
+                boolean down = event.getAction() == MotionEvent.ACTION_DOWN;
+                switch(((Button)v).getId())
+                {
+                    case R.id.LeftForw_b:
+                        if(controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
+                            SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_LEFT), down);
+                        else
+                        {
+                            SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                            SendMovementKey(controlAPI.MOVE_LEFT, down);
+                        }
+                        return false;
+                    case R.id.RightForw_b:
+                        if(controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
+                            SendMovementKey((byte) (controlAPI.MOVE_FORWARD | controlAPI.MOVE_RIGHT), down);
+                        else
+                        {
+                            SendMovementKey(controlAPI.MOVE_FORWARD, down);
+                            SendMovementKey(controlAPI.MOVE_RIGHT, down);
+                        }
+                        return false;
+                    case R.id.Forward_b:  SendMovementKey(controlAPI.MOVE_FORWARD, down);  return false;
+                    case R.id.Backward_b: SendMovementKey(controlAPI.MOVE_BACKWARD, down); return false;
+                    case R.id.Left_b:     SendMovementKey(controlAPI.MOVE_LEFT, down);     return false;
+                    case R.id.Right_b:    SendMovementKey(controlAPI.MOVE_RIGHT, down);    return false;
+                    case R.id.Space_b:    YuniClient.ButtonTouched(" ", down);             return false;
+                    default:              YuniClient.ButtonTouched(((Button)v).getText(), down); return false;        
+                }
+            }
+            return false;
+        }
+    };
+    
+    private final OnClickListener saveLogFile = new OnClickListener()
+    {
         public void onClick(DialogInterface dialog, int id) {
             EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
             String filename = text.getText().toString();
@@ -945,8 +961,6 @@ public class YuniClient extends Activity
                 Toast.makeText(context, "Filename is empty!", Toast.LENGTH_SHORT).show();
                 return;
             }
-       
-            dialog.dismiss();
             SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
             File folder = new File(sp.getString("log_folder", getString(R.string.log_folder_def)));
             if(!folder.exists())
@@ -1184,7 +1198,6 @@ public class YuniClient extends Activity
     private BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<String> mArrayAdapter;
     private ArrayAdapter<String> mPairedDevices;
-    private View.OnTouchListener keyTouch;
     private DialogInterface.OnClickListener fileSelect;
     private AlertDialog alertDialog;
     private ProgressDialog dialog;

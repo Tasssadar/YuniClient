@@ -109,47 +109,51 @@ public class Accelerometer extends Activity
     
     private void ShowAPIDialog()
     {
-        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Quorra", "Quorra final"};
+        final CharSequence[] items = {"Keyboard", "YuniRC", "Packets", "Chessbot", "Quorra"};
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose control API");
         builder.setSingleChoiceItems(items, controlAPI.GetInst().GetAPIType(), new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
+            public void onClick(DialogInterface dialog, int item)
+            {
                 controlAPI.GetInst().SetAPIType((byte) item);
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
                 
                 if(!controlAPI.IsTargetSpeedDefined((byte) item))
-                {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                    builder.setTitle("Set speed");
-                    LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-                    View layout = inflater.inflate(R.layout.save_data,
-                                                   (ViewGroup) findViewById(R.id.layout_root));
-                    ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
-                    builder.setView(layout);
-                    builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface arg0, int arg1) {
-                           EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-                           int speed = 300;
-                           try
-                           {
-                               speed = Integer.valueOf(text.getText().toString());
-                           }
-                           catch(NumberFormatException e)
-                           {
-                               Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
-                           }
-                           controlAPI.GetInst().SetQuarraSpeed(speed);
-                       }
-                    });
-                    alertDialog = builder.create();
-                    alertDialog.show();
-                }
+                    OpenSpeedDialog();
             }
         });
         AlertDialog alert = builder.create();
         alert.show();
+    }
+    
+    private void OpenSpeedDialog()
+    {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Set speed");
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
+        View layout = inflater.inflate(R.layout.save_data,
+                                       (ViewGroup) findViewById(R.id.layout_root));
+        ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
+        builder.setView(layout);
+        builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface arg0, int arg1) {
+               EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+               int speed = 300;
+               try
+               {
+                   speed = Integer.valueOf(text.getText().toString());
+               }
+               catch(NumberFormatException e)
+               {
+                   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
+               }
+               controlAPI.GetInst().SetQuarraSpeed(speed);
+           }
+        });
+        alertDialog = builder.create();
+        alertDialog.show();
     }
     
     private class AccelerometerListener implements SensorEventListener
