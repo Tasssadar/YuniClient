@@ -2,11 +2,11 @@ package com.yuniclient;
 
 public class controlAPI
 {
-    public static final byte API_KEYBOARD = 0;       // just keyboard characters
-    public static final byte API_YUNIRC   = 1;       // keyboard with d or u for press and release
-    public static final byte API_PACKETS  = 2;       // YuniControl packets
-    public static final byte API_QUORRA   = 3;       // Packets for robot Quorra  
-    public static final byte API_QUORRA_FINAL= 4;    // Packets for robot Quorra  
+    public static final byte API_KEYBOARD    = 0;       // just keyboard characters
+    public static final byte API_YUNIRC      = 1;       // keyboard with d or u for press and release
+    public static final byte API_PACKETS     = 2;       // YuniControl packets
+    public static final byte API_CHESSBOT    = 3;       // Packets for robot Chessbot
+    public static final byte API_QUORRA      = 4;       // Packets for robot Quorra  
 
     // For API_PACKETS
     public static final byte MOVE_NONE     = 0x00;
@@ -37,7 +37,16 @@ public class controlAPI
         instance = null;
     }
     
-    public void SetAPIType(byte type) {    apiType = type; }
+    public void SetAPIType(byte type) { apiType = type; }
+    public static byte GetAPITypeFromString(CharSequence type)
+    {
+        if(type == "Keyboard")      return API_KEYBOARD;
+        else if(type == "YuniRC")   return API_YUNIRC;
+        else if(type == "Packets")  return API_PACKETS;
+        else if(type == "Chessbot") return API_CHESSBOT;
+        else if(type == "Quorra")   return API_QUORRA;
+        return API_YUNIRC;
+    }
     public byte GetAPIType() { return apiType; }
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
@@ -83,7 +92,7 @@ public class controlAPI
                 packet = pkt.getSendData();
                 break;
             }
-            case API_QUORRA:
+            case API_CHESSBOT:
             {
                 byte[] tmp = new byte[4];
                 Packet pkt = new Packet(ProtocolMgr.QUORRA_SET_POWER, tmp, (byte) 4);
@@ -116,7 +125,7 @@ public class controlAPI
                 packet = pkt.getSendData();
                 break;
             }
-            case API_QUORRA_FINAL:
+            case API_QUORRA:
             {
                 byte quorraPkt[] = new byte[8];
                 quorraPkt[0] = (byte)0xFF;
@@ -226,9 +235,9 @@ public class controlAPI
         return result;
     }
     
-    public static boolean IsTargetSpeedDefined(byte apiType) { return !(apiType == API_QUORRA || apiType == API_QUORRA_FINAL); }
+    public static boolean IsTargetSpeedDefined(byte apiType) { return !(apiType == API_CHESSBOT || apiType == API_QUORRA); }
     public static boolean HasSeparatedSpeed(byte apiType) { return (apiType == API_YUNIRC || apiType == API_KEYBOARD); }
-    public static boolean HasPacketStructure(byte apiType) { return (apiType == API_PACKETS || apiType == API_QUORRA || apiType == API_QUORRA_FINAL); }
+    public static boolean HasPacketStructure(byte apiType) { return (apiType == API_PACKETS || apiType == API_CHESSBOT || apiType == API_QUORRA); }
     
     private float fabs(float val)
     {
