@@ -214,18 +214,18 @@ public class controlAPI
         if((flags & MOVE_FORWARD) != 0)
         {
             if((flags & MOVE_LEFT) != 0)
-                result[1] = speed/3;
+                result[1] -= speed/5;
             else if((flags & MOVE_RIGHT) != 0)
-                result[0] = speed/3;
+                result[0] -= speed/5;
         }
         else if((flags & MOVE_BACKWARD) != 0)
         {
             result[0] = -speed;
             result[1] = -speed;
             if((flags & MOVE_LEFT) != 0)
-                result[1] = -(speed/3);
+                result[1] += speed/5;
             else if((flags & MOVE_RIGHT) != 0)
-                result[0] = -(speed/3);
+                result[0] += speed/5;
         }
         else if((flags & MOVE_LEFT) != 0)
             result[1] = -speed;
