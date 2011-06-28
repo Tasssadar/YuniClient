@@ -135,12 +135,12 @@ public class Accelerometer extends Activity
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
         View layout = inflater.inflate(R.layout.save_data,
                                        (ViewGroup) findViewById(R.id.layout_root));
-        ((TextView)layout.findViewById(R.id.data_file_save)).setText("300");
+        ((TextView)layout.findViewById(R.id.data_file_save)).setText("255");
         builder.setView(layout);
         builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface arg0, int arg1) {
                EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-               int speed = 300;
+               int speed = 255;
                try
                {
                    speed = Integer.valueOf(text.getText().toString());
