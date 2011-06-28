@@ -11,6 +11,7 @@ public class DeviceInfo
         else if(id.contentEquals("m88")) { name = "ATmega88";  mem_size = 7936;  page_size = 128; }
         else if(id.contentEquals("m168")){ name = "ATmega168"; mem_size = 16128; page_size = 128; }
         else if(id.contentEquals("m162")){ name = "ATmega162"; mem_size = 16128; page_size = 128; }
+        else if(id.contentEquals("m328")){ name = "ATmega328"; mem_size = 32256; page_size = 128; }
         /* FIXME: only 16-bit addresses are available */
         else if(id.contentEquals("m128")){ name = "ATmega128"; mem_size = 65536; page_size = 256; }
     }
