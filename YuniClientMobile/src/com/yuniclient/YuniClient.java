@@ -83,7 +83,9 @@ public class YuniClient extends Activity
         
         setContentView(R.layout.device_list);
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        IntentFilter filterBTChange = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(mReceiver, filter);
+        registerReceiver(mBTStateChangeReceiver, filterBTChange);
         
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
@@ -101,6 +103,7 @@ public class YuniClient extends Activity
         {
             Disconnect(false);
             unregisterReceiver(mReceiver);
+            unregisterReceiver(mBTStateChangeReceiver);
         }
     }
 
@@ -985,14 +988,24 @@ public class YuniClient extends Activity
             String action = intent.getAction();
             // When discovery finds a device
             if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null &&
-                intent.getParcelableExtra(BluetoothDevice.EXTRA_NAME) == null) {
+                intent.getParcelableExtra(BluetoothDevice.EXTRA_NAME) != null) {
                 // Get the BluetoothDevice object from the Intent
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // Add the name and address to an array adapter to show in a ListView
                 mArrayAdapter.add(device.getName() + "\n" + device.getAddress());
             }
         }
-    }; 
+    };
+    
+    final BroadcastReceiver mBTStateChangeReceiver = new BroadcastReceiver()
+    {
+        public void onReceive(Context context, Intent intent)
+        {
+            int stateBT = intent.getExtras().getInt(BluetoothAdapter.EXTRA_STATE);
+            if((state & STATE_CONNECTED) != 0 && stateBT == BluetoothAdapter.STATE_TURNING_OFF)
+                Disconnect(true);
+        }
+    };
     
     private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
