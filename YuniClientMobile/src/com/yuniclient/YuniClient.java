@@ -589,7 +589,7 @@ public class YuniClient extends Activity
         joystick = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_JOYSTICK);
-        state &= ~(STATE_TERMINAL);
+        state &= ~(STATE_TERMINAL);  
 
         context = this;
         if(lock != null)
@@ -612,6 +612,9 @@ public class YuniClient extends Activity
             }
         };
         setContentView(R.layout.main);
+        
+        StartStop((Button) findViewById(R.id.Start_b), ((state & STATE_STOPPED) == 0), true);
+        
         Button button = (Button) findViewById(R.id.Disconnect_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
@@ -636,7 +639,7 @@ public class YuniClient extends Activity
         button = (Button) findViewById(R.id.Start_b);
         button.setOnClickListener(new View.OnClickListener() {
              public void onClick(View v) {
-                StartStop((Button)v, ((state & STATE_STOPPED) != 0));
+                StartStop((Button)v, ((state & STATE_STOPPED) != 0), false);
              }
         });
         button = (Button) findViewById(R.id.Terminal_b);
@@ -690,12 +693,11 @@ public class YuniClient extends Activity
         });
     }
         
-    private void StartStop(Button v, boolean start)
+    private void StartStop(Button v, boolean start, boolean visualOnly)
     {
         byte[] out = null;
         if(start)
         {
-            state &= ~(STATE_STOPPED);
             out = new byte[1];
             out[0] = 0x11;
             state &= ~(STATE_STOPPED);
@@ -703,17 +705,20 @@ public class YuniClient extends Activity
         }
         else
         {
-            out = new byte[4];
-            out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
-            Connection.GetInst().write(out.clone());
-            try {
-                Thread.sleep(300);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            if(!visualOnly)
+            {
+                out = new byte[4];
+                out[0] = 0x74; out[1] = 0x7E; out[2] = 0x7A; out[3] = 0x33;
+                Connection.GetInst().write(out.clone());
+                try {
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                TextView error = (TextView)findViewById(R.id.error);
+                error.setText("Stopping...");
+                state |= STATE_STOPPING;
             }
-            state |= STATE_STOPPING;
-            TextView error = (TextView)findViewById(R.id.error);
-            error.setText("Stopping...");
             v.setText("Start");
         }
         v = (Button) findViewById(R.id.Controls_b);
@@ -728,7 +733,8 @@ public class YuniClient extends Activity
         v = (Button) findViewById(R.id.Flash_b);
         v.setEnabled(!start);
         v.setClickable(!start);
-        Connection.GetInst().write(out.clone());
+        if(!visualOnly)
+            Connection.GetInst().write(out.clone());
     }
     
     private void InitControls()
