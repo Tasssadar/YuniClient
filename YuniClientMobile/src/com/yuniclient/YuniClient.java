@@ -244,8 +244,10 @@ public class YuniClient extends Activity
                                                (ViewGroup) findViewById(R.id.layout_root));
                 builder = new AlertDialog.Builder(context);
                 builder.setView(layout);
-                builder.setNeutralButton("Send", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface arg0, int arg1) {
+                builder.setNeutralButton("Send", new DialogInterface.OnClickListener()
+                {
+                    public void onClick(DialogInterface arg0, int arg1)
+                    {
                        EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
                        byte[] out = new byte[text.getText().length()];
                        for(short i = 0; i < text.getText().length(); ++i)
@@ -270,8 +272,10 @@ public class YuniClient extends Activity
                                                (ViewGroup) findViewById(R.id.layout_root));
                 builder = new AlertDialog.Builder(context);
                 builder.setView(layout);
-                builder.setNeutralButton("Send", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface arg0, int arg1) {
+                builder.setNeutralButton("Send", new DialogInterface.OnClickListener()
+                {
+                    public void onClick(DialogInterface arg0, int arg1)
+                    {
                        EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
                        try
                        {
@@ -298,8 +302,10 @@ public class YuniClient extends Activity
 
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
                 builder.setTitle("Choose parser");
-                builder.setSingleChoiceItems(items, terminal.GetCurrentParser(), new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int item) {
+                builder.setSingleChoiceItems(items, terminal.GetCurrentParser(), new DialogInterface.OnClickListener()
+                {
+                    public void onClick(DialogInterface dialog, int item)
+                    {
                         terminal.SetCurrentParser((byte) item);
                         SetTerminalText(terminal.GetText(), false);
                         dialog.dismiss();
@@ -477,14 +483,16 @@ public class YuniClient extends Activity
         pairedListView.setOnItemClickListener(mDeviceClickListener);
         
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
-        if (pairedDevices.size() > 0) {
+        if (pairedDevices.size() > 0)
+        {
             findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
             for (BluetoothDevice device : pairedDevices)
                 mPairedDevices.add(device.getName() + "\n" + device.getAddress());
         }
         
         final Button button = (Button) findViewById(R.id.button_scan);
-        button.setOnClickListener(new View.OnClickListener() {
+        button.setOnClickListener(new View.OnClickListener()
+        {
             public void onClick(View v)
             {
                 mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -514,9 +522,9 @@ public class YuniClient extends Activity
                 else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
                 {
                     boolean right = false;
-                    boolean correct = fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
+                    boolean correct = abs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
                       // and x movement must be bigger than Y movement
-                      fabs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < fabs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
+                      abs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < abs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
                     
                     for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
                     {
@@ -532,9 +540,9 @@ public class YuniClient extends Activity
                 return false;
             }
 
-            private int fabs(int i) {
-                if(i >= 0) return i;
-                return -i;
+            private int abs(int i)
+            {
+                return (i < 0) ? -i : i;
             }
         });
         
@@ -602,8 +610,10 @@ public class YuniClient extends Activity
         }
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
         curFolder = new File(sp.getString("hex_folder", getString(R.string.hex_folder_def)));
-        fileSelect = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
+        fileSelect = new DialogInterface.OnClickListener()
+        {
+            public void onClick(DialogInterface dialog, int item)
+            {
                 dialog.dismiss();
                 FilenameFilter filter = new HexFilter();
                 final CharSequence[] items = curFolder.list(filter);
@@ -619,42 +629,53 @@ public class YuniClient extends Activity
         StartStop((Button) findViewById(R.id.Start_b), ((state & STATE_STOPPED) == 0), true);
         
         Button button = (Button) findViewById(R.id.Disconnect_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                 Disconnect(true);
              }
         });
 
         button = (Button) findViewById(R.id.joystick_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                 if((state & STATE_STOPPED) == 0)
                     InitJoystick();
              }
         });
         button = (Button) findViewById(R.id.Controls_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                 if((state & STATE_STOPPED) == 0)
                     InitControls();
              }
         });
         button = (Button) findViewById(R.id.Start_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                 StartStop((Button)v, ((state & STATE_STOPPED) != 0), false);
              }
         });
         button = (Button) findViewById(R.id.Terminal_b);
-        button.setOnClickListener(new View.OnClickListener() {
+        button.setOnClickListener(new View.OnClickListener()
+        {
              public void onClick(View v)
              {
                  InitTerminal();
              }
         });
         button = (Button) findViewById(R.id.Flash_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                 TextView error = (TextView)findViewById(R.id.hex_file);
                 File hex = new File(error.getText().toString());
                 error = (TextView)findViewById(R.id.error);
@@ -673,8 +694,10 @@ public class YuniClient extends Activity
         });
 
         button = (Button) findViewById(R.id.List_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                     final AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
                     SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
                     curFolder = new File(sp.getString("hex_folder", getString(R.string.hex_folder_def)));
@@ -689,8 +712,10 @@ public class YuniClient extends Activity
         });
         
         button = (Button) findViewById(R.id.accelerometer_b);
-        button.setOnClickListener(new View.OnClickListener() {
-             public void onClick(View v) {
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
                  startActivityForResult(new Intent(context, Accelerometer.class), ACCELEROMETER_REQ_CODE);
              }
         });
@@ -816,8 +841,10 @@ public class YuniClient extends Activity
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Choose control API");
         int selected = packetOnly ? controlAPI.GetInst().GetAPIType()-2 : controlAPI.GetInst().GetAPIType(); 
-        builder.setSingleChoiceItems(items, selected, new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int item) {
+        builder.setSingleChoiceItems(items, selected, new DialogInterface.OnClickListener()
+        {
+            public void onClick(DialogInterface dialog, int item)
+            {
                 controlAPI.GetInst().SetAPIType(controlAPI.GetAPITypeFromString(items[item]));
                 Toast.makeText(context, items[item] + " has been chosen as control API.", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
@@ -840,7 +867,8 @@ public class YuniClient extends Activity
         ((TextView)layout.findViewById(R.id.data_file_save)).setText("255");
         builder.setView(layout);
         builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface arg0, int arg1) {
+            public void onClick(DialogInterface arg0, int arg1)
+            {
                EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
                int speed = 255;
                try
@@ -962,7 +990,8 @@ public class YuniClient extends Activity
     
     private final OnClickListener saveLogFile = new OnClickListener()
     {
-        public void onClick(DialogInterface dialog, int id) {
+        public void onClick(DialogInterface dialog, int id)
+        {
             EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
             String filename = text.getText().toString();
             if(filename == null || filename == "")
@@ -974,6 +1003,7 @@ public class YuniClient extends Activity
             File folder = new File(sp.getString("log_folder", getString(R.string.log_folder_def)));
             if(!folder.exists())
                 folder.mkdirs();
+
             try {
                 terminal.toFile(filename, toastHandler);
             } catch (IOException e) {
@@ -983,8 +1013,10 @@ public class YuniClient extends Activity
        }
     };
 
-    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
+    final BroadcastReceiver mReceiver = new BroadcastReceiver()
+    {
+        public void onReceive(Context context, Intent intent)
+        {
             String action = intent.getAction();
             // When discovery finds a device
             if (BluetoothDevice.ACTION_FOUND.equals(action) && mArrayAdapter != null) {
@@ -1006,8 +1038,10 @@ public class YuniClient extends Activity
         }
     };
     
-    private final OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
-        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
+    private final OnItemClickListener mDeviceClickListener = new OnItemClickListener()
+    {
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
+        {
             if(!mBluetoothAdapter.isEnabled())
             {
                 btTurnOn = 2;
@@ -1019,9 +1053,11 @@ public class YuniClient extends Activity
         }
     }; 
     
-    private final Handler fileClick = new Handler() {
+    private final Handler fileClick = new Handler()
+    {
         @Override
-        public void handleMessage(Message msg) {
+        public void handleMessage(Message msg)
+        {
             File file = (File)msg.obj;
             if(!file.isDirectory())
             {
@@ -1042,7 +1078,8 @@ public class YuniClient extends Activity
         }
     };
 
-    public final Handler ballHandler = new Handler() {
+    public final Handler ballHandler = new Handler()
+    {
         @Override
         public void handleMessage(Message msg)
         {
@@ -1059,19 +1096,20 @@ public class YuniClient extends Activity
         }
     };
     
-    public final Handler toastHandler = new Handler() {
+    public final Handler toastHandler = new Handler()
+    {
         @Override
         public void handleMessage(Message msg)
         {
             final String text = msg.getData().getString(TOAST);
             if(text == null)
                 return;
-            Toast.makeText(context, text,
-                Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show();
         }
     };
 
-    private final Handler connectionHandler = new Handler() {
+    private final Handler connectionHandler = new Handler()
+    {
         public void handleMessage(Message msg)
         {
             switch(msg.what)
@@ -1232,7 +1270,8 @@ public class YuniClient extends Activity
     public byte eeprom_part;
     public byte eeprom_write_part;
 
-    private Animation inFromRightAnimation() {
+    private Animation inFromRightAnimation()
+    {
         Animation inFromRight = new TranslateAnimation(
             Animation.RELATIVE_TO_PARENT,  +1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
             Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f
@@ -1242,8 +1281,8 @@ public class YuniClient extends Activity
         return inFromRight;
     }
 
-    private Animation inFromLeftAnimation() {
-    
+    private Animation inFromLeftAnimation()
+    {
         Animation inFromLeft = new TranslateAnimation(
             Animation.RELATIVE_TO_PARENT,  -1.0f, Animation.RELATIVE_TO_PARENT,  0.0f,
             Animation.RELATIVE_TO_PARENT,  0.0f, Animation.RELATIVE_TO_PARENT,   0.0f

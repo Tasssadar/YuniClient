@@ -61,6 +61,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
                 ++lineLenght;
                 if(lineLenght >= 100)
                 {
+                    free(mem_loc_check);
+                    free(nums);
+                    free(file);
                     tmp = (jbyte) ERROR_WRONG_LINE_FORMAT;
                     (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
                     return m_error;
@@ -69,9 +72,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
         }
         if (line[0] != ':' || lineLenght % 2 != 1)
         {
-               tmp = (jbyte) ERROR_WRONG_LINE_FORMAT;
-               (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
-              return m_error;
+            free(mem_loc_check);
+            free(nums);
+            free(file);
+            tmp = (jbyte) ERROR_WRONG_LINE_FORMAT;
+            (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
+            return m_error;
         }
         rec_nums_itr = 0;
         i = 1;
@@ -88,18 +94,24 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
         rectype = (short)(0xFF & (int)rec_nums[3]);
         if (length != rec_nums_itr - 5)
         {
-              tmp = (jbyte) ERROR_INVALID_RECORD_LENGHT;
-               (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
-              return m_error;
+            free(mem_loc_check);
+            free(nums);
+            free(file);
+            tmp = (jbyte) ERROR_INVALID_RECORD_LENGHT;
+            (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
+            return m_error;
         }
 
         if (rectype == 2)
         {
             if (length != 2)
             {
+                free(mem_loc_check);
+                free(nums);
+                free(file);
                 tmp = (jbyte) ERROR_INVALID_2_RECORD;
                 (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
-                  return m_error;
+                return m_error;
             }
             base_i = (short)((((0xFF & (int)rec_nums[4]) * 0x100 + (0xFF & (int)rec_nums[5])) * 16));
             continue;
@@ -109,9 +121,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
             break;
         if (rectype != 0)
         {
-             tmp = (jbyte) ERROR_INVALID_RECORD_TYPE;
-              (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
-              return m_error;
+            free(mem_loc_check);
+            free(nums);
+            free(file);
+            tmp = (jbyte) ERROR_INVALID_RECORD_TYPE;
+            (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
+            return m_error;
         }
         i = 0;
         for (; i < length; ++i)
@@ -127,9 +142,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
             (*env)->GetByteArrayRegion(env, m_buffer, (base_i + address + i), 1, (jbyte *)mem_loc_check);
             if (mem_loc_check[0] != (char)0xff)
             {
-                  tmp = (jbyte) ERROR_MEMORY_LOCATION;
-                   (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
-                  return m_error;
+                free(mem_loc_check);
+                free(nums);
+                free(file);
+                tmp = (jbyte) ERROR_MEMORY_LOCATION;
+                (*env)->SetByteArrayRegion(env, m_error, 0, 1, &tmp );
+                return m_error;
             }
 
             jbyte m = (jbyte) rec_nums[i + 4];

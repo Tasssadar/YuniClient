@@ -14,7 +14,7 @@ class memory
     private static final byte ERROR_INVALID_RECORD_LENGHT = 2;
     private static final byte ERROR_INVALID_2_RECORD      = 3;
     private static final byte ERROR_INVALID_RECORD_TYPE   = 4;
-    private static final byte ERROR_MEMORY_LOCATION     = 5;
+    private static final byte ERROR_MEMORY_LOCATION       = 5;
     
     public memory(DeviceInfo info)
     {
@@ -73,7 +73,7 @@ class memory
 
         int i = 0;
         short pageItr = 0;
-        Page cur_page = new Page();
+        Page cur_page = null;
         int page_size = deviceInfo.page_size;
         int stopGenerate = deviceInfo.mem_size / deviceInfo.page_size;
             
