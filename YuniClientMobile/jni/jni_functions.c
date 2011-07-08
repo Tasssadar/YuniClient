@@ -36,7 +36,11 @@ JNIEXPORT jbyteArray JNICALL Java_com_yuniclient_memory_parseHexFile(JNIEnv * en
     jbyte lineLenght;
 
     char *mem_loc_check = (char *)malloc(1);
-    char *nums = (char*) malloc(2);
+    char *nums = (char*) malloc(3);
+    // because strtol ends at first non-integer value, so without this it will
+    // just try memory location after nums array, and god knows what
+    // is there -> random load file errors
+    nums[2] = ' ';
     short i;
 
     while(1)
