@@ -35,4 +35,5 @@
     * ATmega128 (only 16-bit addresses available)
     * ATmega162
     * ATmega168
+    * ATmega328
 
