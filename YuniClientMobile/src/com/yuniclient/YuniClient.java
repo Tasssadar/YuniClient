@@ -921,16 +921,34 @@ public class YuniClient extends Activity
     {
         if(text == null)
             return;
+        
+        boolean wipe = false;
+        int index = -1;
+        while(true)
+        {
+            index = text.indexOf(12, index+1);
+            if(index == -1)
+                break;
+            text = text.substring(index+1);
+            wipe = true;
+        }
+        
         if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
         {
             final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
             if(out != null)
             {
-                out.append(Terminal.Parse(text));
+                if(wipe)
+                    out.setText(Terminal.Parse(text));
+                else
+                    out.append(Terminal.Parse(text));
                 state |= STATE_SCROLL;
             }
         }
-        terminal.Append(text);
+        if(wipe)
+            terminal.SetText(text);
+        else
+            terminal.Append(text);
     }
 
     private void SetTerminalText(String text, boolean toClass)

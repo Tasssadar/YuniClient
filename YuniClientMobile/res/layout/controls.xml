@@ -17,6 +17,7 @@
         android:padding="3dp"
         android:textColor="#fff"
         android:maxLines="50000"
+        android:typeface="monospace"
     /> 
     </ScrollView>   
     
