@@ -48,6 +48,24 @@ public class controlAPI
         return API_YUNIRC;
     }
     public byte GetAPIType() { return apiType; }
+    
+    public byte[] BuildPawPacket(float percent)
+    {
+    	switch(apiType)
+    	{
+    		case API_CHESSBOT:
+    			byte[] tmp = new byte[4];
+    			Packet pkt = new Packet(ProtocolMgr.QUORRA_PAWS, tmp, (byte) 4);
+    			int pos = (int)((2000*percent)-1000);
+    			pkt.writeUInt16(pos);
+    			pkt.writeUInt16(pos);
+    			pkt.CountOpcode(true);
+    			return pkt.getSendData();
+    		default:
+    			return null;
+    	}
+    }
+    
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
         if(apiType == API_KEYBOARD && !down)

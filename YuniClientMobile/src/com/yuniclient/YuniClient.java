@@ -1104,11 +1104,20 @@ public class YuniClient extends Activity
             MotionEvent event = (MotionEvent)msg.obj;
             float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
             
-            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+            byte[] data = null;
+            int aa = joystick.getPawsVal();
+            if(y > aa)
+            	data = controlAPI.GetInst().BuildPawPacket(event.getX()/(msg.arg1*2));
+            else
+            {
+            	byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+                
+                if(flags == null)
+                    return;
+                
+                data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
+            }
             
-            if(flags == null)
-                return;
-            byte[] data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
             if(data != null)
                 Connection.GetInst().write(data.clone());
         }

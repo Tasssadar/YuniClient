@@ -142,6 +142,7 @@ class Joystick
 
         public void surfaceChanged(SurfaceHolder holder, int arg1, int width, int height)
         {
+        	pawsVal = height - (height - width)/2;
             this.width = width/2;
             this.height = height/2;
             
@@ -160,9 +161,12 @@ class Joystick
             c.drawLine(width, height-20, width, height+20, mLine);
         }
     }
+    
+    public int getPawsVal() { return pawsVal; }
 
     private byte mMovementFlags;
     private byte mSpeed;
     private boolean mSpinAtPlace;
     private boolean mFingerDown;
+    private int pawsVal;
 }
