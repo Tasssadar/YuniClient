@@ -50,7 +50,7 @@ public class ProtocolMgr
     private Protocol parseFile(File file) throws IOException 
     {	
     	lineEnd = 0;
-    	FileInputStream stream = new FileInputStream(file);
+    /*	FileInputStream stream = new FileInputStream(file);
     	byte[] fileBuff = new byte[(int) file.length()];
         stream.read(fileBuff);
         stream.close();
@@ -166,7 +166,7 @@ public class ProtocolMgr
                 }
                 	
             }
-        }
+        }*/
     	
     	return null;
     }

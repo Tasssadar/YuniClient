@@ -4,19 +4,17 @@ public class Protocol
 {   
     public Protocol()
     {
-        m_header = null;
-        m_data = null;
+        m_id = -1;
     }
     
-    public void setHeader(Header header) { m_header = header; }
-    public Header getHeader() { return m_header; }
+    public void setId(byte id) { m_id = id; }
+    public byte getId() { return m_id; }
+    public String getName() { return null; }
     
-    public void setData(Data data) { m_data = data; }
-    public Data getData() { return m_data; }
+    public byte[] BuildPawPacket(float percent) { return null; }
+    public byte[] BuildMovementPacket(byte flags, boolean down, byte speed) { return null; }
     
-    private Header m_header;
-    private Data m_data;
-    
+    private byte m_id; 
 };
 
 

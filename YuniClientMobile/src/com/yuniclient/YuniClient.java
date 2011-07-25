@@ -864,13 +864,13 @@ public class YuniClient extends Activity
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
         View layout = inflater.inflate(R.layout.save_data,
                                        (ViewGroup) findViewById(R.id.layout_root));
-        ((TextView)layout.findViewById(R.id.data_file_save)).setText("255");
+        ((TextView)layout.findViewById(R.id.data_file_save)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
         builder.setView(layout);
         builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface arg0, int arg1)
             {
                EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
-               int speed = 255;
+               int speed = controlAPI.GetInst().GetDefaultMaxSpeed();
                try
                {
                    speed = Integer.valueOf(text.getText().toString());
@@ -880,7 +880,7 @@ public class YuniClient extends Activity
                    Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                }
 
-               controlAPI.GetInst().SetQuarraSpeed(speed);
+               controlAPI.GetInst().SetMaxSpeed(speed);
            }
         });
         alertDialog = builder.create();
@@ -1105,12 +1105,12 @@ public class YuniClient extends Activity
             float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
             
             byte[] data = null;
-            int aa = joystick.getPawsVal();
-            if(y > aa)
-            	data = controlAPI.GetInst().BuildPawPacket(event.getX()/(msg.arg1*2));
+
+            if(y > joystick.getPawsVal() && event.getAction() == MotionEvent.ACTION_DOWN)
+                data = controlAPI.GetInst().BuildPawPacket(event.getX()/(msg.arg1*2));
             else
             {
-            	byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+                byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
                 
                 if(flags == null)
                     return;

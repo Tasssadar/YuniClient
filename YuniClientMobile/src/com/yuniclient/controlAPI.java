@@ -19,6 +19,8 @@ public class controlAPI
     {
         apiType = API_YUNIRC;
         quorraSpeed = 300; // base calculation speed of quorra
+        m_chessbot = null;
+        m_quorra = null;
     }
     
     public static controlAPI InitInstance()
@@ -37,7 +39,23 @@ public class controlAPI
         instance = null;
     }
     
-    public void SetAPIType(byte type) { apiType = type; }
+    public void SetAPIType(byte type)
+    {
+    	apiType = type;
+    	m_chessbot = null;
+    	m_quorra = null;
+    	switch(apiType)
+    	{
+    		default:
+    			return;
+    		case API_CHESSBOT:
+    			m_chessbot = new ChessBotProtocol();
+    			return;
+    		case API_QUORRA:
+    			m_quorra = new QuorraProtocol();
+    			return;
+    	}
+    }
     public static byte GetAPITypeFromString(CharSequence type)
     {
         if(type == "Keyboard")      return API_KEYBOARD;
@@ -51,19 +69,15 @@ public class controlAPI
     
     public byte[] BuildPawPacket(float percent)
     {
-    	switch(apiType)
-    	{
-    		case API_CHESSBOT:
-    			byte[] tmp = new byte[4];
-    			Packet pkt = new Packet(ProtocolMgr.QUORRA_PAWS, tmp, (byte) 4);
-    			int pos = (int)((2000*percent)-1000);
-    			pkt.writeUInt16(pos);
-    			pkt.writeUInt16(pos);
-    			pkt.CountOpcode(true);
-    			return pkt.getSendData();
-    		default:
-    			return null;
-    	}
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+                return m_chessbot.BuildPawPacket(percent);
+            case API_QUORRA:
+            	return m_quorra.BuildPawPacket(percent);
+            default:
+                return null;
+        }
     }
     
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
@@ -112,74 +126,12 @@ public class controlAPI
             }
             case API_CHESSBOT:
             {
-                byte[] tmp = new byte[4];
-                Packet pkt = new Packet(ProtocolMgr.QUORRA_SET_POWER, tmp, (byte) 4);
-                int[] data = null;
-                if(down)
-                {
-                    int targetSpeed = quorraSpeed;
-                    switch(speed)
-                    {
-                        case 50: targetSpeed = quorraSpeed/3; break;
-                        case 100: targetSpeed = quorraSpeed/2;break;
-                        case 127:
-                        default:
-                            break;
-                    }
-                    data = MoveFlagsToQuorra(targetSpeed, flags);
-                    if(data != null)
-                    {
-                        pkt.writeUInt16(data[0]);
-                        pkt.writeUInt16(data[1]);
-                    }
-                }
-                
-                if(data == null)
-                {
-                    pkt.writeUInt16(0);
-                    pkt.writeUInt16(0);
-                }
-                pkt.CountOpcode(true);
-                packet = pkt.getSendData();
+                packet = m_chessbot.BuildMovementPacket(flags, down, speed);
                 break;
             }
             case API_QUORRA:
             {
-                byte quorraPkt[] = new byte[8];
-                quorraPkt[0] = (byte)0xFF;
-                quorraPkt[1] = (byte)0x00;
-                quorraPkt[2] = (byte)5;
-                quorraPkt[3] = (byte)5;
-                int[] data = null;
-                if(down)
-                {
-                    int targetSpeed = quorraSpeed;
-                    switch(speed)
-                    {
-                        case 50: targetSpeed = quorraSpeed/3; break;
-                        case 100: targetSpeed = quorraSpeed/2;break;
-                        case 127:
-                        default:
-                            break;
-                    }
-                    data = MoveFlagsToQuorra(targetSpeed, flags);
-                    if(data != null)
-                    {
-                        quorraPkt[4] = (byte) (data[0] >> 8);
-                        quorraPkt[5] = (byte) (data[0]);
-                        quorraPkt[6] = (byte) (data[1] >> 8);
-                        quorraPkt[7] = (byte) (data[1]);
-                    }
-                }
-                
-                if(data == null)
-                {
-                    quorraPkt[4] = (byte) 0;
-                    quorraPkt[5] = (byte) 0;
-                    quorraPkt[6] = (byte) 0;
-                    quorraPkt[7] = (byte) 0;
-                }
-                packet = quorraPkt;
+                packet = m_quorra.BuildMovementPacket(flags, down, speed);
                 break;
             }
         }
@@ -223,7 +175,7 @@ public class controlAPI
         return flags;
     }
     
-    public int[] MoveFlagsToQuorra(int speed, byte flags)
+    public static int[] MoveFlagsToQuorra(int speed, byte flags)
     {
         int[] result = {speed, speed};
         if(speed == 0 || flags == MOVE_NONE)
@@ -267,7 +219,33 @@ public class controlAPI
     public float GetDefX() { return mDefX; }
     public float GetDefY() { return mDefY; }
 
-    public void SetQuarraSpeed(int speed) { quorraSpeed = speed; }
+    public void SetMaxSpeed(int speed)
+    {
+    	switch(apiType)
+    	{
+    		case API_CHESSBOT:
+    			m_chessbot.setMaxSpeed((short) speed);
+    			break;
+    		case API_QUORRA:
+    			m_quorra.setMaxSpeed((short)speed);
+    		default:
+    			quorraSpeed = speed;
+    			break;	
+    	}
+    }
+    
+    public short GetDefaultMaxSpeed()
+    {
+    	switch(apiType)
+    	{
+    		case API_CHESSBOT:
+    			return m_chessbot.getMaxSpeed();
+    		case API_QUORRA:
+    			return m_quorra.getMaxSpeed();
+    		default:
+    			return (short)quorraSpeed;
+    	}
+    }
     
     private float mDefX = 0;
     private float mDefY = 0;
@@ -276,4 +254,6 @@ public class controlAPI
     private int quorraSpeed;
     
     private static controlAPI instance;
+    private ChessBotProtocol m_chessbot;
+    private QuorraProtocol m_quorra;
 };
