@@ -3,6 +3,7 @@ package com.yuniclient;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Set;
 
 import android.app.Activity;
@@ -20,6 +21,11 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
+import android.gesture.Gesture;
+import android.gesture.GestureLibraries;
+import android.gesture.GestureLibrary;
+import android.gesture.GestureOverlayView;
+import android.gesture.Prediction;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -94,6 +100,10 @@ public class YuniClient extends Activity
             ShowAlert("This device does not have bluetooth adapter");
         else if(!mBluetoothAdapter.isEnabled())
             EnableBT();
+        gestureLib = GestureLibraries.fromRawResource(this, R.raw.gestures);
+        if (!gestureLib.load()) {
+            finish();
+        }
         init();
     }
 
@@ -503,52 +513,23 @@ public class YuniClient extends Activity
                     FindDevices();
             }
         });
-        if(EEPROMTouchLastX == null)
-        {
-            EEPROMTouchLastX = new int[50];
-            EEPROMTouchLastY = new int[50];
-        }
-        pairedListView.setOnTouchListener(new View.OnTouchListener()
-        {
-            public boolean onTouch(View v, MotionEvent event)
+        
+        GestureOverlayView gestureOverlayView = (GestureOverlayView) findViewById(R.id.gestures_view);
+        gestureOverlayView.addOnGesturePerformedListener(new GestureOverlayView.OnGesturePerformedListener()
+        {    
+            public void onGesturePerformed(GestureOverlayView overlay, Gesture gesture)
             {
-                if(event.getAction() == MotionEvent.ACTION_MOVE)
+                ArrayList<Prediction> predictions = gestureLib.recognize(gesture);
+                for (Prediction prediction : predictions)
                 {
-                    if(EEPROMTouchItr >= 50)
-                        EEPROMTouchItr = 0;
-                    EEPROMTouchLastX[EEPROMTouchItr] = (int) event.getX();
-                    EEPROMTouchLastY[EEPROMTouchItr] = (int) event.getY();
-                    ++EEPROMTouchItr;
-                }
-                else if(event.getAction() == MotionEvent.ACTION_DOWN)
-                    EEPROMTouchItr = 0;
-                else if(event.getAction() == MotionEvent.ACTION_UP && EEPROMTouchItr != 0)
-                {
-                    boolean right = false;
-                    boolean correct = abs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]) > 30 && // X movement must be bigger than 30px
-                      // and x movement must be bigger than Y movement
-                      abs(EEPROMTouchLastY[0] - EEPROMTouchLastY[EEPROMTouchItr-1]) < abs(EEPROMTouchLastX[0] - EEPROMTouchLastX[EEPROMTouchItr-1]);
-                    
-                    for(byte i = 1; i < EEPROMTouchItr && correct; ++i)
+                    if (prediction.score > 1.0)
                     {
-                        if(i == 1 && EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i])
-                            right = true;
-                        else if((EEPROMTouchLastX[i-1] < EEPROMTouchLastX[i] && !right) || 
-                                (EEPROMTouchLastX[i-1] > EEPROMTouchLastX[i] && right))
-                            correct = false;
+                        ChangeDevicesPart(true, prediction.name.contentEquals("right"));
+                        break;
                     }
-                    if(correct)
-                        ChangeDevicesPart(true, right);
                 }
-                return false;
-            }
-
-            private int abs(int i)
-            {
-                return (i < 0) ? -i : i;
             }
         });
-        
     }
     
     private static void ButtonTouched(CharSequence button, boolean down)
@@ -1367,11 +1348,10 @@ public class YuniClient extends Activity
     private static int state;
     
     private byte btTurnOn;
-    private int[] EEPROMTouchLastX;
-    private int[] EEPROMTouchLastY;
-    private byte EEPROMTouchItr;
     public byte eeprom_part;
     public byte eeprom_write_part;
+    
+    private GestureLibrary gestureLib;
 
     private Animation inFromRightAnimation()
     {
