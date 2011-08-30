@@ -35,6 +35,8 @@ class memory
         file.read(fileBuff);
         file.close();
         
+        System.loadLibrary("jni_functions");
+        
         m_buffer = parseHexFile(fileBuff, deviceInfo.mem_size, (int) filePath.length());
         if(m_buffer == null)
             return "Corrupted hex file!";

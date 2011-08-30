@@ -70,6 +70,8 @@ public class YuniClient extends Activity
     public static final short STATE_ACCELEROMETER   = 0x80;
     public static final short STATE_JOYSTICK        = 0x100;
     public static final short STATE_TERMINAL        = 0x200;
+    public static final short STATE_EEPROM          = 0x400;
+    public static final short STATE_EEPROM_READ     = 0x800;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -92,7 +94,6 @@ public class YuniClient extends Activity
             ShowAlert("This device does not have bluetooth adapter");
         else if(!mBluetoothAdapter.isEnabled())
             EnableBT();
-        System.loadLibrary("jni_functions");
         init();
     }
 
@@ -162,7 +163,8 @@ public class YuniClient extends Activity
     {
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {
-              if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0)
+              if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0 ||
+            	 (state & STATE_EEPROM) != 0)
               {
                   if((state & STATE_JOYSTICK) != 0)
                       this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
@@ -360,6 +362,7 @@ public class YuniClient extends Activity
 
         controlAPI.GetInst().SetDefXY(0, 0);
         joystick = null;
+        eeprom = null;
         if(Connection.GetInst() != null)
             Connection.GetInst().cancel();
         Connection.Destroy();
@@ -598,9 +601,11 @@ public class YuniClient extends Activity
             autoScrollThread.cancel();
         autoScrollThread = null;
         joystick = null;
+        eeprom = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_JOYSTICK);
         state &= ~(STATE_TERMINAL);  
+        state &= ~(STATE_EEPROM);
 
         context = this;
         if(lock != null)
@@ -719,6 +724,15 @@ public class YuniClient extends Activity
                  startActivityForResult(new Intent(context, Accelerometer.class), ACCELEROMETER_REQ_CODE);
              }
         });
+        
+        button = (Button) findViewById(R.id.eeprom_b);
+        button.setOnClickListener(new View.OnClickListener()
+        {
+             public void onClick(View v)
+             {
+            	 StartEEPROMRead();
+             }
+        });
     }
         
     private void StartStop(Button v, boolean start, boolean visualOnly)
@@ -759,6 +773,9 @@ public class YuniClient extends Activity
         v.setEnabled(start);
         v.setClickable(start);
         v = (Button) findViewById(R.id.Flash_b);
+        v.setEnabled(!start);
+        v.setClickable(!start);
+        v = (Button) findViewById(R.id.eeprom_b);
         v.setEnabled(!start);
         v.setClickable(!start);
         if(!visualOnly)
@@ -965,6 +982,30 @@ public class YuniClient extends Activity
         if(toClass)
             terminal.SetText(text);
     }
+    
+    private void InitEEPROM()
+    {
+    	state |= STATE_EEPROM;
+    	setContentView(R.layout.eeprom);
+    	ArrayAdapter<String> mListAdapter = eeprom.CreateOrGetAdapter(this);
+
+        ListView pairedListView = (ListView) findViewById(R.id.eeprom_list);
+        pairedListView.setAdapter(mListAdapter);
+        
+        eeprom.FillAdapter();
+        //pairedListView.setOnItemClickListener(mDeviceClickListener);
+    }
+    
+    private void StartEEPROMRead()
+    {
+        state |= STATE_EEPROM_READ;
+    	
+    	final byte[] out = { 0x12 };
+        Connection.GetInst().write(out.clone());
+        state |= STATE_WAITING_ID;
+        TextView error = (TextView)findViewById(R.id.error);
+        error.append("Waiting for chip id...");
+    }
  
     // ============================================ HANDLERS ============================================  
     private View.OnTouchListener keyTouch = new View.OnTouchListener()
@@ -1005,7 +1046,7 @@ public class YuniClient extends Activity
             return false;
         }
     };
-    
+
     private final OnClickListener saveLogFile = new OnClickListener()
     {
         public void onClick(DialogInterface dialog, int id)
@@ -1185,11 +1226,22 @@ public class YuniClient extends Activity
                         case Connection.DATA_ID_RESPONSE:
                             dialog.dismiss();
                             dialog= new ProgressDialog(context);
-                            dialog.setCancelable(false);
-                            dialog.setMessage("Flashing into " + ((DeviceInfo)msg.obj).name + "...");
                             dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                            dialog.setMax(100);
                             dialog.setProgress(0);
+                            if((state & STATE_EEPROM_READ) == 0)
+                            {
+                            	dialog.setMessage("Flashing into " + ((DeviceInfo)msg.obj).name + "...");
+                            	dialog.setMax(100);
+                            	dialog.setCancelable(false);
+                            }
+                            else
+                            {
+                            	eeprom = new EEPROM((DeviceInfo)msg.obj);
+                            	dialog.setMessage("Reading eeprom from " + ((DeviceInfo)msg.obj).name + "...");
+                            	dialog.setMax(eeprom.getSize()/EEPROM.EEPROM_READ_BLOCK);
+                            	dialog.setCancelable(true);
+                            	Connection.GetInst().StartEEPROMRead(eeprom);
+                            }
                             dialog.show();
                             state &= ~(STATE_WAITING_ID);
                             return;
@@ -1216,6 +1268,20 @@ public class YuniClient extends Activity
                                 TextView error = (TextView)findViewById(R.id.error);
                                 error.setText("Flashing done");
                                 dialog.dismiss();
+                            }
+                            return;
+                        }
+                        case Connection.DATA_EEPROM_READ:
+                        {
+                            if(msg.arg2 == 1)
+                                dialog.incrementProgressBy(1);
+                            else
+                            {
+                                state &= ~(STATE_EEPROM_READ);
+                                TextView error = (TextView)findViewById(R.id.error);
+                                error.setText("");
+                                dialog.dismiss();
+                                InitEEPROM();
                             }
                             return;
                         }
@@ -1272,9 +1338,19 @@ public class YuniClient extends Activity
     
     public static int getState() { return state; }
     
+    public static String numToHex(int num, byte width)
+    {
+    	String begin = "0x";
+        String res = Integer.toHexString(num).toUpperCase();
+        for(byte i = 0; i < (width - res.length()); ++i)
+        	begin += "0";
+        return begin + res;
+    }
+    
     private Joystick joystick;
     private Terminal terminal;
     private LogFile log;
+    private EEPROM eeprom;
 
     private WakeLock lock;
     private View connectView;

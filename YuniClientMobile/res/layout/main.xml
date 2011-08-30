@@ -44,13 +44,25 @@
                 android:layout_toRightOf="@id/accelerometer_b"
                 android:text="Controls" android:layout_weight="1"/> 
      </LinearLayout>
+     <LinearLayout android:layout_height="wrap_content"
+        android:id="@+id/linear4" 
+        android:layout_below="@id/linear2"
+        android:layout_width="fill_parent">
+         <Button android:id="@+id/eeprom_b"
+                android:layout_width="105dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/joystick_b"
+                android:clickable="false"
+                android:enabled="false"
+                android:text="EEPROM" android:layout_weight="1"/> 
+     </LinearLayout>
      <EditText android:id="@+id/hex_file" 
               android:layout_width="fill_parent" 
               android:layout_height="wrap_content" 
               android:layout_marginTop="20dp"
               android:background="@android:drawable/editbox_background"
               android:text=""
-              android:layout_below="@id/linear2" />
+              android:layout_below="@id/linear4" />
      <LinearLayout android:layout_height="wrap_content"
         android:id="@+id/linear3" 
         android:layout_below="@id/hex_file"

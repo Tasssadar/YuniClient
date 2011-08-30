@@ -18,6 +18,7 @@ class Connection
     public static final byte DATA_ID_RESPONSE = 3;
     public static final byte DATA_FLASH       = 4;
     public static final byte DATA_FLASH_PAGE  = 5;
+    public static final byte DATA_EEPROM_READ = 6;
     
     public static final int MESSAGE_STATE_CHANGE = 1;
     public static final int MESSAGE_READ = 2;
@@ -71,6 +72,25 @@ class Connection
         final byte[] adress = { (byte)(page.address >> 8), (byte)(page.address) };
         mChatService.write(adress);
         mChatService.write(page.data);
+    }
+    
+    public void StartEEPROMRead(EEPROM eeprom)
+    {
+        m_eeprom = eeprom;
+        eeprom.setReadAddress(0);
+        final byte[] out = { 0x13, 0, 0, (byte) EEPROM.EEPROM_READ_BLOCK };
+        mChatService.write(out);
+    }
+    
+    private boolean SendNextEEPROMRead()
+    {
+    	int address = m_eeprom.getNextReadAddress();
+    	if(address >= m_eeprom.getSize())
+    		return false;
+    	
+    	final byte[] out = { 0x13, (byte)(address >> 8), (byte)(address), (byte)EEPROM.EEPROM_READ_BLOCK };
+    	mChatService.write(out);
+    	return true;
     }
     
     private final Handler mBThandler = new Handler() {
@@ -130,9 +150,12 @@ class Connection
                                 resp.arg1 = DATA_ID_RESPONSE;
                                 resp.obj = deviceInfo;
                                 mHandler.sendMessage(resp);
-                                mem = new memory(deviceInfo);
-                                HexLoadThread load = new HexLoadThread();
-                                load.start();
+                                if((state & YuniClient.STATE_EEPROM_READ) == 0)
+                                {
+	                                mem = new memory(deviceInfo);
+	                                HexLoadThread load = new HexLoadThread();
+	                                load.start();
+                                }
                             }
                         }
                         else if((state & YuniClient.STATE_FLASHING) != 0)
@@ -141,6 +164,14 @@ class Connection
                             if(page != null)  SendPage(page);
                             else              mem = null;
                             mHandler.obtainMessage(CONNECTION_DATA, DATA_FLASH_PAGE, page != null ? 1 : 0).sendToTarget();
+                        }
+                        else if((state & YuniClient.STATE_EEPROM_READ) != 0)
+                        {
+                        	if(m_eeprom.addData(buffer, (short) msg.arg1)%EEPROM.EEPROM_READ_BLOCK == 0)
+                        	{
+                        		boolean doNext = SendNextEEPROMRead();
+                        		mHandler.obtainMessage(CONNECTION_DATA, DATA_EEPROM_READ, doNext ? 1 : 0).sendToTarget();
+                        	}
                         }
                         else if(seq != "")
                         {
@@ -212,4 +243,5 @@ class Connection
     private BluetoothChatService mChatService;
     private memory mem;
     private File hexFile;
+    private EEPROM m_eeprom;
 }
