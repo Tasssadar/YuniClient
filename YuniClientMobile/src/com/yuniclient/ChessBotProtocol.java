@@ -2,24 +2,24 @@ package com.yuniclient;
 
 public class ChessBotProtocol extends Protocol
 {
-	public ChessBotProtocol()
-	{
-		m_maxSpeed = 255;
-	}
-	
-	public String getName() { return "ChessBot"; }
-	
-	public byte[] BuildPawPacket(float percent)
-	{
-		byte[] tmp = new byte[4];
+    public ChessBotProtocol()
+    {
+        m_maxSpeed = 255;
+    }
+    
+    public String getName() { return "ChessBot"; }
+    
+    public byte[] BuildPawPacket(float percent)
+    {
+        byte[] tmp = new byte[4];
         Packet pkt = new Packet(ProtocolMgr.QUORRA_PAWS, tmp, (byte) 4);
         int pos = (int)((2000*percent)-1000);
         pkt.writeUInt16(pos);
         pkt.writeUInt16(pos);
         pkt.CountOpcode(true);
         return pkt.getSendData();
-	}
-	
+    }
+    
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
         byte[] tmp = new byte[4];
@@ -50,7 +50,7 @@ public class ChessBotProtocol extends Protocol
             pkt.writeUInt16(0);
         }
         pkt.CountOpcode(true);
-    	return pkt.getSendData();
+        return pkt.getSendData();
     }
     
     public void setMaxSpeed(short speed) { m_maxSpeed = speed; }

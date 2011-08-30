@@ -16,7 +16,7 @@ public class QuorraProtocol extends Protocol
     
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
-    	  byte quorraPkt[] = new byte[8];
+          byte quorraPkt[] = new byte[8];
           quorraPkt[0] = (byte)0xFF;
           quorraPkt[1] = (byte)0x00;
           quorraPkt[2] = (byte)5;

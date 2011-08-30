@@ -164,7 +164,7 @@ public class YuniClient extends Activity
         if ((keyCode == KeyEvent.KEYCODE_BACK))
         {
               if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0 ||
-            	 (state & STATE_EEPROM) != 0)
+                 (state & STATE_EEPROM) != 0)
               {
                   if((state & STATE_JOYSTICK) != 0)
                       this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
@@ -730,7 +730,7 @@ public class YuniClient extends Activity
         {
              public void onClick(View v)
              {
-            	 StartEEPROMRead();
+                 StartEEPROMRead();
              }
         });
     }
@@ -985,9 +985,9 @@ public class YuniClient extends Activity
     
     private void InitEEPROM()
     {
-    	state |= STATE_EEPROM;
-    	setContentView(R.layout.eeprom);
-    	ArrayAdapter<String> mListAdapter = eeprom.CreateOrGetAdapter(this);
+        state |= STATE_EEPROM;
+        setContentView(R.layout.eeprom);
+        ArrayAdapter<String> mListAdapter = eeprom.CreateOrGetAdapter(this);
 
         ListView pairedListView = (ListView) findViewById(R.id.eeprom_list);
         pairedListView.setAdapter(mListAdapter);
@@ -999,8 +999,8 @@ public class YuniClient extends Activity
     private void StartEEPROMRead()
     {
         state |= STATE_EEPROM_READ;
-    	
-    	final byte[] out = { 0x12 };
+        
+        final byte[] out = { 0x12 };
         Connection.GetInst().write(out.clone());
         state |= STATE_WAITING_ID;
         TextView error = (TextView)findViewById(R.id.error);
@@ -1230,17 +1230,17 @@ public class YuniClient extends Activity
                             dialog.setProgress(0);
                             if((state & STATE_EEPROM_READ) == 0)
                             {
-                            	dialog.setMessage("Flashing into " + ((DeviceInfo)msg.obj).name + "...");
-                            	dialog.setMax(100);
-                            	dialog.setCancelable(false);
+                                dialog.setMessage("Flashing into " + ((DeviceInfo)msg.obj).name + "...");
+                                dialog.setMax(100);
+                                dialog.setCancelable(false);
                             }
                             else
                             {
-                            	eeprom = new EEPROM((DeviceInfo)msg.obj);
-                            	dialog.setMessage("Reading eeprom from " + ((DeviceInfo)msg.obj).name + "...");
-                            	dialog.setMax(eeprom.getSize()/EEPROM.EEPROM_READ_BLOCK);
-                            	dialog.setCancelable(true);
-                            	Connection.GetInst().StartEEPROMRead(eeprom);
+                                eeprom = new EEPROM((DeviceInfo)msg.obj);
+                                dialog.setMessage("Reading eeprom from " + ((DeviceInfo)msg.obj).name + "...");
+                                dialog.setMax(eeprom.getSize()/EEPROM.EEPROM_READ_BLOCK);
+                                dialog.setCancelable(true);
+                                Connection.GetInst().StartEEPROMRead(eeprom);
                             }
                             dialog.show();
                             state &= ~(STATE_WAITING_ID);
@@ -1340,10 +1340,10 @@ public class YuniClient extends Activity
     
     public static String numToHex(int num, byte width)
     {
-    	String begin = "0x";
+        String begin = "0x";
         String res = Integer.toHexString(num).toUpperCase();
         for(byte i = 0; i < (width - res.length()); ++i)
-        	begin += "0";
+            begin += "0";
         return begin + res;
     }
     

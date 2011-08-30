@@ -84,13 +84,13 @@ class Connection
     
     private boolean SendNextEEPROMRead()
     {
-    	int address = m_eeprom.getNextReadAddress();
-    	if(address >= m_eeprom.getSize())
-    		return false;
-    	
-    	final byte[] out = { 0x13, (byte)(address >> 8), (byte)(address), (byte)EEPROM.EEPROM_READ_BLOCK };
-    	mChatService.write(out);
-    	return true;
+        int address = m_eeprom.getNextReadAddress();
+        if(address >= m_eeprom.getSize())
+            return false;
+        
+        final byte[] out = { 0x13, (byte)(address >> 8), (byte)(address), (byte)EEPROM.EEPROM_READ_BLOCK };
+        mChatService.write(out);
+        return true;
     }
     
     private final Handler mBThandler = new Handler() {
@@ -152,9 +152,9 @@ class Connection
                                 mHandler.sendMessage(resp);
                                 if((state & YuniClient.STATE_EEPROM_READ) == 0)
                                 {
-	                                mem = new memory(deviceInfo);
-	                                HexLoadThread load = new HexLoadThread();
-	                                load.start();
+                                    mem = new memory(deviceInfo);
+                                    HexLoadThread load = new HexLoadThread();
+                                    load.start();
                                 }
                             }
                         }
@@ -167,11 +167,11 @@ class Connection
                         }
                         else if((state & YuniClient.STATE_EEPROM_READ) != 0)
                         {
-                        	if(m_eeprom.addData(buffer, (short) msg.arg1)%EEPROM.EEPROM_READ_BLOCK == 0)
-                        	{
-                        		boolean doNext = SendNextEEPROMRead();
-                        		mHandler.obtainMessage(CONNECTION_DATA, DATA_EEPROM_READ, doNext ? 1 : 0).sendToTarget();
-                        	}
+                            if(m_eeprom.addData(buffer, (short) msg.arg1)%EEPROM.EEPROM_READ_BLOCK == 0)
+                            {
+                                boolean doNext = SendNextEEPROMRead();
+                                mHandler.obtainMessage(CONNECTION_DATA, DATA_EEPROM_READ, doNext ? 1 : 0).sendToTarget();
+                            }
                         }
                         else if(seq != "")
                         {
