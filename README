@@ -1,15 +1,3 @@
-
-    ==== YuniClient ====
-
-    Client for yunimin class robots (which are using ATmega microcontrollers) ported into C#.
-
-    * Can flash program into robot if robot has avakar's bootloader
-    * Can send characters to robot
-    * Can show output from robot
-    * Can control robot's movement if implemented in its program
-    * Can edit EEPROM memory in robot if implemented in its program
-    * Can save and load EEPROM content from data files
-
     ==== YuniClientMobile ====
 
     Client for yunimin class robots (which are using ATmega microcontrollers) ported for android devices
@@ -35,5 +23,7 @@
     * ATmega128 (only 16-bit addresses available)
     * ATmega162
     * ATmega168
-    * ATmega328
+    * ATmega328p
+    * ATmega8u2
+    * ATmega1284p
 

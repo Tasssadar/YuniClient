@@ -183,7 +183,7 @@ public class YuniClient extends Activity
               else if((state & STATE_CONNECTED) != 0)
                   Disconnect(true);
               else
-                  finish();
+                  moveTaskToBack(true);
               return true;
         }
         else if(keyCode == KeyEvent.KEYCODE_MENU)
@@ -498,7 +498,6 @@ public class YuniClient extends Activity
         Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
         if (pairedDevices.size() > 0)
         {
-            findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
             for (BluetoothDevice device : pairedDevices)
                 mPairedDevices.add(device.getName() + "\n" + device.getAddress());
         }
@@ -1075,6 +1074,14 @@ public class YuniClient extends Activity
             int stateBT = intent.getExtras().getInt(BluetoothAdapter.EXTRA_STATE);
             if((state & STATE_CONNECTED) != 0 && stateBT == BluetoothAdapter.STATE_TURNING_OFF)
                 Disconnect(true);
+            else if((state & STATE_CONNECTED) == 0 && stateBT == BluetoothAdapter.STATE_ON)
+            {
+            	mPairedDevices.clear();
+            	Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+                if (pairedDevices.size() > 0)
+                    for (BluetoothDevice device : pairedDevices)
+                        mPairedDevices.add(device.getName() + "\n" + device.getAddress());
+            }
         }
     };
     
