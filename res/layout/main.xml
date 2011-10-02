@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#fff"
+    >
+
+	<LinearLayout android:layout_height="wrap_content"
+        android:id="@+id/linear2" 
+        android:layout_width="fill_parent">  
+	    <TextView android:id="@+id/paired_label"
+	        android:layout_width="100dp"
+	        android:layout_height="wrap_content"
+	        android:text="Paired Devices"
+	        android:padding="3dp"
+	        android:textColor="#000"
+	        android:maxLines="1"
+	        android:layout_weight="1"
+	        android:background="#FFC15E"
+	    />
+	    <TextView android:id="@+id/search_label"
+	        android:layout_width="100dp"
+	        android:layout_height="wrap_content"
+	        android:text="Search"
+	        android:padding="3dp"
+	        android:textColor="#000"
+	        android:maxLines="1"
+	        android:layout_toRightOf="@id/paired_label"
+	        android:layout_weight="1"
+	    /> 
+    </LinearLayout>
+    <android.support.v4.view.ViewPager
+            android:id="@+id/pager"
+            android:layout_width="match_parent"
+            android:layout_height="0px"
+            android:layout_weight="1">
+    </android.support.v4.view.ViewPager>
+    
+</LinearLayout>
