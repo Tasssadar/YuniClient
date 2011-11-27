@@ -13,9 +13,10 @@ public class ChessBotProtocol extends Protocol
     {
         byte[] tmp = new byte[4];
         Packet pkt = new Packet(ProtocolMgr.QUORRA_PAWS, tmp, (byte) 4);
-        int pos = (int)((2000*percent)-1000);
+        int pos = (int)((2000*(percent/100))-1000);
+        int pos2 = (int)((2000*((100 - percent)/100))-1000);
         pkt.writeUInt16(pos);
-        pkt.writeUInt16(pos);
+        pkt.writeUInt16(pos2);
         pkt.CountOpcode(true);
         return pkt.getSendData();
     }

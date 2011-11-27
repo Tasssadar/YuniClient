@@ -78,6 +78,7 @@ public class YuniClient extends Activity
     public static final short STATE_TERMINAL        = 0x200;
     public static final short STATE_EEPROM          = 0x400;
     public static final short STATE_EEPROM_READ     = 0x800;
+    public static final short STATE_PAWS_OPEN       = 0x1000;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -194,6 +195,23 @@ public class YuniClient extends Activity
                 ShowAPIDialog(true);
             else
                 startActivity(new Intent(this, Settings.class));
+            return true;
+        }
+        else if(keyCode == KeyEvent.KEYCODE_SEARCH && (state & STATE_JOYSTICK) != 0)
+        {
+            float pct = 0;
+            if((state & STATE_PAWS_OPEN) == 0)
+            {
+                state |= STATE_PAWS_OPEN;
+                pct = 90;
+            }
+            else
+                state &= ~(STATE_PAWS_OPEN);
+            
+            byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
+
+            if(data != null)
+                Connection.GetInst().write(data.clone());
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -1076,8 +1094,8 @@ public class YuniClient extends Activity
                 Disconnect(true);
             else if((state & STATE_CONNECTED) == 0 && stateBT == BluetoothAdapter.STATE_ON)
             {
-            	mPairedDevices.clear();
-            	Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
+                mPairedDevices.clear();
+                Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices(); 
                 if (pairedDevices.size() > 0)
                     for (BluetoothDevice device : pairedDevices)
                         mPairedDevices.add(device.getName() + "\n" + device.getAddress());
@@ -1134,18 +1152,12 @@ public class YuniClient extends Activity
             float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
             
             byte[] data = null;
-
-            if(y > joystick.getPawsVal() && event.getAction() == MotionEvent.ACTION_DOWN)
-                data = controlAPI.GetInst().BuildPawPacket(event.getX()/(msg.arg1*2));
-            else
-            {
-                byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
                 
-                if(flags == null)
-                    return;
+            if(flags == null)
+                return;
                 
-                data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
-            }
+            data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
             
             if(data != null)
                 Connection.GetInst().write(data.clone());

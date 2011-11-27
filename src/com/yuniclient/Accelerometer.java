@@ -33,28 +33,56 @@ import com.yuni.client.R;
 
 public class Accelerometer extends Activity
 {
+    
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        super.onCreate(savedInstanceState);  
-        
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-                                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        view = new AccelerometerView(this);
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        super.onCreate(savedInstanceState);  
+    //    startAccel();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+  //      stopAccel();
+        super.onDestroy();
+    }
+    
+    @Override
+    protected void onPause()
+    {
+        stopAccel();
+        super.onPause();
+    }
+    
+    @Override
+    protected void onResume()
+    {
+        startAccel();
+        super.onResume();
+    }
+    
+    private void startAccel()
+    {
+        if(view == null)
+            view = new AccelerometerView(this);
         setContentView(view);
-        
+
         accelerometerListener = new AccelerometerListener();
         lock = ((PowerManager) getBaseContext().getSystemService(Context.POWER_SERVICE))
             .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
         lock.acquire();
         context = this;
         started = false;
+        controlAPI.GetInst().SetDefXY(0, 0);
+        pawsClosed = ((YuniClient.getState() & YuniClient.STATE_PAWS_OPEN) != 0);
         ShowStartDialog();
     }
-
-    @Override
-    protected void onDestroy()
+    
+    private void stopAccel()
     {
         ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(accelerometerListener);
         lock.release();
@@ -70,7 +98,6 @@ public class Accelerometer extends Activity
                 Connection.GetInst().write(data);
         }
         controlAPI.GetInst().SetDefXY(0, 0);
-        super.onDestroy();
     }
     
     @Override
@@ -79,6 +106,17 @@ public class Accelerometer extends Activity
         if(keyCode == KeyEvent.KEYCODE_MENU)
         {
             ShowAPIDialog();
+            return true;
+        }
+        else if(keyCode == KeyEvent.KEYCODE_SEARCH)
+        {
+            float pct = pawsClosed ? 90 : 0;
+            pawsClosed = !pawsClosed;
+            
+            byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
+
+            if(data != null)
+                Connection.GetInst().write(data.clone());
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -379,4 +417,5 @@ public class Accelerometer extends Activity
     private boolean started;
     private byte mMovementFlags;
     private byte mSpeed;
+    private boolean pawsClosed;
 }
