@@ -86,6 +86,8 @@ public class YuniClient extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+
         context = this;
         eeprom_part = 1;
         eeprom_write_part = 1;
@@ -111,7 +113,6 @@ public class YuniClient extends Activity
 
         init();
 
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         super.onCreate(savedInstanceState);
     }
 
