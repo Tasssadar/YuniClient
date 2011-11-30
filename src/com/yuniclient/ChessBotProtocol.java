@@ -21,6 +21,16 @@ public class ChessBotProtocol extends Protocol
         return pkt.getSendData();
     }
     
+    public byte[] BuildReelPacket(boolean up)
+    {
+        byte[] tmp = new byte[2];
+        Packet pkt = new Packet(ProtocolMgr.QUORRA_REEL, tmp, (byte) 2);
+        pkt.writeByte(up ? (byte)1 : (byte)0);
+        pkt.writeByte((byte)100);
+        pkt.CountOpcode(true);
+        return pkt.getSendData();
+    }
+    
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
         byte[] tmp = new byte[4];

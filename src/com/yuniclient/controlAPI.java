@@ -41,20 +41,20 @@ public class controlAPI
     
     public void SetAPIType(byte type)
     {
-    	apiType = type;
-    	m_chessbot = null;
-    	m_quorra = null;
-    	switch(apiType)
-    	{
-    		default:
-    			return;
-    		case API_CHESSBOT:
-    			m_chessbot = new ChessBotProtocol();
-    			return;
-    		case API_QUORRA:
-    			m_quorra = new QuorraProtocol();
-    			return;
-    	}
+        apiType = type;
+        m_chessbot = null;
+        m_quorra = null;
+        switch(apiType)
+        {
+            default:
+                return;
+            case API_CHESSBOT:
+                m_chessbot = new ChessBotProtocol();
+                return;
+            case API_QUORRA:
+                m_quorra = new QuorraProtocol();
+                return;
+        }
     }
     public static byte GetAPITypeFromString(CharSequence type)
     {
@@ -74,13 +74,26 @@ public class controlAPI
             case API_CHESSBOT:
                 return m_chessbot.BuildPawPacket(percent);
             case API_QUORRA:
-            	return m_quorra.BuildPawPacket(percent);
+                return m_quorra.BuildPawPacket(percent);
             default:
                 return null;
         }
     }
     
-    public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
+    public byte[] BuildReelPacket(boolean up)
+    {
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+                return m_chessbot.BuildReelPacket(up);
+            case API_QUORRA:
+                return m_quorra.BuildReelPacket(up);
+            default:
+                return null;
+        }
+    }
+    
+    public byte[] BuildMovementPacket(byte flags, boolean down, byte speed, short left, short right)
     {
         if(apiType == API_KEYBOARD && !down)
             return null;
@@ -221,30 +234,30 @@ public class controlAPI
 
     public void SetMaxSpeed(int speed)
     {
-    	switch(apiType)
-    	{
-    		case API_CHESSBOT:
-    			m_chessbot.setMaxSpeed((short) speed);
-    			break;
-    		case API_QUORRA:
-    			m_quorra.setMaxSpeed((short)speed);
-    		default:
-    			quorraSpeed = speed;
-    			break;	
-    	}
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+                m_chessbot.setMaxSpeed((short) speed);
+                break;
+            case API_QUORRA:
+                m_quorra.setMaxSpeed((short)speed);
+            default:
+                quorraSpeed = speed;
+                break;    
+        }
     }
     
     public short GetDefaultMaxSpeed()
     {
-    	switch(apiType)
-    	{
-    		case API_CHESSBOT:
-    			return m_chessbot.getMaxSpeed();
-    		case API_QUORRA:
-    			return m_quorra.getMaxSpeed();
-    		default:
-    			return (short)quorraSpeed;
-    	}
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+                return m_chessbot.getMaxSpeed();
+            case API_QUORRA:
+                return m_quorra.getMaxSpeed();
+            default:
+                return (short)quorraSpeed;
+        }
     }
     
     private float mDefX = 0;

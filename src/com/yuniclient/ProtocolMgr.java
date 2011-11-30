@@ -11,6 +11,7 @@ public class ProtocolMgr
     public static final byte YUNICONTROL_SET_MOVEMENT  = 0x03;
     public static final byte QUORRA_SET_POWER          = 4;
     public static final byte QUORRA_PAWS               = 6;
+    public static final byte QUORRA_REEL               = 7;
     
     private static final String protocolVersion        = "#YCProtocol01"; 
     private static final byte headerLenght             = 13;

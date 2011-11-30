@@ -26,11 +26,11 @@ class Joystick
         mFingerDown = false;
     }
     
-    public byte[] touchEvent(int action, float x, float y, int width, int height)
+    public short[] touchEvent(int action, float x, float y, int width, int height)
     {
         if(action == MotionEvent.ACTION_UP)
         {
-            byte[] flags = {0, 0};
+            short[] flags = {0, 0, 0, 0};
             Reset();
             return flags;
         }
@@ -49,7 +49,7 @@ class Joystick
             else if(dist < 66)
                 speed = 100;
             
-            byte[] flags = {0, speed };
+            short[] flags = {0, speed , 0, 0};
             
             if(ang > 5.18362 || ang <  1.09956) // 0.7 PI range
                 flags[0] |= controlAPI.MOVE_FORWARD;
@@ -80,8 +80,8 @@ class Joystick
             if(flags[0] == mMovementFlags && flags[1] == mSpeed)
                 return null;
             
-            mMovementFlags = flags[0];
-            mSpeed = flags[1];
+            mMovementFlags = (byte)flags[0];
+            mSpeed = (byte)flags[1];
             return flags;
         }
     }
@@ -142,7 +142,7 @@ class Joystick
 
         public void surfaceChanged(SurfaceHolder holder, int arg1, int width, int height)
         {
-        	pawsVal = height - (height - width)/2;
+            pawsVal = height - (height - width)/2;
             this.width = width/2;
             this.height = height/2;
             

@@ -14,6 +14,11 @@ public class QuorraProtocol extends Protocol
         return null;
     }
     
+    public byte[] BuildReelPacket(boolean up)
+    {
+    	return null;
+    }
+    
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
           byte quorraPkt[] = new byte[8];

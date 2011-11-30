@@ -44,11 +44,13 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
@@ -79,6 +81,7 @@ public class YuniClient extends Activity
     public static final short STATE_EEPROM          = 0x400;
     public static final short STATE_EEPROM_READ     = 0x800;
     public static final short STATE_PAWS_OPEN       = 0x1000;
+    public static final short STATE_REEL_UP         = 0x2000;
 
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -172,47 +175,62 @@ public class YuniClient extends Activity
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
-        if ((keyCode == KeyEvent.KEYCODE_BACK))
+        switch(keyCode)
         {
-              if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0 ||
-                 (state & STATE_EEPROM) != 0)
-              {
-                  if((state & STATE_JOYSTICK) != 0)
-                      this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-                  InitMain();
-              }
-              else if((state & STATE_CONNECTED) != 0)
-                  Disconnect(true);
-              else
-                  moveTaskToBack(true);
-              return true;
-        }
-        else if(keyCode == KeyEvent.KEYCODE_MENU)
-        {
-            if((state & STATE_TERMINAL) != 0 || state == 0 || (state & STATE_CONTROLS) != 0)
-                return super.onKeyDown(keyCode, event);
-            else if((state & STATE_JOYSTICK) != 0)
-                ShowAPIDialog(true);
-            else
-                startActivity(new Intent(this, Settings.class));
-            return true;
-        }
-        else if(keyCode == KeyEvent.KEYCODE_SEARCH && (state & STATE_JOYSTICK) != 0)
-        {
-            float pct = 0;
-            if((state & STATE_PAWS_OPEN) == 0)
+            case KeyEvent.KEYCODE_BACK:
             {
-                state |= STATE_PAWS_OPEN;
-                pct = 90;
+                if((state & STATE_CONTROLS) != 0 || (state & STATE_JOYSTICK) != 0 || (state & STATE_TERMINAL) != 0 || (state & STATE_ACCELEROMETER) != 0 ||
+                         (state & STATE_EEPROM) != 0)
+                {
+                    if((state & STATE_JOYSTICK) != 0)
+                        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                    InitMain();
+                }
+                else if((state & STATE_CONNECTED) != 0)
+                    Disconnect(true);
+                else
+                    moveTaskToBack(true);
+                return true;
             }
-            else
-                state &= ~(STATE_PAWS_OPEN);
-            
-            byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
+            case KeyEvent.KEYCODE_MENU:
+            {
+                if((state & STATE_TERMINAL) != 0 || state == 0 || (state & STATE_CONTROLS) != 0)
+                    return super.onKeyDown(keyCode, event);
+                else if((state & STATE_JOYSTICK) != 0)
+                    ShowAPIDialog(true);
+                else
+                    startActivity(new Intent(this, Settings.class));
+                return true;
+            }
+            case KeyEvent.KEYCODE_SEARCH:
+            {
+                float pct = 5;
+                if((state & STATE_PAWS_OPEN) == 0)
+                {
+                    state |= STATE_PAWS_OPEN;
+                    pct = 75;
+                }
+                else
+                    state &= ~(STATE_PAWS_OPEN);
+                
+                byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
 
-            if(data != null)
-                Connection.GetInst().write(data.clone());
-            return true;
+                if(data != null)
+                    Connection.GetInst().write(data.clone());
+                return true;
+            }
+            case KeyEvent.KEYCODE_VOLUME_DOWN:
+            {
+                boolean up = ((state & STATE_REEL_UP) == 0);
+                if(up)
+                    state |= STATE_REEL_UP;
+                else
+                    state &= ~(STATE_REEL_UP);
+                byte[] data = controlAPI.GetInst().BuildReelPacket(up);
+                if(data != null)
+                    Connection.GetInst().write(data);
+                return true;
+            }
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -588,7 +606,7 @@ public class YuniClient extends Activity
 
     private static void SendMovementKey(byte button, boolean down)
     {
-        byte[] out = controlAPI.GetInst().BuildMovementPacket(button, down, (byte) 0);
+        byte[] out = controlAPI.GetInst().BuildMovementPacket(button, down, (byte) 0, (short)0, (short)0);
         if(out != null)
             Connection.GetInst().write(out);     
     }
@@ -877,14 +895,34 @@ public class YuniClient extends Activity
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Set speed");
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-        View layout = inflater.inflate(R.layout.save_data,
-                                       (ViewGroup) findViewById(R.id.layout_root));
-        ((TextView)layout.findViewById(R.id.data_file_save)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
+        View layout = inflater.inflate(R.layout.speed_dialog,
+                                       (ViewGroup) findViewById(R.id.layout_speed_dial));
+        ((TextView)layout.findViewById(R.id.speed_text)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
         builder.setView(layout);
+        SeekBar bar = (SeekBar)layout.findViewById(R.id.speedSeekBar);
+        bar.setProgress(controlAPI.GetInst().GetDefaultMaxSpeed());
+        bar.setOnSeekBarChangeListener(new OnSeekBarChangeListener()
+        {
+
+            public void onProgressChanged(SeekBar bar, int val, boolean fromUser) {
+                // TODO Auto-generated method stub
+                EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
+                text.setText(Integer.valueOf(val).toString());
+            }
+
+            public void onStartTrackingTouch(SeekBar arg0) {
+                // TODO Auto-generated method stub
+                
+            }
+
+            public void onStopTrackingTouch(SeekBar arg0) {
+                // TODO Auto-generated method stub
+                
+            }}
+        );
         builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface arg0, int arg1)
-            {
-               EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+            public void onClick(DialogInterface arg0, int arg1) {
+               EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
                int speed = controlAPI.GetInst().GetDefaultMaxSpeed();
                try
                {
@@ -894,7 +932,6 @@ public class YuniClient extends Activity
                {
                    Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
                }
-
                controlAPI.GetInst().SetMaxSpeed(speed);
            }
         });
@@ -1152,12 +1189,12 @@ public class YuniClient extends Activity
             float y = event.getRawY() - (getWindowManager().getDefaultDisplay().getHeight() - msg.arg2*2);
             
             byte[] data = null;
-            byte[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
+            short[] flags = joystick.touchEvent(event.getAction(), event.getX(), y, msg.arg1, msg.arg2);
                 
             if(flags == null)
                 return;
                 
-            data = controlAPI.GetInst().BuildMovementPacket(flags[0], true, flags[1]);
+            data = controlAPI.GetInst().BuildMovementPacket((byte)flags[0], true, (byte)flags[1], flags[2], flags[3]);
             
             if(data != null)
                 Connection.GetInst().write(data.clone());

@@ -26,6 +26,8 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -79,6 +81,7 @@ public class Accelerometer extends Activity
         started = false;
         controlAPI.GetInst().SetDefXY(0, 0);
         pawsClosed = ((YuniClient.getState() & YuniClient.STATE_PAWS_OPEN) != 0);
+        reelUp = ((YuniClient.getState() & YuniClient.STATE_REEL_UP) != 0);
         ShowStartDialog();
     }
     
@@ -92,7 +95,7 @@ public class Accelerometer extends Activity
         {
             if(!controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
                 mMovementFlags = controlAPI.MOVE_NONE;
-            byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, (byte)0);
+            byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, (byte)0, (short)0, (short)0);
             
             if(data != null)
                 Connection.GetInst().write(data);
@@ -103,21 +106,30 @@ public class Accelerometer extends Activity
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)
     {
-        if(keyCode == KeyEvent.KEYCODE_MENU)
+        switch(keyCode)
         {
-            ShowAPIDialog();
-            return true;
-        }
-        else if(keyCode == KeyEvent.KEYCODE_SEARCH)
-        {
-            float pct = pawsClosed ? 90 : 0;
-            pawsClosed = !pawsClosed;
-            
-            byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
-
-            if(data != null)
-                Connection.GetInst().write(data.clone());
-            return true;
+            case KeyEvent.KEYCODE_MENU:
+                ShowAPIDialog();
+                return true;
+            case KeyEvent.KEYCODE_SEARCH:
+            {
+                float pct = pawsClosed ? 75 : 5;
+                pawsClosed = !pawsClosed;
+                
+                byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
+    
+                if(data != null)
+                    Connection.GetInst().write(data.clone());
+                return true;
+            }
+            case KeyEvent.KEYCODE_VOLUME_UP:
+            {
+                reelUp = !reelUp;
+                byte[] data = controlAPI.GetInst().BuildReelPacket(reelUp);
+                if(data != null)
+                    Connection.GetInst().write(data);
+                return true;
+            }
         }
         return super.onKeyDown(keyCode, event);
     }
@@ -171,13 +183,34 @@ public class Accelerometer extends Activity
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Set speed");
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-        View layout = inflater.inflate(R.layout.save_data,
-                                       (ViewGroup) findViewById(R.id.layout_root));
-        ((TextView)layout.findViewById(R.id.data_file_save)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
+        View layout = inflater.inflate(R.layout.speed_dialog,
+                                       (ViewGroup) findViewById(R.id.layout_speed_dial));
+        ((TextView)layout.findViewById(R.id.speed_text)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
         builder.setView(layout);
+        SeekBar bar = (SeekBar)layout.findViewById(R.id.speedSeekBar);
+        bar.setProgress(controlAPI.GetInst().GetDefaultMaxSpeed());
+        bar.setOnSeekBarChangeListener(new OnSeekBarChangeListener()
+        {
+
+            public void onProgressChanged(SeekBar bar, int val, boolean fromUser) {
+                // TODO Auto-generated method stub
+                EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
+                text.setText(Integer.valueOf(val).toString());
+            }
+
+            public void onStartTrackingTouch(SeekBar arg0) {
+                // TODO Auto-generated method stub
+                
+            }
+
+            public void onStopTrackingTouch(SeekBar arg0) {
+                // TODO Auto-generated method stub
+                
+            }}
+        );
         builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface arg0, int arg1) {
-               EditText text = (EditText)alertDialog.findViewById(R.id.data_file_save);
+               EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
                int speed = controlAPI.GetInst().GetDefaultMaxSpeed();
                try
                {
@@ -236,7 +269,7 @@ public class Accelerometer extends Activity
                 Connection.GetInst().write(speedData.clone());
                 if(controlAPI.GetInst().GetAPIType() == controlAPI.API_YUNIRC && mMovementFlags != 0)
                 {
-                    speedData = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, mSpeed);
+                    speedData = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, false, mSpeed, (short)0, (short)0);
                     if(speedData != null)
                         Connection.GetInst().write(speedData.clone());
                 }
@@ -245,7 +278,7 @@ public class Accelerometer extends Activity
             mMovementFlags = moveFlags[0];
             if(moveFlags[0] != controlAPI.MOVE_NONE || controlAPI.HasPacketStructure(controlAPI.GetInst().GetAPIType()))
             {
-                byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed);
+                byte[] data = controlAPI.GetInst().BuildMovementPacket(mMovementFlags, moveFlags[0] != 0, mSpeed, (short)0, (short)0);
                 if(data != null)
                 {
                     Connection.GetInst().write(data.clone());
@@ -418,4 +451,5 @@ public class Accelerometer extends Activity
     private byte mMovementFlags;
     private byte mSpeed;
     private boolean pawsClosed;
+    private boolean reelUp;
 }
