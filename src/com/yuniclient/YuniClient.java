@@ -86,7 +86,6 @@ public class YuniClient extends Activity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        super.onCreate(savedInstanceState);
         context = this;
         eeprom_part = 1;
         eeprom_write_part = 1;
@@ -98,17 +97,22 @@ public class YuniClient extends Activity
         IntentFilter filterBTChange = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(mReceiver, filter);
         registerReceiver(mBTStateChangeReceiver, filterBTChange);
-        
+
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
             ShowAlert("This device does not have bluetooth adapter");
         else if(!mBluetoothAdapter.isEnabled())
             EnableBT();
+
         gestureLib = GestureLibraries.fromRawResource(this, R.raw.gestures);
         if (!gestureLib.load()) {
             finish();
         }
+
         init();
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        super.onCreate(savedInstanceState);
     }
 
     public void onDestroy() 
