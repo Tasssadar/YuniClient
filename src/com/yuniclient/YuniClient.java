@@ -29,7 +29,6 @@ import android.gesture.Prediction;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.PowerManager.WakeLock;
 import android.preference.PreferenceManager;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -44,20 +43,18 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.TranslateAnimation;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 import com.yuni.client.R;
 
-public class YuniClient extends Activity
+public class YuniClient extends Shared
 {
     private static final int REQUEST_ENABLE_BT = 2;
 
@@ -207,6 +204,7 @@ public class YuniClient extends Activity
                     startActivity(new Intent(this, Settings.class));
                 return true;
             }
+            case KeyEvent.KEYCODE_VOLUME_UP:
             case KeyEvent.KEYCODE_SEARCH:
             {
                 float pct = 5;
@@ -895,55 +893,6 @@ public class YuniClient extends Activity
         alert.show();
     }
     
-    private void OpenSpeedDialog()
-    {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Set speed");
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-        View layout = inflater.inflate(R.layout.speed_dialog,
-                                       (ViewGroup) findViewById(R.id.layout_speed_dial));
-        ((TextView)layout.findViewById(R.id.speed_text)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
-        builder.setView(layout);
-        SeekBar bar = (SeekBar)layout.findViewById(R.id.speedSeekBar);
-        bar.setProgress(controlAPI.GetInst().GetDefaultMaxSpeed());
-        bar.setOnSeekBarChangeListener(new OnSeekBarChangeListener()
-        {
-
-            public void onProgressChanged(SeekBar bar, int val, boolean fromUser) {
-                // TODO Auto-generated method stub
-                EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
-                text.setText(Integer.valueOf(val).toString());
-            }
-
-            public void onStartTrackingTouch(SeekBar arg0) {
-                // TODO Auto-generated method stub
-                
-            }
-
-            public void onStopTrackingTouch(SeekBar arg0) {
-                // TODO Auto-generated method stub
-                
-            }}
-        );
-        builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface arg0, int arg1) {
-               EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
-               int speed = controlAPI.GetInst().GetDefaultMaxSpeed();
-               try
-               {
-                   speed = Integer.valueOf(text.getText().toString());
-               }
-               catch(NumberFormatException e)
-               {
-                   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
-               }
-               controlAPI.GetInst().SetMaxSpeed(speed);
-           }
-        });
-        alertDialog = builder.create();
-        alertDialog.show();
-    }
-    
     private void InitJoystick()
     {
         joystick = new Joystick();
@@ -1394,16 +1343,13 @@ public class YuniClient extends Activity
     private LogFile log;
     private EEPROM eeprom;
 
-    private WakeLock lock;
     private View connectView;
     private BluetoothAdapter mBluetoothAdapter;
     private ArrayAdapter<String> mArrayAdapter;
     private ArrayAdapter<String> mPairedDevices;
     private DialogInterface.OnClickListener fileSelect;
-    private AlertDialog alertDialog;
     private ProgressDialog dialog;
     private File curFolder; 
-    private Context context;
     private ScrollThread autoScrollThread;
     
     private static int state;

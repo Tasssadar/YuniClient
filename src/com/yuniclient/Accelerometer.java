@@ -1,6 +1,5 @@
 package com.yuniclient;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -16,25 +15,20 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.EditText;
-import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.yuni.client.R;
 
-public class Accelerometer extends Activity
+public class Accelerometer extends Shared
 {
+    public static final byte ACC_STARTED            = 0x01;
+    public static final byte ACC_REEL_UP            = 0x02;
+    public static final byte ACC_PAWS_CLOSED        = 0x04;
     
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -43,14 +37,6 @@ public class Accelerometer extends Activity
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         super.onCreate(savedInstanceState);  
-    //    startAccel();
-    }
-
-    @Override
-    protected void onDestroy()
-    {
-  //      stopAccel();
-        super.onDestroy();
     }
     
     @Override
@@ -78,10 +64,14 @@ public class Accelerometer extends Activity
             .newWakeLock((PowerManager.SCREEN_BRIGHT_WAKE_LOCK), "YuniClient accelerometer lock");
         lock.acquire();
         context = this;
-        started = false;
+        state &= ~(ACC_STARTED);
+        
+        if(((YuniClient.getState() & YuniClient.STATE_PAWS_OPEN) == 0))
+            state |= ACC_PAWS_CLOSED;
+        if(((YuniClient.getState() & YuniClient.STATE_REEL_UP) != 0))
+            state |= ACC_REEL_UP;
+        
         controlAPI.GetInst().SetDefXY(0, 0);
-        pawsClosed = ((YuniClient.getState() & YuniClient.STATE_PAWS_OPEN) != 0);
-        reelUp = ((YuniClient.getState() & YuniClient.STATE_REEL_UP) != 0);
         ShowStartDialog();
     }
     
@@ -91,7 +81,7 @@ public class Accelerometer extends Activity
         lock.release();
         lock = null;
         accelerometerListener = null;
-        if(Connection.GetInst() != null && started)
+        if(Connection.GetInst() != null && (state & ACC_STARTED) != 0)
         {
             if(!controlAPI.HasSeparatedSpeed(controlAPI.GetInst().GetAPIType()))
                 mMovementFlags = controlAPI.MOVE_NONE;
@@ -113,8 +103,11 @@ public class Accelerometer extends Activity
                 return true;
             case KeyEvent.KEYCODE_SEARCH:
             {
-                float pct = pawsClosed ? 75 : 5;
-                pawsClosed = !pawsClosed;
+                float pct = (state & ACC_PAWS_CLOSED) != 0 ? 75 : 5;
+                if((state & ACC_PAWS_CLOSED) != 0)
+                    state &= ~(ACC_PAWS_CLOSED);
+                else
+                    state |= ACC_PAWS_CLOSED;
                 
                 byte[] data = controlAPI.GetInst().BuildPawPacket(pct);
     
@@ -124,8 +117,12 @@ public class Accelerometer extends Activity
             }
             case KeyEvent.KEYCODE_VOLUME_UP:
             {
-                reelUp = !reelUp;
-                byte[] data = controlAPI.GetInst().BuildReelPacket(reelUp);
+                if((state & ACC_REEL_UP) != 0)
+                    state &= ~(ACC_REEL_UP);
+                else
+                    state |= ACC_REEL_UP;
+
+                byte[] data = controlAPI.GetInst().BuildReelPacket((state & ACC_REEL_UP) != 0);
                 if(data != null)
                     Connection.GetInst().write(data);
                 return true;
@@ -144,7 +141,7 @@ public class Accelerometer extends Activity
             {
                 SensorManager mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
                 mSensorManager.registerListener(accelerometerListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_FASTEST);
-                started = true;
+                state |= ACC_STARTED;
             }
         });
         builder.setOnCancelListener(new DialogInterface.OnCancelListener()
@@ -177,56 +174,7 @@ public class Accelerometer extends Activity
         AlertDialog alert = builder.create();
         alert.show();
     }
-    
-    private void OpenSpeedDialog()
-    {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Set speed");
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(LAYOUT_INFLATER_SERVICE);
-        View layout = inflater.inflate(R.layout.speed_dialog,
-                                       (ViewGroup) findViewById(R.id.layout_speed_dial));
-        ((TextView)layout.findViewById(R.id.speed_text)).setText(String.valueOf(controlAPI.GetInst().GetDefaultMaxSpeed()));
-        builder.setView(layout);
-        SeekBar bar = (SeekBar)layout.findViewById(R.id.speedSeekBar);
-        bar.setProgress(controlAPI.GetInst().GetDefaultMaxSpeed());
-        bar.setOnSeekBarChangeListener(new OnSeekBarChangeListener()
-        {
 
-            public void onProgressChanged(SeekBar bar, int val, boolean fromUser) {
-                // TODO Auto-generated method stub
-                EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
-                text.setText(Integer.valueOf(val).toString());
-            }
-
-            public void onStartTrackingTouch(SeekBar arg0) {
-                // TODO Auto-generated method stub
-                
-            }
-
-            public void onStopTrackingTouch(SeekBar arg0) {
-                // TODO Auto-generated method stub
-                
-            }}
-        );
-        builder.setNeutralButton("Set", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface arg0, int arg1) {
-               EditText text = (EditText)alertDialog.findViewById(R.id.speed_text);
-               int speed = controlAPI.GetInst().GetDefaultMaxSpeed();
-               try
-               {
-                   speed = Integer.valueOf(text.getText().toString());
-               }
-               catch(NumberFormatException e)
-               {
-                   Toast.makeText(context, "Wrong format!", Toast.LENGTH_SHORT).show();
-               }
-               controlAPI.GetInst().SetMaxSpeed(speed);
-           }
-        });
-        alertDialog = builder.create();
-        alertDialog.show();
-    }
-    
     private class AccelerometerListener implements SensorEventListener
     {    
         public AccelerometerListener() { }
@@ -443,13 +391,8 @@ public class Accelerometer extends Activity
     
     private AccelerometerView view;
     private AccelerometerListener accelerometerListener;
-    private WakeLock lock;
-    private Context context;
-    private AlertDialog alertDialog;
-    
-    private boolean started;
+
     private byte mMovementFlags;
     private byte mSpeed;
-    private boolean pawsClosed;
-    private boolean reelUp;
+    private byte state;
 }

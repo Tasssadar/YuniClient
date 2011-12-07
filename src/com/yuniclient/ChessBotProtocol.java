@@ -5,6 +5,7 @@ public class ChessBotProtocol extends Protocol
     public ChessBotProtocol()
     {
         m_maxSpeed = 255;
+        m_div = 5;
     }
     
     public String getName() { return "ChessBot"; }
@@ -47,7 +48,7 @@ public class ChessBotProtocol extends Protocol
                 default:
                     break;
             }
-            data = controlAPI.MoveFlagsToQuorra(targetSpeed, flags);
+            data = controlAPI.MoveFlagsToQuorra(targetSpeed, flags, getTurnDiv());
             if(data != null)
             {
                 pkt.writeUInt16(data[0]);
@@ -63,9 +64,5 @@ public class ChessBotProtocol extends Protocol
         pkt.CountOpcode(true);
         return pkt.getSendData();
     }
-    
-    public void setMaxSpeed(short speed) { m_maxSpeed = speed; }
-    public short getMaxSpeed() { return m_maxSpeed; }
-    
-    private short m_maxSpeed;
+  
 }

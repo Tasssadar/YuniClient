@@ -34,7 +34,7 @@ public final class R {
         public static final int RightForw_b=0x7f080011;
         public static final int Right_b=0x7f080015;
         public static final int ScrollView01=0x7f080000;
-        public static final int ScrollViewTerminal=0x7f080031;
+        public static final int ScrollViewTerminal=0x7f080033;
         public static final int Space_b=0x7f080007;
         public static final int Speed1_b=0x7f080003;
         public static final int Speed2_b=0x7f080004;
@@ -43,12 +43,14 @@ public final class R {
         public static final int Terminal_b=0x7f080021;
         public static final int accelerometer_b=0x7f080023;
         public static final int button_scan=0x7f08001a;
-        public static final int clear=0x7f080038;
+        public static final int clear=0x7f08003a;
         public static final int data_file_save=0x7f08002c;
+        public static final int divSeekBar=0x7f080031;
+        public static final int div_text=0x7f080032;
         public static final int eeprom_b=0x7f080025;
         public static final int eeprom_list=0x7f08001d;
         public static final int error=0x7f080029;
-        public static final int exit=0x7f080033;
+        public static final int exit=0x7f080035;
         public static final int flipper_devices=0x7f080018;
         public static final int gestures_view=0x7f080019;
         public static final int hex_file=0x7f080026;
@@ -65,17 +67,17 @@ public final class R {
         public static final int linear_parrent=0x7f080016;
         public static final int logo=0x7f08002a;
         public static final int output=0x7f080001;
-        public static final int output_terminal=0x7f080032;
+        public static final int output_terminal=0x7f080034;
         public static final int paired_devices=0x7f08001c;
         public static final int photo=0x7f08001e;
-        public static final int protocol=0x7f080034;
-        public static final int save_log=0x7f080039;
-        public static final int send_byte=0x7f080037;
-        public static final int send_string=0x7f080036;
+        public static final int protocol=0x7f080036;
+        public static final int save_log=0x7f08003b;
+        public static final int send_byte=0x7f080039;
+        public static final int send_string=0x7f080038;
         public static final int settings=0x7f08002d;
         public static final int speedSeekBar=0x7f08002f;
         public static final int speed_text=0x7f080030;
-        public static final int terminal_parse=0x7f080035;
+        public static final int terminal_parse=0x7f080037;
         public static final int title_paired_devices=0x7f08001b;
     }
     public static final class layout {

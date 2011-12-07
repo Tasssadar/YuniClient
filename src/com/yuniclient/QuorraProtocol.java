@@ -5,19 +5,10 @@ public class QuorraProtocol extends Protocol
     public QuorraProtocol()
     {
         m_maxSpeed = 500;
+        m_div = 3;
     }
     
     public String getName() { return "Quorra"; }
-    
-    public byte[] BuildPawPacket(float percent)
-    {
-        return null;
-    }
-    
-    public byte[] BuildReelPacket(boolean up)
-    {
-    	return null;
-    }
     
     public byte[] BuildMovementPacket(byte flags, boolean down, byte speed)
     {
@@ -38,7 +29,7 @@ public class QuorraProtocol extends Protocol
                   default:
                       break;
               }
-              data = controlAPI.MoveFlagsToQuorra(targetSpeed, flags);
+              data = controlAPI.MoveFlagsToQuorra(targetSpeed, flags, getTurnDiv());
               if(data != null)
               {
                   quorraPkt[4] = (byte) (data[0] >> 8);
@@ -57,9 +48,4 @@ public class QuorraProtocol extends Protocol
           }
           return quorraPkt;
     }
-    
-    public void setMaxSpeed(short speed) { m_maxSpeed = speed; }
-    public short getMaxSpeed() { return m_maxSpeed; }
-    
-    private short m_maxSpeed;
 }

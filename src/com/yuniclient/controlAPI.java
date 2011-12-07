@@ -18,9 +18,7 @@ public class controlAPI
     private controlAPI()
     {
         apiType = API_YUNIRC;
-        quorraSpeed = 300; // base calculation speed of quorra
-        m_chessbot = null;
-        m_quorra = null;
+        m_maxSpeed = 255; // base calculation speed of quorra
     }
     
     public static controlAPI InitInstance()
@@ -41,18 +39,21 @@ public class controlAPI
     
     public void SetAPIType(byte type)
     {
+        if(apiType == type)
+            return;
+
         apiType = type;
-        m_chessbot = null;
-        m_quorra = null;
+        m_protocol = null;
+
         switch(apiType)
         {
             default:
                 return;
             case API_CHESSBOT:
-                m_chessbot = new ChessBotProtocol();
+                m_protocol = new ChessBotProtocol();
                 return;
             case API_QUORRA:
-                m_quorra = new QuorraProtocol();
+                m_protocol = new QuorraProtocol();
                 return;
         }
     }
@@ -72,9 +73,8 @@ public class controlAPI
         switch(apiType)
         {
             case API_CHESSBOT:
-                return m_chessbot.BuildPawPacket(percent);
             case API_QUORRA:
-                return m_quorra.BuildPawPacket(percent);
+                return m_protocol.BuildPawPacket(percent);
             default:
                 return null;
         }
@@ -85,9 +85,8 @@ public class controlAPI
         switch(apiType)
         {
             case API_CHESSBOT:
-                return m_chessbot.BuildReelPacket(up);
             case API_QUORRA:
-                return m_quorra.BuildReelPacket(up);
+                return m_protocol.BuildReelPacket(up);
             default:
                 return null;
         }
@@ -138,13 +137,9 @@ public class controlAPI
                 break;
             }
             case API_CHESSBOT:
-            {
-                packet = m_chessbot.BuildMovementPacket(flags, down, speed);
-                break;
-            }
             case API_QUORRA:
             {
-                packet = m_quorra.BuildMovementPacket(flags, down, speed);
+                packet = m_protocol.BuildMovementPacket(flags, down, speed);
                 break;
             }
         }
@@ -188,7 +183,7 @@ public class controlAPI
         return flags;
     }
     
-    public static int[] MoveFlagsToQuorra(int speed, byte flags)
+    public static int[] MoveFlagsToQuorra(int speed, byte flags, byte div)
     {
         int[] result = {speed, speed};
         if(speed == 0 || flags == MOVE_NONE)
@@ -197,18 +192,18 @@ public class controlAPI
         if((flags & MOVE_FORWARD) != 0)
         {
             if((flags & MOVE_LEFT) != 0)
-                result[1] -= speed/5;
+                result[1] -= speed/div;
             else if((flags & MOVE_RIGHT) != 0)
-                result[0] -= speed/5;
+                result[0] -= speed/div;
         }
         else if((flags & MOVE_BACKWARD) != 0)
         {
             result[0] = -speed;
             result[1] = -speed;
             if((flags & MOVE_LEFT) != 0)
-                result[1] += speed/5;
+                result[1] += speed/div;
             else if((flags & MOVE_RIGHT) != 0)
-                result[0] += speed/5;
+                result[0] += speed/div;
         }
         else if((flags & MOVE_LEFT) != 0)
             result[1] = -speed;
@@ -237,12 +232,11 @@ public class controlAPI
         switch(apiType)
         {
             case API_CHESSBOT:
-                m_chessbot.setMaxSpeed((short) speed);
-                break;
             case API_QUORRA:
-                m_quorra.setMaxSpeed((short)speed);
+                m_protocol.setMaxSpeed((short) speed);
+                break;
             default:
-                quorraSpeed = speed;
+                m_maxSpeed = speed;
                 break;    
         }
     }
@@ -252,21 +246,42 @@ public class controlAPI
         switch(apiType)
         {
             case API_CHESSBOT:
-                return m_chessbot.getMaxSpeed();
             case API_QUORRA:
-                return m_quorra.getMaxSpeed();
+                return m_protocol.getMaxSpeed();
             default:
-                return (short)quorraSpeed;
+                return (short)m_maxSpeed;
         }
     }
     
-    private float mDefX = 0;
-    private float mDefY = 0;
+    public byte GetTurnDiv()
+    {
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+            case API_QUORRA:
+                return m_protocol.getTurnDiv();
+            default:
+                return 5;
+        }
+    }
+    
+    public void SetTurnDiv(byte div)
+    {
+        switch(apiType)
+        {
+            case API_CHESSBOT:
+            case API_QUORRA:
+                m_protocol.setTurnDiv(div);
+                break;
+        }
+    }
+    
+    private float mDefX;
+    private float mDefY;
 
     private byte apiType;
-    private int quorraSpeed;
+    private int m_maxSpeed;
     
     private static controlAPI instance;
-    private ChessBotProtocol m_chessbot;
-    private QuorraProtocol m_quorra;
+    private Protocol m_protocol;
 };
