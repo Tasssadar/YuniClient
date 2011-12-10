@@ -398,7 +398,6 @@ public class YuniClient extends Shared
         state = 0;
         curFolder = null;
         curFolder = null;
-        keyTouch = null;
         fileSelect = null;
         dialog = null;
         autoScrollThread = null;
@@ -705,6 +704,7 @@ public class YuniClient extends Shared
                 error = (TextView)findViewById(R.id.error);
                 if(hex.exists() && hex.canRead())
                 {
+                    hexFileName = error.getText().toString();
                     error.setText("Hex file exists\n");
                     Connection.GetInst().setHexFile(hex);
                     final byte[] out = { 0x12 };
@@ -752,6 +752,9 @@ public class YuniClient extends Shared
                  StartEEPROMRead();
              }
         });
+
+        EditText text = (EditText) findViewById(R.id.hex_file);
+        text.setText(hexFileName);
     }
         
     private void StartStop(Button v, boolean start, boolean visualOnly)
@@ -1119,6 +1122,7 @@ public class YuniClient extends Shared
             {
                 TextView error = (TextView)findViewById(R.id.hex_file);
                 error.setText(file.getAbsolutePath());
+                hexFileName = file.getAbsolutePath();
             }
             else
             {
@@ -1357,6 +1361,7 @@ public class YuniClient extends Shared
     private byte btTurnOn;
     public byte eeprom_part;
     public byte eeprom_write_part;
+    private String hexFileName;
     
     private GestureLibrary gestureLib;
 
