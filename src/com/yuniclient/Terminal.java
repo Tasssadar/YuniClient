@@ -126,12 +126,12 @@ class Terminal
     
     
     public String GetText() { return parsedText; }
-    public void SetText(String text)
+    public void SetText(String text, String parsed)
     {
         terminalText = text;
-        parsedText = Terminal.Parse(terminalText);
+        parsedText = parsed;
     }
-    public void Append(String text)
+    public void Append(String text, String parsed)
     {
         if(text == null)
             return;
@@ -141,7 +141,7 @@ class Terminal
             parsedText = "";
         }
         terminalText += text;
-        parsedText += Terminal.Parse(text);
+        parsedText += parsed;
     }
     
     public void toFile(String name, Handler handler) throws IOException

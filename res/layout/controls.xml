@@ -4,7 +4,7 @@
               android:layout_width="fill_parent" 
               android:layout_height="fill_parent">
     <ScrollView    
-      android:id="@+id/ScrollView01"   
+      android:id="@+id/ScrollViewTerminal"   
       android:layout_height="150dp"    
       android:layout_width="fill_parent"
       android:fadingEdge="none"
@@ -23,7 +23,7 @@
     
     <LinearLayout android:layout_height="wrap_content"
         android:id="@+id/linear1" 
-        android:layout_below="@id/ScrollView01"
+        android:layout_below="@id/ScrollViewTerminal"
         android:layout_width="fill_parent">        
         <Button android:id="@+id/Speed1_b"
                 android:layout_width="108dp"

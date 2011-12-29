@@ -284,7 +284,7 @@ public class YuniClient extends Shared
                 return true;
             case R.id.clear:
                 ((TextView)findViewById(R.id.output_terminal)).setText("");
-                terminal.SetText(null);
+                terminal.SetText(null, null);
                 return true;
             case R.id.send_string:
             {
@@ -407,6 +407,8 @@ public class YuniClient extends Shared
         log = null;
         if(lock != null)
             lock.release();
+        termOutput = null;
+        scroll = null;
 
         controlAPI.GetInst().SetDefXY(0, 0);
         joystick = null;
@@ -620,6 +622,8 @@ public class YuniClient extends Shared
         autoScrollThread = null;
         joystick = null;
         eeprom = null;
+        termOutput = null;
+        scroll = null;
         state &= ~(STATE_CONTROLS);
         state &= ~(STATE_JOYSTICK);
         state &= ~(STATE_TERMINAL);  
@@ -844,21 +848,21 @@ public class YuniClient extends Shared
              public void onClick(View v) {
                 TextView out = (TextView) findViewById(R.id.output);
                 out.setText("");
-                terminal.SetText(null);
+                terminal.SetText(null, null);
              }
            });
         
         
         if(autoScrollThread != null)
             autoScrollThread.cancel();
-        autoScrollThread = new ScrollThread((TextView) findViewById(R.id.output), (ScrollView) findViewById(R.id.ScrollView01));
+        autoScrollThread = new ScrollThread();
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
-        
+        termOutput = (TextView) findViewById(R.id.output);
+        scroll = (ScrollView)findViewById(R.id.ScrollViewTerminal);
         if(terminal.GetText() != null)
         {
-            TextView out = (TextView) findViewById(R.id.output);
-            out.setText(terminal.GetText());
+            termOutput.setText(terminal.GetText());
             state |= STATE_SCROLL;
         }
     }
@@ -914,65 +918,97 @@ public class YuniClient extends Shared
         state |= STATE_TERMINAL;
         setContentView(R.layout.terminal);
         
-        autoScrollThread = new ScrollThread((TextView) findViewById(R.id.output_terminal), (ScrollView) findViewById(R.id.ScrollViewTerminal));
+        autoScrollThread = new ScrollThread();
         autoScrollThread.setPriority(1);
         autoScrollThread.start();
-        
+        termOutput = (TextView) findViewById(R.id.output_terminal);
+        scroll = (ScrollView)findViewById(R.id.ScrollViewTerminal);
         if(terminal.GetText() != null)
         {
-            TextView out = (TextView) findViewById(R.id.output_terminal);
-            out.setText(terminal.GetText());
+            termOutput.setText(terminal.GetText());
             state |= STATE_SCROLL;
         }
     }
-    
+
     private void WriteTerminalText(String text)
     {
         if(text == null)
             return;
+        new NewTextThread(text).start();
+    }
+    
+    private class NewTextThread extends Thread
+    {
+        private String text;
         
-        boolean wipe = false;
-        int index = -1;
-        while(true)
+        public NewTextThread(String t)
         {
-            index = text.indexOf(12, index+1);
-            if(index == -1)
-                break;
-            text = text.substring(index+1);
-            wipe = true;
+            text = t;
         }
         
-        if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+        public void run()
         {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            if(out != null)
+            boolean wipe = false;
+            int index = -1;
+            while(true)
             {
-                if(wipe)
-                    out.setText(Terminal.Parse(text));
-                else
-                    out.append(Terminal.Parse(text));
-                state |= STATE_SCROLL;
+                index = text.indexOf(12, index+1);
+                if(index == -1)
+                    break;
+                text = text.substring(index+1);
+                wipe = true;
             }
+            String parsed = Terminal.Parse(text);
+
+            if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
+            {
+                if(termOutput != null)
+                    termOutput.post(new TerminalSetThread(wipe, parsed));
+            }
+            
+            if(wipe)
+                terminal.SetText(text, parsed);
+            else
+                terminal.Append(text, parsed);
         }
-        if(wipe)
-            terminal.SetText(text);
-        else
-            terminal.Append(text);
+    }
+    
+    private class TerminalSetThread implements Runnable
+    {
+        boolean wipe;
+        String text;
+        public TerminalSetThread(boolean w, String t)
+        {
+            wipe = w;
+            text = t;
+        }
+
+        public void run() {
+            if(termOutput == null)
+                return;
+            if(wipe)
+                termOutput.setText(text);
+            else
+                termOutput.append(text);
+            
+            if(scroll != null)
+                scroll.scrollTo(0, termOutput.getHeight());
+        }
     }
 
     private void SetTerminalText(String text, boolean toClass)
     {
         if((state & STATE_CONTROLS) != 0 || (state & STATE_TERMINAL) != 0)
         {
-            final TextView out = (TextView) findViewById(((state & STATE_CONTROLS) != 0) ? R.id.output : R.id.output_terminal);
-            if(out != null)
+            if(termOutput != null)
             {
-                out.setText(text);
+                termOutput.setText(text);
                 state |= STATE_SCROLL;
             }
         }
+
         if(toClass)
-            terminal.SetText(text);
+            terminal.SetText(text, Terminal.Parse(text));
     }
     
     private void InitEEPROM()
@@ -1289,14 +1325,10 @@ public class YuniClient extends Shared
     
     private class ScrollThread extends Thread
     {
-        private TextView out;
-        private ScrollView scroll;
         private boolean run;
         
-        public ScrollThread(TextView outView, ScrollView scrollView)
+        public ScrollThread()
         {
-            out = outView;
-            scroll = scrollView;
             run = true;
         }
         
@@ -1305,13 +1337,13 @@ public class YuniClient extends Shared
             setName("AutoScrollThread");
             while(run)
             {
-                if((state & STATE_SCROLL) != 0 && scroll != null && out != null && scroll.getScrollY() != out.getHeight())
+                if((state & STATE_SCROLL) != 0 && scroll != null && termOutput != null && scroll.getScrollY() != termOutput.getHeight())
                 {
-                    out.post(new Runnable() {
+                    termOutput.post(new Runnable() {
                         public void run()
                         {
-                            if(scroll != null && out != null)
-                                scroll.scrollTo(0, out.getHeight());
+                            if(scroll != null && termOutput != null)
+                                scroll.scrollTo(0, termOutput.getHeight());
                         }
                       });
                     state &= ~(STATE_SCROLL);
@@ -1355,6 +1387,8 @@ public class YuniClient extends Shared
     private ProgressDialog dialog;
     private File curFolder; 
     private ScrollThread autoScrollThread;
+    private TextView termOutput;
+    private ScrollView scroll;
     
     private static int state;
     
