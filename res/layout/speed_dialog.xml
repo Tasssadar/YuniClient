@@ -1,0 +1,61 @@
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/layout_speed_dial"
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              >
+    <ScrollView    
+          android:layout_height="fill_parent"    
+          android:layout_width="fill_parent"
+          android:fadingEdge="none"
+          android:scrollbarSize="40dp"
+          android:fillViewport="true">
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                      android:id="@+id/layout_speed_dial"
+                      android:orientation="vertical"
+                      android:layout_width="fill_parent"
+                      android:layout_height="fill_parent"
+                      android:padding="10dp"
+                      android:paddingRight="40dp"
+                      >
+         
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Speed"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+        
+            <SeekBar
+                android:id="@+id/speedSeekBar"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:max="1000"/>
+        
+            <EditText android:id="@+id/speed_text" 
+                      android:layout_width="fill_parent" 
+                      android:layout_height="wrap_content" 
+                      android:background="@android:drawable/editbox_background"
+                      android:text=""
+                      android:singleLine="true"/>    
+                      
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Turn divider"
+                android:textAppearance="?android:attr/textAppearanceSmall" />
+            <SeekBar
+                android:id="@+id/divSeekBar"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:max="10"/>
+        
+            <EditText android:id="@+id/div_text" 
+                      android:layout_width="fill_parent" 
+                      android:layout_height="wrap_content" 
+                      android:background="@android:drawable/editbox_background"
+                      android:text=""
+                      android:singleLine="true"/>   
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

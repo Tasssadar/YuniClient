@@ -99,7 +99,12 @@ public class YuniClient extends Shared
 
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null)
+        {
             ShowAlert("This device does not have bluetooth adapter");
+            super.onCreate(savedInstanceState);
+            finish();
+            return;
+        }
         else if(!mBluetoothAdapter.isEnabled())
             EnableBT();
 
